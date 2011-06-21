@@ -5,7 +5,7 @@ The aluminum eam potential module.
 import numpy as np
 import al_
 
-class eam_al_calculator:
+class al:
 
     def __init__(self):
         self.atoms = None
