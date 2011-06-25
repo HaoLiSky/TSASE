@@ -10,14 +10,14 @@ print "=" * len(head)
 ljocl = tsase.calc.ljocl()
 lj = tsase.calc.lj()
 
-for N in range(10, 2010, 10):
+for N in range(10, 400, 20):
     a = ase.Atoms(["H"]*N, positions=numpy.random.normal(0, 1, (N,3)))
-    a.cell = numpy.array([[100, 0, 0], [0, 100, 0], [0, 0, 100]])
+    a.center(100)
     b = a.copy()
     a.set_calculator(ljocl)
     b.set_calculator(lj)
 
-    Q = 3
+    Q = 5
     tcl = []
     t = []
     for i in range(Q):

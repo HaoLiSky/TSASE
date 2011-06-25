@@ -47,6 +47,11 @@ class ljocl:
         self.atoms = None
         self.u = None
         self.f = None
+        self.r = None
+        self.ubuf = None
+        self.fbuf = None
+        self.rbuf = None
+        self.lastSize = 0
         self.context = cl.create_some_context(False)
         self.queue = cl.CommandQueue(self.context)
         self.program = cl.Program(self.context, code).build()
@@ -84,15 +89,23 @@ class ljocl:
         r = r.ravel().reshape(N, 4)
         u = np.zeros(N, dtype=np.float32)
         f = np.zeros((N,4), dtype=np.float32)
-        rbuf = cl.Buffer(self.context, MF.READ_ONLY|MF.COPY_HOST_PTR, hostbuf = r)
-        ubuf = cl.Buffer(self.context, MF.WRITE_ONLY, u.nbytes)
-        fbuf = cl.Buffer(self.context, MF.WRITE_ONLY, f.nbytes)
-        self.program.lj(self.queue, [N], None, rbuf, ubuf, fbuf, np.int32(N))
-        cl.enqueue_read_buffer(self.queue, ubuf, u).wait()
-        cl.enqueue_read_buffer(self.queue, fbuf, f).wait()
-        rbuf.release()
-        ubuf.release()
-        fbuf.release()
+        if self.lastSize != N:
+            if self.ubuf:
+                self.ubuf.release()
+            if self.fbuf:        
+                self.fbuf.release()
+            if self.rbuf:        
+                self.rbuf.release()
+            self.r = r            
+            self.ubuf = cl.Buffer(self.context, MF.WRITE_ONLY, u.nbytes)
+            self.fbuf = cl.Buffer(self.context, MF.WRITE_ONLY, f.nbytes)
+            self.rbuf = cl.Buffer(self.context, MF.READ_ONLY|MF.COPY_HOST_PTR, hostbuf = self.r)
+            self.lastSize = N
+        self.r[:] = r
+        self.program.lj(self.queue, [N], None, self.rbuf, self.ubuf, self.fbuf, np.int32(N))
+        cl.enqueue_read_buffer(self.queue, self.ubuf, u)
+        cl.enqueue_read_buffer(self.queue, self.fbuf, f)
+        self.queue.finish()
         self.f = f
         self.u = u.sum()
 
