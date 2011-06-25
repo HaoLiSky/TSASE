@@ -3,7 +3,7 @@ import ase
 import tsase
 import time
 
-head = "%5s %16s %16s" % ("Natom", "ljocl (sec)", "lj (sec)")
+head = "%5s %16s" % ("Natom", "ljocl speedup")
 print head
 print "=" * len(head)
 
@@ -17,7 +17,7 @@ for N in range(10, 400, 20):
     a.set_calculator(ljocl)
     b.set_calculator(lj)
 
-    Q = 5
+    Q = 10
     tcl = []
     t = []
     for i in range(Q):
@@ -30,5 +30,5 @@ for N in range(10, 400, 20):
         t0 = time.time()
         fb = b.get_forces()
         t.append(time.time() - t0)
-    print "%5d %16.12f %16.12f" % (N, min(tcl), min(t))
+    print "%5d %16.12f" % (N, min(t)/min(tcl))
 
