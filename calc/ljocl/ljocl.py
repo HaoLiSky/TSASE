@@ -4,6 +4,7 @@ import numpy as np
 
 code=\
 """
+#pragma OPENCL EXTENSION cl_amd_printf : enable
 __kernel void lj(__global float4* r, __global float* u, __global float4* f, unsigned int N)
 {
     unsigned int i = get_global_id(0);
@@ -26,10 +27,10 @@ __kernel void lj(__global float4* r, __global float* u, __global float4* f, unsi
             float d7 = d6 * d;
             float d12 = d6 * d6;
             float d13 = d12 * d;
-            float fmag = (6.0/d7 - 12.0/d13);
-            fx -= 4 * fmag * dx;
-            fy -= 4 * fmag * dy;
-            fz -= 4 * fmag * dz;
+            float fmag = 6.0/d7 - 12.0/d13;
+            fx -= 4 * fmag * dx * invd;
+            fy -= 4 * fmag * dy * invd;
+            fz -= 4 * fmag * dz * invd;
             myu += 0.5 * 4 * (1.0/d12 - 1.0/d6);
         }
     }
@@ -47,7 +48,6 @@ class ljocl:
         self.atoms = None
         self.u = None
         self.f = None
-        self.r = None
         self.ubuf = None
         self.fbuf = None
         self.rbuf = None
@@ -90,18 +90,17 @@ class ljocl:
         u = np.zeros(N, dtype=np.float32)
         f = np.zeros((N,4), dtype=np.float32)
         if self.lastSize != N:
-            if self.ubuf:
+            try:
                 self.ubuf.release()
-            if self.fbuf:        
                 self.fbuf.release()
-            if self.rbuf:        
                 self.rbuf.release()
-            self.r = r            
+            except AttributeError:
+                pass
             self.ubuf = cl.Buffer(self.context, MF.WRITE_ONLY, u.nbytes)
             self.fbuf = cl.Buffer(self.context, MF.WRITE_ONLY, f.nbytes)
-            self.rbuf = cl.Buffer(self.context, MF.READ_ONLY|MF.COPY_HOST_PTR, hostbuf = self.r)
+            self.rbuf = cl.Buffer(self.context, MF.READ_ONLY, r.nbytes)
             self.lastSize = N
-        self.r[:] = r
+        cl.enqueue_write_buffer(self.queue, self.rbuf, r).wait()
         self.program.lj(self.queue, [N], None, self.rbuf, self.ubuf, self.fbuf, np.int32(N))
         cl.enqueue_read_buffer(self.queue, self.ubuf, u)
         cl.enqueue_read_buffer(self.queue, self.fbuf, f)
