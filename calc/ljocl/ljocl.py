@@ -5,7 +5,7 @@ import numpy as np
 code=\
 """
 #pragma OPENCL EXTENSION cl_amd_printf : enable
-__kernel void lj(__global float4* r, __global float* u, __global float4* f, unsigned int N)
+__kernel void lj(__global float4* r, __global float* u, __global float4* f, unsigned int N, float bx, float by, float bz)
 {
     unsigned int i = get_global_id(0);
     unsigned int j = 0;
@@ -20,25 +20,33 @@ __kernel void lj(__global float4* r, __global float* u, __global float4* f, unsi
             float dx = r[i].x - r[j].x;
             float dy = r[i].y - r[j].y;
             float dz = r[i].z - r[j].z;
-            float d = sqrt(dx*dx + dy*dy + dz*dz);
+            float dbx = dx/bx;
+            float dby = dy/by;
+            float dbz = dz/bz;
+            float sx = dbx/fabs(dbx);
+            float sy = dby/fabs(dby);
+            float sz = dbz/fabs(dbz);
+            dx = dx - bx * (int)(dbx + 0.5 * sx);
+            dy = dy - by * (int)(dby + 0.5 * sy);
+            dz = dz - bz * (int)(dbz + 0.5 * sz);
+            float d = dx*dx + dy*dy + dz*dz;
             float invd = 1.0/d;
-            float d3 = d * d * d;
-            float d6 = d3 * d3;
-            float d7 = d6 * d;
+            float d2 = invd;
+            float d6 = d2 * d2 * d2;
             float d12 = d6 * d6;
-            float d13 = d12 * d;
-            float fmag = 6.0/d7 - 12.0/d13;
-            fx -= 4 * fmag * dx * invd;
-            fy -= 4 * fmag * dy * invd;
-            fz -= 4 * fmag * dz * invd;
-            myu += 0.5 * 4 * (1.0/d12 - 1.0/d6);
+            float u = d12 - d6;
+            float du = (12.0*d12 - 6.0*d6) * invd;
+            fx += du * dx;
+            fy += du * dy;
+            fz += du * dz;
+            myu += u;
         }
     }
 
-    u[i] = myu;
-    f[i].x = fx;
-    f[i].y = fy;
-    f[i].z = fz;
+    u[i] = 0.5 * 4 * myu;
+    f[i].x = 4.0 * fx;
+    f[i].y = 4.0 * fy;
+    f[i].z = 4.0 * fz;
 }
 """
 
@@ -101,7 +109,10 @@ class ljocl:
             self.rbuf = cl.Buffer(self.context, MF.READ_ONLY, r.nbytes)
             self.lastSize = N
         cl.enqueue_write_buffer(self.queue, self.rbuf, r).wait()
-        self.program.lj(self.queue, [N], None, self.rbuf, self.ubuf, self.fbuf, np.int32(N))
+        self.program.lj(self.queue, [N], None, self.rbuf, self.ubuf, self.fbuf, np.int32(N), 
+                        np.float32(self.atoms.cell[0][0]),
+                        np.float32(self.atoms.cell[1][1]),
+                        np.float32(self.atoms.cell[2][2]))
         cl.enqueue_read_buffer(self.queue, self.ubuf, u)
         cl.enqueue_read_buffer(self.queue, self.fbuf, f)
         self.queue.finish()
