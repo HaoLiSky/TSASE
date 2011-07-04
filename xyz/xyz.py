@@ -42,6 +42,10 @@ class atomview(gtk.Window):
         self.boxbutton = gladetree.get_widget("boxbutton")
         self.axisbutton = gladetree.get_widget("axisbutton")
         self.resetbutton = gladetree.get_widget("resetbutton")
+        self.zoombutton = gladetree.get_widget("zoombutton")
+        self.radiusbutton = gladetree.get_widget("radiusbutton")
+        self.frozenbutton = gladetree.get_widget("frozenbutton")
+        self.movebutton = gladetree.get_widget("movebutton")
         self.fps = gladetree.get_widget("fps")
         self.repeatx = gladetree.get_widget("repeatx")
         self.repeaty = gladetree.get_widget("repeaty")
@@ -59,9 +63,12 @@ class atomview(gtk.Window):
         self.resetbutton.connect("clicked", lambda w: self.gfx_reset_transform())
         self.boxbutton.connect("clicked", lambda w: self.queue_draw())
         self.axisbutton.connect("clicked", lambda w: self.queue_draw())
+        self.frozenbutton.connect("clicked", lambda w: self.queue_draw())
         self.repeatx.connect("value-changed", lambda w: self.gfx_center_atoms())
         self.repeaty.connect("value-changed", lambda w: self.gfx_center_atoms())
         self.repeatz.connect("value-changed", lambda w: self.gfx_center_atoms())
+        self.zoombutton.connect("value-changed", lambda w: self.queue_draw())
+        self.radiusbutton.connect("value-changed", lambda w: self.queue_draw())
         # Drawing area.
         self.area = gladetree.get_widget("atomview")
         self.area.connect("expose_event", self.event_exposed)
@@ -90,7 +97,6 @@ class atomview(gtk.Window):
         self.button3 = False
         self.mouselast = [None, None]
         self.background = [1.0, 1.0, 1.0]
-        # self.background = [0.949, 0.945, 0.941]
         self.keys = {}
         self.black_gc = self.area.get_style().black_gc
         self.white_gc = self.area.get_style().white_gc
@@ -141,22 +147,23 @@ class atomview(gtk.Window):
             dx = mx - self.mouselast[0]
             dy = my - self.mouselast[1]
             self.mouselast = (mx, my)
-        if self.gui_key_on("m"):
-            if self.button1:            
+        if self.button1:
+            if self.gui_key_on("m") or (self.movebutton.get_active() and self.grabbedatom is not None):
                 if self.grabbedatom is not None:
                     r = self.get_frame_atoms().get_positions() 
-                    r[self.grabbedatom] += np.dot(np.linalg.inv(self.rotation), np.array([dx, -dy, 0]) / self.scale / 2.0)
-                    self.get_frame_atoms().set_positions(r) 
-                    self.gfx_render()
-        elif self.button1:
-            self.gfx_rot_x(dy * 0.009)
-            self.gfx_rot_y(dx * 0.009)
+                    r[self.grabbedatom] += np.dot(np.linalg.inv(self.rotation), 
+                                                  np.array([dx, -dy, 0]) / \
+                                                  self.zoombutton.get_value() / 2.0)
+                    self.get_frame_atoms().positions = r
+            else:
+                self.gfx_rot_x(dy * 0.009)
+                self.gfx_rot_y(dx * 0.009)
             self.gfx_render()
         elif self.button2:
             self.gfx_rot_z(-dx * 0.0078125)
             self.gfx_render()
         elif self.button3:
-            self.translate += np.array([dx, -dy, 0]) / self.scale / 2
+            self.translate += np.array([dx, -dy, 0]) / self.zoombutton.get_value() / 2
             self.gfx_render()
         atomid = self.get_mouse_atom()
         if atomid is not None:     
@@ -203,16 +210,16 @@ class atomview(gtk.Window):
     def event_scroll(self, widget, event):
         if self.gui_key_on("r"): 
             if event.direction == gdk.SCROLL_UP:
-                self.radius *= 1.1
+                self.radiusbutton.set_value(self.radiusbutton.get_value() * 1.1)
                 self.queue_draw()
             elif event.direction == gdk.SCROLL_DOWN:
-                self.radius *= 0.9
+                self.radiusbutton.set_value(self.radiusbutton.get_value() * 0.9)
                 self.queue_draw()
         else:
             if event.direction == gdk.SCROLL_UP:
-                self.scale *= 1.1
+                self.zoombutton.set_value(self.zoombutton.get_value() * 1.1)
             elif event.direction == gdk.SCROLL_DOWN:
-                self.scale *= 0.9
+                self.zoombutton.set_value(self.zoombutton.get_value() * 0.9)
             self.queue_draw()
         return True
                                                     
@@ -328,8 +335,8 @@ class atomview(gtk.Window):
             self.colors.append(self.gfx_get_color_gc(c[0], c[1], c[2]))
 
     def gfx_reset_transform(self):
-        self.radius = 1.5
-        self.scale = 8.0
+        self.radiusbutton.set_value(1.5)
+        self.zoombutton.set_value(8.0)
         self.rotation = np.identity(3)
         self.translate = np.array([0.0, 0.0, 16.0])
         self.queue_draw()
@@ -356,6 +363,10 @@ class atomview(gtk.Window):
             atom.number = atoms.elements[symbols[i]]['number']
             atom.id = i % len(self.get_frame_atoms())
             atom.depth = 0
+            atom.constrained = False
+            if len(ra.constraints) > 0:
+                if i in ra.constraints[0].index:
+                    atom.constrained = True
             self.queue.append(atom)
 
     def gfx_queue_box(self):
@@ -468,22 +479,27 @@ class atomview(gtk.Window):
 
     def gfx_draw_queue(self):
         self.screenatoms = []
-        s2 = self.scale * 2
+        s2 = self.zoombutton.get_value() * 2
         w2 = self.width * 0.5
         h2 = self.height * 0.5
+        dr = math.cos(math.pi*0.25)
         for q in self.queue:
             if q.kind == "atom":
                 r = q.r
-                rad = int(q.radius * self.scale * self.radius)
+                rad = int(q.radius * self.zoombutton.get_value() * self.radiusbutton.get_value())
                 x = int(r[0] * s2 + w2)
                 y = int(-r[1] * s2 + h2)
                 self.gfx_draw_circle(x, y, rad, q.number)
+                if self.frozenbutton.get_active():
+                    if q.constrained:
+                        self.gfx_draw_line(x-rad*dr, y-rad*dr, x+rad*dr, y+rad*dr)
+                        self.gfx_draw_line(x-rad*dr, y+rad*dr, x+rad*dr, y-rad*dr)
                 self.screenatoms.append([x, y, rad, q.id])
             else:   
-                q.r1[0] = q.r1[0] * self.scale * 2 + self.width * 0.5
-                q.r1[1] = -q.r1[1] * self.scale * 2 + self.height * 0.5
-                q.r2[0] = q.r2[0] * self.scale * 2 + self.width * 0.5
-                q.r2[1] = -q.r2[1] * self.scale * 2 + self.height * 0.5
+                q.r1[0] = q.r1[0] * s2 + self.width * 0.5
+                q.r1[1] = -q.r1[1] * s2 + self.height * 0.5
+                q.r2[0] = q.r2[0] * s2 + self.width * 0.5
+                q.r2[1] = -q.r2[1] * s2 + self.height * 0.5
                 self.gfx_draw_line(q.r1[0], q.r1[1], q.r2[0], q.r2[1])
 
 
@@ -533,7 +549,11 @@ class atomview(gtk.Window):
 
     def gfx_draw_line(self, x1, y1, x2, y2):
         if self.render_cairo:
-            pass
+            self.cairo_context.set_source_rgb(0, 0, 0)
+            self.cairo_context.move_to(x1, y1)
+            self.cairo_context.line_to(x2, y2)
+            self.cairo_context.set_line_width(0.5)
+            self.cairo_context.stroke()
         else:
             self.pixmap.draw_line(self.black_gc, int(x1), int(y1), int(x2), int(y2))        
 
