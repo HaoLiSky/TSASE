@@ -24,7 +24,7 @@ class atomview(gtk.Window):
 # GUI -------------------------------------------------------------------------------------------
 #
 
-    def __init__(self, gui = None):
+    def __init__(self):
         gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
         # Main window
         self.connect("destroy", self.event_close)
@@ -36,16 +36,15 @@ class atomview(gtk.Window):
         gladewindow = gladetree.get_widget("window")
         self.moviescale = gladetree.get_widget("moviescale")
         self.playbutton = gladetree.get_widget("playbutton")
-        self.pausebutton = gladetree.get_widget("pausebutton")
         self.boxbutton = gladetree.get_widget("boxbutton")
         self.resetbutton = gladetree.get_widget("resetbutton")
         self.fps = gladetree.get_widget("fps")
         self.holder = gladetree.get_widget("holder")
-        if gui is not None:
-            self.holder.pack_start(gui, False, False, 0)
+        # Menu
+        gladetree.get_widget("menuFileOpen").connect("activate", self.event_menuFileOpen)
+        gladetree.get_widget("menuFileSaveAs").connect("activate", self.event_menuFileSaveAs)
         # Events
         self.playbutton.connect("clicked", self.event_toggle_play, True)
-        self.pausebutton.connect("clicked", self.event_toggle_play, False)
         self.resetbutton.connect("clicked", lambda w: self.gfx_reset_transform())
         self.boxbutton.connect("clicked", lambda w: self.queue_draw())
         # Drawing area.
@@ -171,13 +170,17 @@ class atomview(gtk.Window):
                 self.scale *= 0.9
             self.queue_draw()
         return True
+                                                    
+    def get_drawpoint(self):
+        drawpoint = self.data[0]
+        if len(self.data) > 1:
+            drawpoint = self.data[int(self.moviescale.get_value())]
+        return drawpoint
                                                                                     
     def event_exposed(self, *args):
         self.gfx_clear()
         self.queue = []
-        self.drawpoint = self.data[0]
-        if len(self.data) > 1:
-            self.drawpoint = self.data[int(self.moviescale.get_value())]
+        self.drawpoint = self.get_drawpoint()
         self.gfx_queue_atoms()
         if self.boxbutton.get_active():
             self.gfx_queue_box()
@@ -203,7 +206,26 @@ class atomview(gtk.Window):
     def event_close(self, *args):
         gtk.main_quit()
         
-        
+    def event_menuFileOpen(self, *args):
+        buttons = (gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OPEN,gtk.RESPONSE_OK)
+        chooser = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_OPEN,buttons=buttons)
+        response = chooser.run()
+        filename = chooser.get_filename()
+        chooser.destroy()
+        if response == gtk.RESPONSE_OK:
+            self.data_read(filename)
+        return True
+
+    def event_menuFileSaveAs(self, *args):
+        buttons = (gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_SAVE,gtk.RESPONSE_OK)
+        chooser = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_SAVE,buttons=buttons)
+        response = chooser.run()
+        filename = chooser.get_filename()
+        chooser.destroy()
+        if response == gtk.RESPONSE_OK:
+            self.data_write(filename)
+        return True
+
 #
 # GRAPHICS --------------------------------------------------------------------------------------
 #
@@ -390,6 +412,25 @@ class atomview(gtk.Window):
         self.gfx_center_atoms()
         self.queue_draw()
 
+    def data_read(self, filename):
+        try:
+            self.data_set(ase.io.read(filename))
+        except:
+            try:
+                self.data.set(tsase.io.read_con(filename))
+            except:
+                print "Failed to load", filename
+                return
+        self.set_title(os.path.abspath(filename))
+
+    def data_write(self, filename):
+        if filename.endswith(".con"):
+            tsase.io.write_con(filename, self.get_drawpoint())
+        else:
+            ase.io.write(filename, self.get_drawpoint())
+        self.set_title(os.path.abspath(filename))
+        
+
 #
 # MAIN ------------------------------------------------------------------------------------------
 #
@@ -402,8 +443,7 @@ if __name__ == "__main__":
     import sys
     q = atomview()
     if len(sys.argv) > 1:
-        data = ase.io.read(sys.argv[1])
-        q.data_set(data)
+        q.data_read(sys.argv[1])
     gtk.main()
 
 
