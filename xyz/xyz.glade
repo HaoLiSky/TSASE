@@ -38,6 +38,22 @@
                   </widget>
                 </child>
                 <child>
+                  <widget class="GtkImageMenuItem" id="menuFileOpenView">
+                    <property name="label" translatable="yes">Open view</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="use_action_appearance">False</property>
+                    <property name="use_stock">False</property>
+                    <child internal-child="image">
+                      <widget class="GtkImage" id="image9">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="stock">gtk-open</property>
+                      </widget>
+                    </child>
+                  </widget>
+                </child>
+                <child>
                   <widget class="GtkImageMenuItem" id="menuFileSaveAs">
                     <property name="label">gtk-save-as</property>
                     <property name="visible">True</property>
@@ -45,6 +61,22 @@
                     <property name="use_action_appearance">False</property>
                     <property name="use_underline">True</property>
                     <property name="use_stock">True</property>
+                  </widget>
+                </child>
+                <child>
+                  <widget class="GtkImageMenuItem" id="menuFileSaveView">
+                    <property name="label" translatable="yes">Save view</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="use_action_appearance">False</property>
+                    <property name="use_stock">False</property>
+                    <child internal-child="image">
+                      <widget class="GtkImage" id="image10">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="stock">gtk-save-as</property>
+                      </widget>
+                    </child>
                   </widget>
                 </child>
                 <child>
@@ -230,21 +262,6 @@
                   </packing>
                 </child>
                 <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
-                  <placeholder/>
-                </child>
-                <child>
                   <widget class="GtkToggleButton" id="movebutton">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
@@ -265,6 +282,21 @@
                     <property name="x_options"></property>
                     <property name="y_options"></property>
                   </packing>
+                </child>
+                <child>
+                  <placeholder/>
+                </child>
+                <child>
+                  <placeholder/>
+                </child>
+                <child>
+                  <placeholder/>
+                </child>
+                <child>
+                  <placeholder/>
+                </child>
+                <child>
+                  <placeholder/>
                 </child>
               </widget>
               <packing>
@@ -617,9 +649,6 @@
                 <property name="fill">False</property>
                 <property name="position">2</property>
               </packing>
-            </child>
-            <child>
-              <placeholder/>
             </child>
           </widget>
           <packing>

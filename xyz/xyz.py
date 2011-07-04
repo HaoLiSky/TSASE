@@ -56,7 +56,9 @@ class atomview(gtk.Window):
         self.statusbar.modify_font(font)
         # Menu
         gladetree.get_widget("menuFileOpen").connect("activate", self.event_menuFileOpen)
+        gladetree.get_widget("menuFileOpenView").connect("activate", self.event_menuFileOpenView)
         gladetree.get_widget("menuFileSaveAs").connect("activate", self.event_menuFileSaveAs)
+        gladetree.get_widget("menuFileSaveView").connect("activate", self.event_menuFileSaveView)
         gladetree.get_widget("menuFileExport").connect("activate", self.event_menuFileExport)
         gladetree.get_widget("menuFileQuit").connect("activate", self.event_close)
         # Events
@@ -264,6 +266,25 @@ class atomview(gtk.Window):
             self.data_read(filename)
         return True
 
+    def event_menuFileOpenView(self, *args):
+        buttons = (gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OPEN,gtk.RESPONSE_OK)
+        chooser = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_OPEN,buttons=buttons)
+        response = chooser.run()
+        filename = chooser.get_filename()
+        chooser.destroy()
+        if response == gtk.RESPONSE_OK:
+            view = eval(open(filename, 'r').readline())
+            self.radiusbutton.set_value(view['radius'])
+            self.zoombutton.set_value(view['zoom'])
+            self.translate = np.array(view['translate'])
+            self.rotation = np.array(view['rotation'])
+            self.resize(view['width'], view['height'])
+            self.repeatx.set_value(view['repeat'][0])
+            self.repeaty.set_value(view['repeat'][1])
+            self.repeatz.set_value(view['repeat'][2])
+            self.gfx_render()
+        return True
+
     def event_menuFileSaveAs(self, *args):
         buttons = (gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_SAVE,gtk.RESPONSE_OK)
         chooser = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_SAVE,buttons=buttons)
@@ -272,6 +293,29 @@ class atomview(gtk.Window):
         chooser.destroy()
         if response == gtk.RESPONSE_OK:
             self.data_write(filename)
+        return True
+
+    def event_menuFileSaveView(self, *args):
+        buttons = (gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_SAVE,gtk.RESPONSE_OK)
+        chooser = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_SAVE,buttons=buttons)
+        response = chooser.run()
+        filename = chooser.get_filename()
+        chooser.destroy()
+        if response == gtk.RESPONSE_OK:
+            width, height = self.get_size()
+            repeat = (int(self.repeatx.get_value()), 
+                      int(self.repeaty.get_value()), 
+                      int(self.repeatz.get_value()))
+            view = repr({'radius':    self.radiusbutton.get_value(), 
+                         'zoom':      self.zoombutton.get_value(), 
+                         'rotation':  self.rotation.tolist(), 
+                         'translate': self.translate.tolist(),
+                         'width':     width,
+                         'height':    height,
+                         'repeat':    repeat})
+            f = open(filename, 'w')
+            f.write(view)
+            f.close()
         return True
 
 
