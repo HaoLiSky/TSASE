@@ -71,7 +71,7 @@
                   </widget>
                 </child>
                 <child>
-                  <widget class="GtkImageMenuItem" id="imagemenuitem5">
+                  <widget class="GtkImageMenuItem" id="menuFileQuit">
                     <property name="label">Quit</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>

@@ -58,6 +58,7 @@ class atomview(gtk.Window):
         gladetree.get_widget("menuFileOpen").connect("activate", self.event_menuFileOpen)
         gladetree.get_widget("menuFileSaveAs").connect("activate", self.event_menuFileSaveAs)
         gladetree.get_widget("menuFileExport").connect("activate", self.event_menuFileExport)
+        gladetree.get_widget("menuFileQuit").connect("activate", self.event_close)
         # Events
         self.playbutton.connect("clicked", self.event_toggle_play)
         self.resetbutton.connect("clicked", lambda w: self.gfx_reset_transform())
