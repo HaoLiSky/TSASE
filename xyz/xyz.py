@@ -9,10 +9,12 @@ import gtk.gdk as gdk
 import gtk.glade as glade
 import gobject
 import pango
+import cairo
 
 import numpy as np
 
 import ase
+from ase.io import vasp
 import tsase
 from tsase import data as atoms
 
@@ -24,7 +26,6 @@ class atomview(gtk.Window):
 #
 # GUI -------------------------------------------------------------------------------------------
 #
-
     def __init__(self):
         gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
         # Main window
@@ -37,17 +38,30 @@ class atomview(gtk.Window):
         gladewindow = gladetree.get_widget("window")
         self.moviescale = gladetree.get_widget("moviescale")
         self.playbutton = gladetree.get_widget("playbutton")
+        self.playimage = gladetree.get_widget("playimage")
         self.boxbutton = gladetree.get_widget("boxbutton")
+        self.axisbutton = gladetree.get_widget("axisbutton")
         self.resetbutton = gladetree.get_widget("resetbutton")
         self.fps = gladetree.get_widget("fps")
+        self.repeatx = gladetree.get_widget("repeatx")
+        self.repeaty = gladetree.get_widget("repeaty")
+        self.repeatz = gladetree.get_widget("repeatz")
         self.holder = gladetree.get_widget("holder")
+        self.statusbar = gladetree.get_widget("statusbar")
+        font = pango.FontDescription("monospace 10")
+        self.statusbar.modify_font(font)
         # Menu
         gladetree.get_widget("menuFileOpen").connect("activate", self.event_menuFileOpen)
         gladetree.get_widget("menuFileSaveAs").connect("activate", self.event_menuFileSaveAs)
+        gladetree.get_widget("menuFileExport").connect("activate", self.event_menuFileExport)
         # Events
-        self.playbutton.connect("clicked", self.event_toggle_play, True)
+        self.playbutton.connect("clicked", self.event_toggle_play)
         self.resetbutton.connect("clicked", lambda w: self.gfx_reset_transform())
         self.boxbutton.connect("clicked", lambda w: self.queue_draw())
+        self.axisbutton.connect("clicked", lambda w: self.queue_draw())
+        self.repeatx.connect("value-changed", lambda w: self.gfx_center_atoms())
+        self.repeaty.connect("value-changed", lambda w: self.gfx_center_atoms())
+        self.repeatz.connect("value-changed", lambda w: self.gfx_center_atoms())
         # Drawing area.
         self.area = gladetree.get_widget("atomview")
         self.area.connect("expose_event", self.event_exposed)
@@ -56,7 +70,7 @@ class atomview(gtk.Window):
         self.area.connect("button_release_event", self.event_button_release)
         self.area.connect("motion_notify_event", self.event_mouse_move)
         self.area.connect("scroll_event", self.event_scroll)
-        self.area.set_size_request(512, 512)
+        self.area.set_size_request(384, 384)
         self.add(gladewindow)
         self.show_all()
         self.gui_members()
@@ -74,7 +88,7 @@ class atomview(gtk.Window):
         self.button1 = False
         self.button2 = False
         self.button3 = False
-        self.mouselast = (None, None)
+        self.mouselast = [None, None]
         self.background = [1.0, 1.0, 1.0]
         # self.background = [0.949, 0.945, 0.941]
         self.keys = {}
@@ -85,8 +99,10 @@ class atomview(gtk.Window):
         self.repeat = (1, 1, 1)
         self.lastTime = time.time()
         self.screenatoms = []
+        self.grabbedatom = None
         self.colors = []
-        
+        self.render_cairo = False
+
     def gui_key_on(self, key):
         return self.keys.has_key(key)
         
@@ -104,6 +120,8 @@ class atomview(gtk.Window):
     def event_key_pressed(self, widget, event):
         key = gdk.keyval_name(event.keyval)
         self.keys[key] = True
+        if key == "space":
+            self.event_toggle_play()
         if key == 'c' and (event.state & gdk.CONTROL_MASK):
             import sys
             sys.exit()
@@ -123,22 +141,47 @@ class atomview(gtk.Window):
             dx = mx - self.mouselast[0]
             dy = my - self.mouselast[1]
             self.mouselast = (mx, my)
-            if self.button1:
-                self.gfx_rot_x(dy * 0.009)
-                self.gfx_rot_y(dx * 0.009)
-                self.gfx_render()
-            elif self.button2:
-                self.gfx_rot_z(-dx * 0.0078125)
-                self.gfx_render()
-            elif self.button3:
-                self.translate += np.array([dx, -dy, 0]) / self.scale / 2
-                self.gfx_render()
+        if self.gui_key_on("m"):
+            if self.button1:            
+                if self.grabbedatom is not None:
+                    r = self.get_frame_atoms().get_positions() 
+                    r[self.grabbedatom] += np.dot(np.linalg.inv(self.rotation), np.array([dx, -dy, 0]) / self.scale / 2.0)
+                    self.get_frame_atoms().set_positions(r) 
+                    self.gfx_render()
+        elif self.button1:
+            self.gfx_rot_x(dy * 0.009)
+            self.gfx_rot_y(dx * 0.009)
+            self.gfx_render()
+        elif self.button2:
+            self.gfx_rot_z(-dx * 0.0078125)
+            self.gfx_render()
+        elif self.button3:
+            self.translate += np.array([dx, -dy, 0]) / self.scale / 2
+            self.gfx_render()
+        atomid = self.get_mouse_atom()
+        if atomid is not None:     
+            atom = self.get_frame_atoms()[atomid]
+            r = atom.get_position()
+            self.statusbar.set_text("Atom %d, %s (%.3fx %.3fy %.3fz)" % 
+                                     (atomid, atom.symbol, r[0], r[1], r[2]))
+        else:
+            self.statusbar.set_text("")
         return True
+    
+    def get_mouse_atom(self):
+        mx, my, mask = self.area.window.get_pointer()
+        atomid = None
+        for a in self.screenatoms:
+            d2 = (a[0] - mx)**2 + (a[1] - my)**2
+            if d2 < a[2]**2:
+                atomid = a[3]
+        return atomid
 
 
     def event_button_press(self, widget, event):
         if event.button == 1:
             self.button1 = True
+            self.grabbedatom = self.get_mouse_atom()
         if event.button == 2:
             self.button2 = True
         if event.button == 3:
@@ -149,6 +192,7 @@ class atomview(gtk.Window):
     def event_button_release(self, widget, event):
         if event.button == 1:
             self.button1 = False
+            self.grabbedatom = None
         if event.button == 2:
             self.button2 = False
         if event.button == 3:
@@ -161,7 +205,6 @@ class atomview(gtk.Window):
             if event.direction == gdk.SCROLL_UP:
                 self.radius *= 1.1
                 self.queue_draw()
-                
             elif event.direction == gdk.SCROLL_DOWN:
                 self.radius *= 0.9
                 self.queue_draw()
@@ -182,8 +225,13 @@ class atomview(gtk.Window):
     def event_exposed(self, *args):
         self.gfx_render()
 
-    def event_toggle_play(self, widget, play):
-        self.playing = play
+    def event_toggle_play(self, *args):
+        self.playing = not self.playing
+        if self.playing:
+            self.playimage.set_from_stock(gtk.STOCK_MEDIA_PAUSE, gtk.ICON_SIZE_BUTTON)
+        else:
+            self.playimage.set_from_stock(gtk.STOCK_MEDIA_PLAY, gtk.ICON_SIZE_BUTTON)
+                        
             
     def event_timeout(self):
         if self.playing and len(self.trajectory) > 1:
@@ -218,6 +266,38 @@ class atomview(gtk.Window):
             self.data_write(filename)
         return True
 
+
+    def event_menuFileExport(self, *args):
+        buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE, gtk.RESPONSE_OK)    
+        action = gtk.FILE_CHOOSER_ACTION_SAVE
+        fcd = gtk.FileChooserDialog(title = "Save", action = action, buttons = buttons)
+        response = fcd.run()
+        if response == gtk.RESPONSE_OK:
+            f = fcd.get_filename()
+            width, height = self.area.window.get_size()
+            if f.endswith(".ps"):
+                csurf = cairo.PSSurface(f, width, height)
+            if f.endswith(".eps"):
+                csurf = cairo.PSSurface(f, width, height)
+                try:
+                    csurf.set_eps(True)
+                except:
+                    print "Could not enable eps."
+            elif f.endswith(".svg"):
+                csurf = cairo.SVGSurface(f, width, height)
+            elif f.endswith(".pdf"):
+                csurf = cairo.PDFSurface(f, width, height)
+            self.cairo_context = cairo.Context(csurf)
+            self.cairo_context.rectangle(0, 0, width, height)
+            self.cairo_context.clip()
+            self.render_cairo = True
+            self.gfx_render()
+            self.render_cairo = False
+            csurf.finish()
+        fcd.destroy()
+
+
+
 #
 # GRAPHICS --------------------------------------------------------------------------------------
 #
@@ -231,7 +311,8 @@ class atomview(gtk.Window):
         self.gfx_transform_queue()
         self.gfx_sort_queue()
         self.gfx_draw_queue()
-        self.gfx_draw_axes()
+        if self.axisbutton.get_active():
+            self.gfx_draw_axes()
         self.area.window.draw_drawable(self.white_gc, self.pixmap, 0, 0, 0, 0, self.width, self.height)
         self.last_draw = time.time()
 
@@ -263,13 +344,16 @@ class atomview(gtk.Window):
         self.queue.append(line)
         
     def gfx_queue_atoms(self):
-        r = self.get_frame_atoms().get_positions()
-        name = self.get_frame_atoms().get_chemical_symbols()
+        ra = self.get_frame_atoms().repeat((int(self.repeatx.get_value()), 
+                                            int(self.repeaty.get_value()), 
+                                            int(self.repeatz.get_value())))
+        r = ra.get_positions()
+        symbols = ra.get_chemical_symbols()
         for i in range(len(r)):
             atom = queueitem("atom")
             atom.r = np.copy(r[i])
-            atom.radius = atoms.elements[name[i]]['radius']
-            atom.number = atoms.elements[name[i]]['number']
+            atom.radius = atoms.elements[symbols[i]]['radius']
+            atom.number = atoms.elements[symbols[i]]['number']
             atom.id = i % len(self.get_frame_atoms())
             atom.depth = 0
             self.queue.append(atom)
@@ -300,7 +384,10 @@ class atomview(gtk.Window):
                                     boxsteps, [0, 0, 0])
             
     def gfx_center_atoms(self):
-        r = self.trajectory[0].get_positions()
+        ra = self.trajectory[0].repeat((int(self.repeatx.get_value()), 
+                                        int(self.repeaty.get_value()), 
+                                        int(self.repeatz.get_value())))
+        r = ra.get_positions()
         minx = min(r[:, 0])                         
         miny = min(r[:, 1])                         
         minz = min(r[:, 2])
@@ -311,6 +398,7 @@ class atomview(gtk.Window):
         midy = miny + (maxy - miny) / 2
         midz = minz + (maxz - minz) / 2            
         self.center = np.array([midx, midy, midz])
+        self.queue_draw()
 
     def gfx_draw_axes(self):
         width, height = self.area.window.get_size()
@@ -379,6 +467,7 @@ class atomview(gtk.Window):
         
 
     def gfx_draw_queue(self):
+        self.screenatoms = []
         s2 = self.scale * 2
         w2 = self.width * 0.5
         h2 = self.height * 0.5
@@ -389,6 +478,7 @@ class atomview(gtk.Window):
                 x = int(r[0] * s2 + w2)
                 y = int(-r[1] * s2 + h2)
                 self.gfx_draw_circle(x, y, rad, q.number)
+                self.screenatoms.append([x, y, rad, q.id])
             else:   
                 q.r1[0] = q.r1[0] * self.scale * 2 + self.width * 0.5
                 q.r1[1] = -q.r1[1] * self.scale * 2 + self.height * 0.5
@@ -419,15 +509,33 @@ class atomview(gtk.Window):
         
 
     def gfx_clear(self):
-        self.pixmap.draw_rectangle(self.background_gc, True, 0, 0, self.width, self.height)
+        if self.render_cairo:
+            self.cairo_context.set_source_rgb(self.background[0], self.background[1], self.background[2])
+            self.cairo_context.rectangle(0, 0, self.width, self.height)
+            self.cairo_context.fill()            
+        else:
+            self.pixmap.draw_rectangle(self.background_gc, True, 0, 0, self.width, self.height)
 
     def gfx_draw_circle(self, x, y, r, element):
         r = max(1,r)
-        self.pixmap.draw_arc(self.colors[element], True, x - r, y - r, r * 2, r * 2, 0, 64 * 360)
-        self.pixmap.draw_arc(self.black_gc, False, x - r, y - r, r * 2, r * 2, 0, 64 * 360)
+        if self.render_cairo:
+            color = atoms.elements[element]['color']
+            self.cairo_context.arc(x, y, r, 0, math.pi * 2.0)
+            self.cairo_context.set_source_rgb(color[0], color[1], color[2])
+            self.cairo_context.fill()
+            self.cairo_context.set_source_rgb(0, 0, 0)
+            self.cairo_context.arc(x, y, r, 0, math.pi * 2.0)
+            self.cairo_context.set_line_width(0.5)
+            self.cairo_context.stroke()
+        else:
+            self.pixmap.draw_arc(self.colors[element], True, x - r, y - r, r * 2, r * 2, 0, 64 * 360)
+            self.pixmap.draw_arc(self.black_gc, False, x - r, y - r, r * 2, r * 2, 0, 64 * 360)
 
     def gfx_draw_line(self, x1, y1, x2, y2):
-        self.pixmap.draw_line(self.black_gc, int(x1), int(y1), int(x2), int(y2))        
+        if self.render_cairo:
+            pass
+        else:
+            self.pixmap.draw_line(self.black_gc, int(x1), int(y1), int(x2), int(y2))        
 
 
         
@@ -452,21 +560,34 @@ class atomview(gtk.Window):
         self.queue_draw()
 
     def data_read(self, filename):
+        if '.' not in filename:
+            try:
+                self.data_set(vasp.read_vasp(filename))
+                self.set_title(os.path.abspath(filename))
+                return
+            except:
+                pass
         try:
             self.data_set(ase.io.read(filename))
+            self.set_title(os.path.abspath(filename))
+            return
         except:
-            try:
-                self.data_set(tsase.io.read_con(filename))
-            except:
-                print "Failed to load", filename
-                return
-        self.set_title(os.path.abspath(filename))
+            pass
+        try:
+            self.data_set(tsase.io.read_con(filename))
+            self.set_title(os.path.abspath(filename))
+            return
+        except:
+            print "Failed to load", filename
 
     def data_write(self, filename):
         if filename.endswith(".con"):
             tsase.io.write_con(filename, self.get_frame_atoms())
         else:
-            ase.io.write(filename, self.get_frame_atoms())
+            if '.' not in filename:
+                vasp.write_vasp(filename, self.get_frame_atoms())
+            else:
+                ase.io.write(filename, self.get_frame_atoms())
         self.set_title(os.path.abspath(filename))
         
 
