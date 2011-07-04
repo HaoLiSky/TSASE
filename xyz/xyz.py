@@ -8,6 +8,7 @@ import gtk
 import gtk.gdk as gdk
 import gtk.glade as glade
 import gobject
+import pango
 
 import numpy as np
 
@@ -74,7 +75,8 @@ class atomview(gtk.Window):
         self.button2 = False
         self.button3 = False
         self.mouselast = (None, None)
-        self.background = [0.949, 0.945, 0.941]
+        self.background = [1.0, 1.0, 1.0]
+        # self.background = [0.949, 0.945, 0.941]
         self.keys = {}
         self.black_gc = self.area.get_style().black_gc
         self.white_gc = self.area.get_style().white_gc
@@ -187,6 +189,7 @@ class atomview(gtk.Window):
         self.gfx_transform_queue()
         self.gfx_sort_queue()
         self.gfx_draw_queue()
+        self.gfx_draw_axes()
         self.area.window.draw_drawable(self.white_gc, self.pixmap, 0, 0, 0, 0, self.width, self.height)
         self.last_draw = time.time()
 
@@ -271,10 +274,10 @@ class atomview(gtk.Window):
 
     def gfx_queue_box(self):
         try:
-            self.drawpoint.box
+            self.drawpoint.cell
         except:
             return
-        bx = self.drawpoint.box
+        bx = self.drawpoint.cell
         b = np.array([[0, 0, 0], [bx[1][0], bx[1][1], bx[1][2]], [bx[1][0] +
                      bx[0][0], bx[1][1] + bx[0][1], bx[1][2] + bx[0][2]],
                      [bx[0][0], bx[0][1], bx[0][2]], [bx[2][0], bx[2][1],
@@ -306,6 +309,40 @@ class atomview(gtk.Window):
         midy = miny + (maxy - miny) / 2
         midz = minz + (maxz - minz) / 2            
         self.center = np.array([midx, midy, midz])
+
+    def gfx_draw_axes(self):
+        width, height = self.area.window.get_size()
+        axes = np.identity(3) * 32
+        axes[0] = np.dot(self.rotation, axes[0])
+        axes[1] = np.dot(self.rotation, axes[1])
+        axes[2] = np.dot(self.rotation, axes[2])
+        x0 = 48
+        y0 = height - 48
+        self.gfx_draw_line(x0, y0, x0 + axes[0][0], y0 - axes[0][1])
+        self.gfx_draw_line(x0, y0, x0 + axes[1][0], y0 - axes[1][1])
+        self.gfx_draw_line(x0, y0, x0 + axes[2][0], y0 - axes[2][1])
+        font = pango.FontDescription("courier sans 12")
+        X = self.area.create_pango_layout("x")
+        Y = self.area.create_pango_layout("y")
+        Z = self.area.create_pango_layout("z")
+        attr = pango.AttrList()
+        fg = pango.AttrForeground(65535, 0, 0, 0, -1)
+        attr.insert(fg)
+        X.set_alignment(pango.ALIGN_CENTER)
+        Y.set_alignment(pango.ALIGN_CENTER)
+        Z.set_alignment(pango.ALIGN_CENTER)
+        X.set_font_description(font)
+        Y.set_font_description(font)
+        Z.set_font_description(font)
+        X.set_attributes(attr)        
+        Y.set_attributes(attr)        
+        Z.set_attributes(attr)        
+        self.pixmap.draw_layout(self.black_gc, int(x0 + axes[0][0]) - X.get_pixel_size()[0] / 2, 
+                                int(y0 - axes[0][1]) - X.get_pixel_size()[1], X)
+        self.pixmap.draw_layout(self.black_gc, int(x0 + axes[1][0]) - Y.get_pixel_size()[0] / 2, 
+                                int(y0 - axes[1][1]) - Y.get_pixel_size()[1], Y)
+        self.pixmap.draw_layout(self.black_gc, int(x0 + axes[2][0]) - Z.get_pixel_size()[0] / 2, 
+                                int(y0 - axes[2][1]) - Z.get_pixel_size()[1], Z)        
         
             
     def gfx_transform_queue(self):
@@ -417,7 +454,7 @@ class atomview(gtk.Window):
             self.data_set(ase.io.read(filename))
         except:
             try:
-                self.data.set(tsase.io.read_con(filename))
+                self.data_set(tsase.io.read_con(filename))
             except:
                 print "Failed to load", filename
                 return
