@@ -22,7 +22,7 @@ class queueitem:
     def __init__(self, kind):
         self.kind = kind
 
-class atomview(gtk.Window):
+class xyz(gtk.Window):
 #
 # GUI -------------------------------------------------------------------------------------------
 #
@@ -244,6 +244,8 @@ class atomview(gtk.Window):
                         
             
     def event_timeout(self):
+        if self.trajectory is None:
+            return
         if self.playing and len(self.trajectory) > 1:
             if time.time() - self.last_draw > 1.0/self.fps.get_value():
                 nextframe = self.moviescale.get_value() + 1
@@ -286,6 +288,8 @@ class atomview(gtk.Window):
         return True
 
     def event_menuFileSaveAs(self, *args):
+        if self.trajectory is None:
+            return
         buttons = (gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_SAVE,gtk.RESPONSE_OK)
         chooser = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_SAVE,buttons=buttons)
         response = chooser.run()
@@ -355,6 +359,8 @@ class atomview(gtk.Window):
 #
 
     def gfx_render(self):
+        if self.trajectory is None:
+            return
         self.gfx_clear()
         self.queue = []
         self.gfx_queue_atoms()
@@ -440,6 +446,8 @@ class atomview(gtk.Window):
                                     boxsteps, [0, 0, 0])
             
     def gfx_center_atoms(self):
+        if self.trajectory is None:
+            return
         ra = self.trajectory[0].repeat((int(self.repeatx.get_value()), 
                                         int(self.repeaty.get_value()), 
                                         int(self.repeatz.get_value())))
@@ -664,9 +672,8 @@ if __name__ == "__main__":
     pid = os.fork()
     if pid:
         os._exit(0)
-    import io
     import sys
-    q = atomview()
+    q = xyz()
     if len(sys.argv) > 1:
         q.data_read(sys.argv[1])
     gtk.main()
