@@ -70,7 +70,7 @@ class atomview(gtk.Window):
         self.last_draw = 0.0
         self.playing = False
         self.queue = []
-        self.data = None
+        self.trajectory = None
         self.button1 = False
         self.button2 = False
         self.button3 = False
@@ -126,13 +126,13 @@ class atomview(gtk.Window):
             if self.button1:
                 self.gfx_rot_x(dy * 0.009)
                 self.gfx_rot_y(dx * 0.009)
-                self.queue_draw()
+                self.gfx_render()
             elif self.button2:
                 self.gfx_rot_z(-dx * 0.0078125)
-                self.queue_draw()
+                self.gfx_render()
             elif self.button3:
                 self.translate += np.array([dx, -dy, 0]) / self.scale / 2
-                self.queue_draw()
+                self.gfx_render()
         return True
 
 
@@ -173,34 +173,23 @@ class atomview(gtk.Window):
             self.queue_draw()
         return True
                                                     
-    def get_drawpoint(self):
-        drawpoint = self.data[0]
-        if len(self.data) > 1:
-            drawpoint = self.data[int(self.moviescale.get_value())]
+    def get_frame_atoms(self):
+        drawpoint = self.trajectory[0]
+        if len(self.trajectory) > 1:
+            drawpoint = self.trajectory[int(self.moviescale.get_value())]
         return drawpoint
                                                                                     
     def event_exposed(self, *args):
-        self.gfx_clear()
-        self.queue = []
-        self.drawpoint = self.get_drawpoint()
-        self.gfx_queue_atoms()
-        if self.boxbutton.get_active():
-            self.gfx_queue_box()
-        self.gfx_transform_queue()
-        self.gfx_sort_queue()
-        self.gfx_draw_queue()
-        self.gfx_draw_axes()
-        self.area.window.draw_drawable(self.white_gc, self.pixmap, 0, 0, 0, 0, self.width, self.height)
-        self.last_draw = time.time()
+        self.gfx_render()
 
     def event_toggle_play(self, widget, play):
         self.playing = play
             
     def event_timeout(self):
-        if self.playing and len(self.data) > 1:
+        if self.playing and len(self.trajectory) > 1:
             if time.time() - self.last_draw > 1.0/self.fps.get_value():
                 nextframe = self.moviescale.get_value() + 1
-                if nextframe > len(self.data) - 1:
+                if nextframe > len(self.trajectory) - 1:
                     nextframe = 0
                 self.moviescale.set_value(nextframe)
                 self.queue_draw()        
@@ -233,6 +222,19 @@ class atomview(gtk.Window):
 # GRAPHICS --------------------------------------------------------------------------------------
 #
 
+    def gfx_render(self):
+        self.gfx_clear()
+        self.queue = []
+        self.gfx_queue_atoms()
+        if self.boxbutton.get_active():
+            self.gfx_queue_box()
+        self.gfx_transform_queue()
+        self.gfx_sort_queue()
+        self.gfx_draw_queue()
+        self.gfx_draw_axes()
+        self.area.window.draw_drawable(self.white_gc, self.pixmap, 0, 0, 0, 0, self.width, self.height)
+        self.last_draw = time.time()
+
     def gfx_get_color_gc(self, r, g, b):
         rgb = (int(r * 65535), int(g * 65535), int(b * 65535))
         gc = self.area.window.new_gc()
@@ -261,23 +263,23 @@ class atomview(gtk.Window):
         self.queue.append(line)
         
     def gfx_queue_atoms(self):
-        r = self.drawpoint.get_positions()
-        name = self.drawpoint.get_chemical_symbols()
+        r = self.get_frame_atoms().get_positions()
+        name = self.get_frame_atoms().get_chemical_symbols()
         for i in range(len(r)):
             atom = queueitem("atom")
             atom.r = np.copy(r[i])
             atom.radius = atoms.elements[name[i]]['radius']
             atom.number = atoms.elements[name[i]]['number']
-            atom.id = i % len(self.drawpoint)
+            atom.id = i % len(self.get_frame_atoms())
             atom.depth = 0
             self.queue.append(atom)
 
     def gfx_queue_box(self):
         try:
-            self.drawpoint.cell
+            self.get_frame_atoms().cell
         except:
             return
-        bx = self.drawpoint.cell
+        bx = self.get_frame_atoms().cell
         b = np.array([[0, 0, 0], [bx[1][0], bx[1][1], bx[1][2]], [bx[1][0] +
                      bx[0][0], bx[1][1] + bx[0][1], bx[1][2] + bx[0][2]],
                      [bx[0][0], bx[0][1], bx[0][2]], [bx[2][0], bx[2][1],
@@ -298,7 +300,7 @@ class atomview(gtk.Window):
                                     boxsteps, [0, 0, 0])
             
     def gfx_center_atoms(self):
-        r = self.data[0].get_positions()
+        r = self.trajectory[0].get_positions()
         minx = min(r[:, 0])                         
         miny = min(r[:, 1])                         
         minz = min(r[:, 2])
@@ -346,7 +348,7 @@ class atomview(gtk.Window):
         
             
     def gfx_transform_queue(self):
-        r = self.drawpoint.get_positions()
+        r = self.get_frame_atoms().get_positions()
         for i in range(len(self.queue)):
             q = self.queue[i]
             if q.kind == "atom":
@@ -439,12 +441,12 @@ class atomview(gtk.Window):
     def data_set(self, data):
         if type(data) != type([]):
             data = [data]
-        self.data = data
+        self.trajectory = data
         self.moviescale.set_sensitive(False)
         self.moviescale.set_range(0, 1)
-        if len(self.data) > 1:
+        if len(self.trajectory) > 1:
             self.moviescale.set_sensitive(True)
-            self.moviescale.set_range(0, len(self.data) - 1)
+            self.moviescale.set_range(0, len(self.trajectory) - 1)
             self.moviescale.connect("value-changed", lambda w: self.queue_draw())
         self.gfx_center_atoms()
         self.queue_draw()
@@ -462,9 +464,9 @@ class atomview(gtk.Window):
 
     def data_write(self, filename):
         if filename.endswith(".con"):
-            tsase.io.write_con(filename, self.get_drawpoint())
+            tsase.io.write_con(filename, self.get_frame_atoms())
         else:
-            ase.io.write(filename, self.get_drawpoint())
+            ase.io.write(filename, self.get_frame_atoms())
         self.set_title(os.path.abspath(filename))
         
 
