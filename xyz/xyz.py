@@ -64,6 +64,7 @@ class xyz(gtk.Window):
         gladetree.get_widget("menuFileSaveView").connect("activate", self.event_menuFileSaveView)
         gladetree.get_widget("menuFileExport").connect("activate", self.event_menuFileExport)
         gladetree.get_widget("menuFileQuit").connect("activate", self.event_close)
+        gladetree.get_widget("menuHelpDocumentation").connect("activate", self.display_docs)
         # Events
         self.playbutton.connect("clicked", self.event_toggle_play)
         self.resetbutton.connect("clicked", lambda w: self.gfx_reset_transform())
@@ -92,6 +93,10 @@ class xyz(gtk.Window):
         self.gfx_reset_transform()
         # Timeout
         gobject.timeout_add(8, self.event_timeout)
+
+    def display_docs(self, *args):
+        import webbrowser
+        webbrowser.open(os.path.join(os.path.dirname(__file__), "../docs/_build/html/xyz.html"))
 
     def init_triage(self):
         def queue_triage(type, value, tb):

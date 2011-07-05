@@ -286,13 +286,19 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <child>
-                  <widget class="GtkImageMenuItem" id="imagemenuitem10">
-                    <property name="label">gtk-about</property>
+                  <widget class="GtkImageMenuItem" id="menuHelpDocumentation">
+                    <property name="label">Documentation</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="use_action_appearance">False</property>
-                    <property name="use_underline">True</property>
-                    <property name="use_stock">True</property>
+                    <property name="use_stock">False</property>
+                    <child internal-child="image">
+                      <widget class="GtkImage" id="image13">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="stock">gtk-info</property>
+                      </widget>
+                    </child>
                   </widget>
                 </child>
               </widget>
