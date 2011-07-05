@@ -18,7 +18,7 @@ import numpy as np
 import ase
 from ase.io import vasp
 import tsase
-from tsase import data as atoms
+from tsase.data import *
 
 class queueitem:
     def __init__(self, kind):
@@ -407,8 +407,8 @@ class xyz(gtk.Window):
         return gc
         
     def gfx_setup_colors(self):
-        for i in range(atoms.numElements):
-            c = atoms.elements[i]['color']
+        for i in range(num_elements):
+            c = elements[i]['color']
             self.colors.append(self.gfx_get_color_gc(c[0], c[1], c[2]))
 
     def gfx_reset_transform(self):
@@ -436,8 +436,8 @@ class xyz(gtk.Window):
         for i in range(len(r)):
             atom = queueitem("atom")
             atom.r = np.copy(r[i])
-            atom.radius = atoms.elements[symbols[i]]['radius']
-            atom.number = atoms.elements[symbols[i]]['number']
+            atom.radius = elements[symbols[i]]['radius']
+            atom.number = elements[symbols[i]]['number']
             atom.id = i % len(self.get_frame_atoms())
             atom.depth = 0
             atom.constrained = False
@@ -614,7 +614,7 @@ class xyz(gtk.Window):
     def gfx_draw_circle(self, x, y, r, element):
         r = max(1,r)
         if self.render_cairo:
-            color = atoms.elements[element]['color']
+            color = elements[element]['color']
             self.cairo_context.arc(x, y, r, 0, math.pi * 2.0)
             self.cairo_context.set_source_rgb(color[0], color[1], color[2])
             self.cairo_context.fill()
