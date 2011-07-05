@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
 import os
+import sys
 import math
 import time
+import traceback
 
 import gtk
 import gtk.gdk as gdk
@@ -27,6 +29,7 @@ class xyz(gtk.Window):
 # GUI -------------------------------------------------------------------------------------------
 #
     def __init__(self):
+        self.init_triage()
         gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
         # Main window
         self.connect("destroy", self.event_close)
@@ -82,7 +85,7 @@ class xyz(gtk.Window):
         self.area.connect("scroll_event", self.event_scroll)
         self.area.set_size_request(384, 384)
         self.add(gladewindow)
-        self.show_all()
+        self.show()
         self.gui_members()
         self.event_configure()
         self.gfx_setup_colors()
@@ -90,7 +93,27 @@ class xyz(gtk.Window):
         # Timeout
         gobject.timeout_add(8, self.event_timeout)
 
+    def init_triage(self):
+        def queue_triage(type, value, tb):
+            self.triage_queue.append((type, value, tb))
+        sys.excepthook = queue_triage
+
+    def triage(self, type, value, tb):
+        gladetree = gtk.glade.XML(os.path.join(os.path.dirname(__file__), "xyz.glade"))
+        errorwindow = gladetree.get_widget("errordialog")
+        buffer = gtk.TextBuffer()
+        buffer.set_text(''.join(traceback.format_tb(tb)) + str(value))
+        errortext = gladetree.get_widget("errortext")
+        errortext.set_buffer(buffer)
+        font = pango.FontDescription("monospace 10")
+        errortext.modify_font(font)
+        result = errorwindow.run()
+        if result == 1:
+            gtk.main_quit()
+        errorwindow.destroy()        
+
     def gui_members(self):
+        self.triage_queue = []
         self.last_draw = 0.0
         self.playing = False
         self.queue = []
@@ -244,6 +267,9 @@ class xyz(gtk.Window):
                         
             
     def event_timeout(self):
+        if len(self.triage_queue) > 0:
+            q = self.triage_queue.pop(0)
+            self.triage(q[0], q[1], q[2])
         if self.trajectory is None:
             return
         if self.playing and len(self.trajectory) > 1:
@@ -610,11 +636,6 @@ class xyz(gtk.Window):
         else:
             self.pixmap.draw_line(self.black_gc, int(x1), int(y1), int(x2), int(y2))        
 
-
-        
-    
-
-
 #
 # DATA ------------------------------------------------------------------------------------------
 #
@@ -633,25 +654,20 @@ class xyz(gtk.Window):
         self.queue_draw()
 
     def data_read(self, filename):
-        if '.' not in filename:
+        data = None
+        try:
+            data = vasp.read_vasp(filename)
+        except:
             try:
-                self.data_set(vasp.read_vasp(filename))
-                self.set_title(os.path.abspath(filename))
-                return
+                data = ase.io.read(filename + "@:")
             except:
-                pass
-        try:
-            self.data_set(ase.io.read(filename))
-            self.set_title(os.path.abspath(filename))
-            return
-        except:
-            pass
-        try:
-            self.data_set(tsase.io.read_con(filename))
-            self.set_title(os.path.abspath(filename))
-            return
-        except:
-            print "Failed to load", filename
+                try:
+                    data = tsase.io.read_con(filename)
+                except:
+                    print "Failed to load", filename
+                    return
+        self.data_set(data)
+        self.set_title(os.path.abspath(filename))
 
     def data_write(self, filename):
         if filename.endswith(".con"):
@@ -668,15 +684,15 @@ class xyz(gtk.Window):
 # MAIN ------------------------------------------------------------------------------------------
 #
 
-if __name__ == "__main__":
-    pid = os.fork()
-    if pid:
-        os._exit(0)
-    import sys
-    q = xyz()
-    if len(sys.argv) > 1:
-        q.data_read(sys.argv[1])
-    gtk.main()
+# if __name__ == "__main__":
+#     pid = os.fork()
+#     if pid:
+#         os._exit(0)
+#     import sys
+#     q = xyz()
+#     if len(sys.argv) > 1:
+#         q.data_read(sys.argv[1])
+#     gtk.main()
 
 
 
