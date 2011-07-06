@@ -207,7 +207,7 @@ class xyz(gtk.Window):
         return True
     
     def get_mouse_atom(self):
-        mx, my, mask = self.area.window.get_pointer()
+        mx, my = self.mouselast
         atomid = None
         for a in self.screenatoms:
             d2 = (a[0] - mx)**2 + (a[1] - my)**2

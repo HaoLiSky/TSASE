@@ -711,7 +711,7 @@
               <widget class="GtkDrawingArea" id="atomview">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="events">GDK_SCROLL_MASK</property>
+                <property name="events">GDK_EXPOSURE_MASK | GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK | GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK | GDK_KEY_PRESS_MASK | GDK_KEY_RELEASE_MASK | GDK_SCROLL_MASK</property>
               </widget>
               <packing>
                 <property name="expand">True</property>
