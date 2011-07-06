@@ -37,7 +37,8 @@ class xyz(gtk.Window):
         self.connect("key_press_event", self.event_key_pressed)
         self.set_resizable(True)
         # Glade
-        gladetree = gtk.glade.XML(os.path.join(os.path.dirname(__file__), "xyz.glade"))
+        filename = os.path.join(os.path.dirname(__file__), "xyz.glade")
+        gladetree = gtk.glade.XML(filename)
         gladewindow = gladetree.get_widget("window")
         self.moviescale = gladetree.get_widget("moviescale")
         self.playbutton = gladetree.get_widget("playbutton")
