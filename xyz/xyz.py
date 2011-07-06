@@ -101,7 +101,7 @@ class xyz(gtk.Window):
     def init_triage(self):
         def queue_triage(type, value, tb):
             self.triage_queue.append((type, value, tb))
-        sys.excepthook = queue_triage
+        # sys.excepthook = queue_triage
 
     def triage(self, type, value, tb):
         gladetree = gtk.glade.XML(os.path.join(os.path.dirname(__file__), "xyz.glade"))
