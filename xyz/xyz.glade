@@ -695,7 +695,7 @@
               </packing>
             </child>
             <child>
-              <widget class="GtkHBox" id="hbox2">
+              <widget class="GtkHBox" id="moviebox">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="border_width">4</property>

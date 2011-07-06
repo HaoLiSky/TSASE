@@ -41,6 +41,8 @@ class xyz(gtk.Window):
         gladetree = gtk.glade.XML(filename)
         gladewindow = gladetree.get_widget("window")
         self.moviescale = gladetree.get_widget("moviescale")
+        self.moviescale.set_increments(1, 1)
+        self.moviebox = gladetree.get_widget("moviebox")
         self.playbutton = gladetree.get_widget("playbutton")
         self.playimage = gladetree.get_widget("playimage")
         self.boxbutton = gladetree.get_widget("boxbutton")
@@ -77,6 +79,7 @@ class xyz(gtk.Window):
         self.repeatz.connect("value-changed", lambda w: self.gfx_center_atoms())
         self.zoombutton.connect("value-changed", lambda w: self.queue_draw())
         self.radiusbutton.connect("value-changed", lambda w: self.queue_draw())
+        self.moviescale.connect("value-changed", lambda w: self.queue_draw())
         # Drawing area.
         self.area = gladetree.get_widget("atomview")
         self.area.connect("expose_event", self.event_exposed)
@@ -158,7 +161,7 @@ class xyz(gtk.Window):
     def event_key_pressed(self, widget, event):
         key = gdk.keyval_name(event.keyval)
         self.keys[key] = True
-        if key == "space":
+        if key == "space" and len(self.trajectory) > 1:
             self.event_toggle_play()
         if key == 'c' and (event.state & gdk.CONTROL_MASK):
             import sys
@@ -650,11 +653,10 @@ class xyz(gtk.Window):
         if type(data) != type([]):
             data = [data]
         self.trajectory = data
-        self.moviescale.set_sensitive(False)
-        self.moviescale.set_increments(1, 1)
         self.moviescale.set_range(0, 1)
+        self.moviebox.set_sensitive(False)
         if len(self.trajectory) > 1:
-            self.moviescale.set_sensitive(True)
+            self.moviebox.set_sensitive(True)
             self.moviescale.set_range(0, len(self.trajectory) - 1)
             self.moviescale.connect("value-changed", lambda w: self.queue_draw())
         self.gfx_center_atoms()
