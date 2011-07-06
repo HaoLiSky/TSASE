@@ -651,6 +651,7 @@ class xyz(gtk.Window):
             data = [data]
         self.trajectory = data
         self.moviescale.set_sensitive(False)
+        self.moviescale.set_increments(1, 1)
         self.moviescale.set_range(0, 1)
         if len(self.trajectory) > 1:
             self.moviescale.set_sensitive(True)
