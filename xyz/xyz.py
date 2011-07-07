@@ -670,7 +670,16 @@ class xyz(gtk.Window):
     def data_read(self, filename):
         data = None
         try:
-            data = vasp.read_vasp(filename)
+            f = open(filename, 'r')
+            data = []
+            while True:
+                try:
+                    data.append(vasp.read_vasp(f))
+                except:
+                    f.close()
+                    break
+            if len(data) < 1:
+                raise
         except:
             try:
                 data = ase.io.read(filename + "@:")
