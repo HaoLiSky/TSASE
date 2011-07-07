@@ -1,0 +1,51 @@
+
+Viewing options
+===============
+
+    Rotation
+    --------
+
+    	Click anywhere in the atom view window with the left mouse button and translate your mouse to rotate the view around the up/down and left/right axes of the screen. 
+	
+    	Use the middle mouse button to rotate around the axis coming out of the screen.
+
+
+    Translation
+    -----------
+
+    	Click anywhere in the atom view window with the right mouse button and translate your mouse to translate the view in the plane of the screen.
+
+
+    Zoom
+    ----
+
+    	Use the mouse scroll function to zoom in and out. Alternatively, use the **Zoom** spin button on the tool palette to change the zoom level.
+
+
+    Atom Radius Scale
+    -----------------
+
+    	Use the "Radius" spin button on the tool palette to change the scale of the atomic radii.
+
+
+    Repeat
+    ------
+
+    	Use the "Repeat x", "Repeat y", and "Repeat z" spin buttons on the tool pallete to increase or decrease the number of cell repetitions to display.
+
+
+Keyboard Shortcuts
+==================
+
+    "r" + mouse scroll wheel
+    ------------------------
+
+	    Increases/decreases atom radius
+
+
+    "m" + left click and drag an atom
+    ---------------------------------
+
+	    Moves an atom in the plane of the screen.
+
+ 

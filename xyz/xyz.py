@@ -58,8 +58,6 @@ class xyz(gtk.Window):
         self.repeatz = gladetree.get_widget("repeatz")
         self.holder = gladetree.get_widget("holder")
         self.statusbar = gladetree.get_widget("statusbar")
-        self.helpwindow = gladetree.get_widget("helpwindow")
-        self.helpview = gladetree.get_widget("helpview")
         font = pango.FontDescription("monospace 10")
         self.statusbar.modify_font(font)
         # Menu
@@ -101,11 +99,18 @@ class xyz(gtk.Window):
         gobject.timeout_add(8, self.event_timeout)
 
     def display_docs(self, *args):
-        lines = ''.join(open(os.path.join(os.path.dirname(__file__), "xyz.rst"), 'r').readlines())
+        gladetree = gtk.glade.XML(os.path.join(os.path.dirname(__file__), "xyz.glade"))
+        helpwindow = gladetree.get_widget("helpwindow")
+        helpview = gladetree.get_widget("helpview")
+        f = open(os.path.join(os.path.dirname(__file__), "xyz.help"), 'r')
+        lines = ''.join(f.readlines())
+        f.close()
         buffer = gtk.TextBuffer()
         buffer.set_text(lines)
-        self.helpview.set_buffer(buffer)
-        self.helpwindow.show_all()
+        helpview.set_buffer(buffer)
+        font = pango.FontDescription("monospace 10")
+        helpview.modify_font(font)
+        helpwindow.show_all()
 
     def init_triage(self):
         def queue_triage(type, value, tb):
