@@ -153,6 +153,7 @@ class xyz(gtk.Window):
         self.grabbedatom = None
         self.colors = []
         self.render_cairo = False
+        self.pwd = os.getcwd()
 
     def gui_key_on(self, key):
         return self.keys.has_key(key)
@@ -306,20 +307,24 @@ class xyz(gtk.Window):
     def event_menuFileOpen(self, *args):
         buttons = (gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OPEN,gtk.RESPONSE_OK)
         chooser = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_OPEN,buttons=buttons)
+        chooser.set_current_folder(self.pwd)
         response = chooser.run()
         filename = chooser.get_filename()
         chooser.destroy()
         if response == gtk.RESPONSE_OK:
+            self.pwd = os.path.dirname(filename)
             self.data_read(filename)
         return True
 
     def event_menuFileOpenView(self, *args):
         buttons = (gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OPEN,gtk.RESPONSE_OK)
         chooser = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_OPEN,buttons=buttons)
+        chooser.set_current_folder(self.pwd)
         response = chooser.run()
         filename = chooser.get_filename()
         chooser.destroy()
         if response == gtk.RESPONSE_OK:
+            self.pwd = os.path.dirname(filename)
             view = eval(open(filename, 'r').readline())
             self.radiusbutton.set_value(view['radius'])
             self.zoombutton.set_value(view['zoom'])
@@ -337,20 +342,24 @@ class xyz(gtk.Window):
             return
         buttons = (gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_SAVE,gtk.RESPONSE_OK)
         chooser = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_SAVE,buttons=buttons)
+        chooser.set_current_folder(self.pwd)
         response = chooser.run()
         filename = chooser.get_filename()
         chooser.destroy()
         if response == gtk.RESPONSE_OK:
+            self.pwd = os.path.dirname(filename)
             self.data_write(filename)
         return True
 
     def event_menuFileSaveView(self, *args):
         buttons = (gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_SAVE,gtk.RESPONSE_OK)
         chooser = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_SAVE,buttons=buttons)
+        chooser.set_current_folder(self.pwd)
         response = chooser.run()
         filename = chooser.get_filename()
         chooser.destroy()
         if response == gtk.RESPONSE_OK:
+            self.pwd = os.path.dirname(filename)
             width, height = self.get_size()
             repeat = (int(self.repeatx.get_value()), 
                       int(self.repeaty.get_value()), 
@@ -371,23 +380,26 @@ class xyz(gtk.Window):
     def event_menuFileExport(self, *args):
         buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE, gtk.RESPONSE_OK)    
         action = gtk.FILE_CHOOSER_ACTION_SAVE
-        fcd = gtk.FileChooserDialog(title = "Save", action = action, buttons = buttons)
-        response = fcd.run()
+        chooser = gtk.FileChooserDialog(title = "Save", action = action, buttons = buttons)
+        chooser.set_current_folder(self.pwd)
+        response = chooser.run()
+        filename = chooser.get_filename()
+        chooser.destroy()
         if response == gtk.RESPONSE_OK:
-            f = fcd.get_filename()
+            self.pwd = os.path.dirname(filename)
             width, height = self.area.window.get_size()
-            if f.endswith(".ps"):
-                csurf = cairo.PSSurface(f, width, height)
-            if f.endswith(".eps"):
-                csurf = cairo.PSSurface(f, width, height)
+            if filename.endswith(".ps"):
+                csurf = cairo.PSSurface(filename, width, height)
+            if filename.endswith(".eps"):
+                csurf = cairo.PSSurface(filename, width, height)
                 try:
                     csurf.set_eps(True)
                 except:
                     print "Could not enable eps."
-            elif f.endswith(".svg"):
-                csurf = cairo.SVGSurface(f, width, height)
-            elif f.endswith(".pdf"):
-                csurf = cairo.PDFSurface(f, width, height)
+            elif filename.endswith(".svg"):
+                csurf = cairo.SVGSurface(filename, width, height)
+            elif filename.endswith(".pdf"):
+                csurf = cairo.PDFSurface(filename, width, height)
             self.cairo_context = cairo.Context(csurf)
             self.cairo_context.rectangle(0, 0, width, height)
             self.cairo_context.clip()
@@ -395,7 +407,7 @@ class xyz(gtk.Window):
             self.gfx_render()
             self.render_cairo = False
             csurf.finish()
-        fcd.destroy()
+        return True
 
 
 
