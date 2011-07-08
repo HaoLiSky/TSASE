@@ -290,25 +290,33 @@ class xyz(gtk.Window):
     def event_close(self, *args):
         gtk.main_quit()
         
-    def event_menuFileOpen(self, *args):
+    def getFilenameOpen(self):
         buttons = (gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OPEN,gtk.RESPONSE_OK)
         chooser = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_OPEN,buttons=buttons)
         chooser.set_current_folder(self.pwd)
         response = chooser.run()
         filename = chooser.get_filename()
         chooser.destroy()
+        return response, filename    
+
+    def getFilenameSave(self):
+        buttons = (gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_SAVE,gtk.RESPONSE_OK)
+        chooser = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_SAVE,buttons=buttons)
+        chooser.set_current_folder(self.pwd)
+        response = chooser.run()
+        filename = chooser.get_filename()
+        chooser.destroy()
+        return response, filename    
+        
+    def event_menuFileOpen(self, *args):
+        response, filename = self.getFilenameOpen()
         if response == gtk.RESPONSE_OK:
             self.pwd = os.path.dirname(filename)
             self.data_read(filename)
         return True
 
     def event_menuFileOpenView(self, *args):
-        buttons = (gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OPEN,gtk.RESPONSE_OK)
-        chooser = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_OPEN,buttons=buttons)
-        chooser.set_current_folder(self.pwd)
-        response = chooser.run()
-        filename = chooser.get_filename()
-        chooser.destroy()
+        response, filename = self.getFilenameOpen()
         if response == gtk.RESPONSE_OK:
             self.pwd = os.path.dirname(filename)
             view = eval(open(filename, 'r').readline())
@@ -326,24 +334,14 @@ class xyz(gtk.Window):
     def event_menuFileSaveAs(self, *args):
         if self.trajectory is None:
             return
-        buttons = (gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_SAVE,gtk.RESPONSE_OK)
-        chooser = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_SAVE,buttons=buttons)
-        chooser.set_current_folder(self.pwd)
-        response = chooser.run()
-        filename = chooser.get_filename()
-        chooser.destroy()
+        response, filename = self.getFilenameSave()
         if response == gtk.RESPONSE_OK:
             self.pwd = os.path.dirname(filename)
             self.data_write(filename)
         return True
 
     def event_menuFileSaveView(self, *args):
-        buttons = (gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_SAVE,gtk.RESPONSE_OK)
-        chooser = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_SAVE,buttons=buttons)
-        chooser.set_current_folder(self.pwd)
-        response = chooser.run()
-        filename = chooser.get_filename()
-        chooser.destroy()
+        response, filename = self.getFilenameSave()
         if response == gtk.RESPONSE_OK:
             self.pwd = os.path.dirname(filename)
             width, height = self.get_size()
@@ -362,15 +360,8 @@ class xyz(gtk.Window):
             f.close()
         return True
 
-
     def event_menuFileExport(self, *args):
-        buttons = (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE, gtk.RESPONSE_OK)    
-        action = gtk.FILE_CHOOSER_ACTION_SAVE
-        chooser = gtk.FileChooserDialog(title = "Save", action = action, buttons = buttons)
-        chooser.set_current_folder(self.pwd)
-        response = chooser.run()
-        filename = chooser.get_filename()
-        chooser.destroy()
+        response, filename = self.getFilenameSave()
         if response == gtk.RESPONSE_OK:
             self.pwd = os.path.dirname(filename)
             width, height = self.area.window.get_size()
