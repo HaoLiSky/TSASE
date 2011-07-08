@@ -150,6 +150,7 @@ class xyz(gtk.Window):
 
 
     def event_configure(self, *args):
+        """ Called when the window is resized and created. """
         x, y, self.width, self.height = self.area.get_allocation()
         self.pixmap = gdk.Pixmap(self.area.window, self.width, self.height)     
         return True
@@ -161,14 +162,15 @@ class xyz(gtk.Window):
         if key == "space" and len(self.trajectory) > 1:
             self.event_toggle_play()
         if key == 'c' and (event.state & gdk.CONTROL_MASK):
-            import sys
             sys.exit()
+        return True
 
 
     def event_key_released(self, widget, event):
         key = gdk.keyval_name(event.keyval)
         if self.gui_key_on(key):
             self.keys.pop(key)
+        return True
 
 
     def event_mouse_move(self, widget, event):
@@ -364,21 +366,20 @@ class xyz(gtk.Window):
         response, filename = self.getFilenameSave()
         if response == gtk.RESPONSE_OK:
             self.pwd = os.path.dirname(filename)
-            width, height = self.area.window.get_size()
             if filename.endswith(".ps"):
-                csurf = cairo.PSSurface(filename, width, height)
+                csurf = cairo.PSSurface(filename, self.width, self.height)
             if filename.endswith(".eps"):
-                csurf = cairo.PSSurface(filename, width, height)
+                csurf = cairo.PSSurface(filename, self.width, self.height)
                 try:
                     csurf.set_eps(True)
                 except:
                     print "Could not enable eps."
             elif filename.endswith(".svg"):
-                csurf = cairo.SVGSurface(filename, width, height)
+                csurf = cairo.SVGSurface(filename, self.width, self.height)
             elif filename.endswith(".pdf"):
-                csurf = cairo.PDFSurface(filename, width, height)
+                csurf = cairo.PDFSurface(filename, self.width, self.height)
             self.cairo_context = cairo.Context(csurf)
-            self.cairo_context.rectangle(0, 0, width, height)
+            self.cairo_context.rectangle(0, 0, self.width, self.height)
             self.cairo_context.clip()
             self.render_cairo = True
             self.gfx_render()
@@ -499,13 +500,12 @@ class xyz(gtk.Window):
         self.queue_draw()
 
     def gfx_draw_axes(self):
-        width, height = self.area.window.get_size()
         axes = np.identity(3) * 32
         axes[0] = np.dot(self.rotation, axes[0])
         axes[1] = np.dot(self.rotation, axes[1])
         axes[2] = np.dot(self.rotation, axes[2])
         x0 = 48
-        y0 = height - 48
+        y0 = self.height - 48
         self.gfx_draw_line(x0, y0, x0 + axes[0][0], y0 - axes[0][1])
         self.gfx_draw_line(x0, y0, x0 + axes[1][0], y0 - axes[1][1])
         self.gfx_draw_line(x0, y0, x0 + axes[2][0], y0 - axes[2][1])
@@ -583,10 +583,10 @@ class xyz(gtk.Window):
                         self.gfx_draw_line(x-rad*dr, y+rad*dr, x+rad*dr, y-rad*dr)
                 self.screenatoms.append([x, y, rad, q.id])
             else:   
-                q.r1[0] = q.r1[0] * s2 + self.width * 0.5
-                q.r1[1] = -q.r1[1] * s2 + self.height * 0.5
-                q.r2[0] = q.r2[0] * s2 + self.width * 0.5
-                q.r2[1] = -q.r2[1] * s2 + self.height * 0.5
+                q.r1[0] = q.r1[0] * s2 + w2
+                q.r1[1] = -q.r1[1] * s2 + h2
+                q.r2[0] = q.r2[0] * s2 + w2
+                q.r2[1] = -q.r2[1] * s2 + h2
                 self.gfx_draw_line(q.r1[0], q.r1[1], q.r2[0], q.r2[1])
 
 
@@ -701,15 +701,9 @@ class xyz(gtk.Window):
 # MAIN ------------------------------------------------------------------------------------------
 #
 
-# if __name__ == "__main__":
-#     pid = os.fork()
-#     if pid:
-#         os._exit(0)
-#     import sys
-#     q = xyz()
-#     if len(sys.argv) > 1:
-#         q.data_read(sys.argv[1])
-#     gtk.main()
+if __name__ == "__main__":
+    q = xyz()
+    gtk.main()
 
 
 
