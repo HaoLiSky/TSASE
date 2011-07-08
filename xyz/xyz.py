@@ -163,14 +163,12 @@ class xyz(gtk.Window):
             self.event_toggle_play()
         if key == 'c' and (event.state & gdk.CONTROL_MASK):
             sys.exit()
-        return True
 
 
     def event_key_released(self, widget, event):
         key = gdk.keyval_name(event.keyval)
         if self.gui_key_on(key):
             self.keys.pop(key)
-        return True
 
 
     def event_mouse_move(self, widget, event):
@@ -209,6 +207,7 @@ class xyz(gtk.Window):
             self.statusbar.set_text("")
         return True
     
+
     def get_mouse_atom(self):
         mx, my = self.mouselast
         atomid = None
@@ -257,14 +256,17 @@ class xyz(gtk.Window):
             self.queue_draw()
         return True
                                                     
+
     def get_frame_atoms(self):
         drawpoint = self.trajectory[0]
         if len(self.trajectory) > 1:
             drawpoint = self.trajectory[int(self.moviescale.get_value())]
         return drawpoint
                                                                                     
+
     def event_exposed(self, *args):
         self.gfx_render()
+
 
     def event_toggle_play(self, *args):
         self.playing = not self.playing
@@ -289,9 +291,11 @@ class xyz(gtk.Window):
                 self.queue_draw()        
         return True
     
+
     def event_close(self, *args):
         gtk.main_quit()
         
+
     def getFilenameOpen(self):
         buttons = (gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OPEN,gtk.RESPONSE_OK)
         chooser = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_OPEN,buttons=buttons)
