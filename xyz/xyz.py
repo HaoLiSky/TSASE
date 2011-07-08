@@ -29,7 +29,6 @@ class xyz(gtk.Window):
 # GUI -------------------------------------------------------------------------------------------
 #
     def __init__(self):
-        self.init_triage()
         gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
         self.acquire_widgets()
         self.connect_events()
@@ -117,25 +116,6 @@ class xyz(gtk.Window):
         font = pango.FontDescription("monospace 10")
         helpview.modify_font(font)
         helpwindow.show_all()
-
-    def init_triage(self):
-        def queue_triage(type, value, tb):
-            self.triage_queue.append((type, value, tb))
-        # sys.excepthook = queue_triage
-
-    def triage(self, type, value, tb):
-        gladetree = gtk.glade.XML(os.path.join(os.path.dirname(__file__), "xyz.glade"))
-        errorwindow = gladetree.get_widget("errordialog")
-        buffer = gtk.TextBuffer()
-        buffer.set_text(''.join(traceback.format_tb(tb)) + str(value))
-        errortext = gladetree.get_widget("errortext")
-        errortext.set_buffer(buffer)
-        font = pango.FontDescription("monospace 10")
-        errortext.modify_font(font)
-        result = errorwindow.run()
-        if result == 1:
-            gtk.main_quit()
-        errorwindow.destroy()        
 
     def initialize_members(self):
         self.triage_queue = []
