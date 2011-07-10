@@ -4,11 +4,10 @@ import os
 import sys
 import math
 import time
-import traceback
 
 import gtk
+import gtk.glade
 import gtk.gdk as gdk
-import gtk.glade as glade
 import gobject
 import pango
 import cairo
@@ -19,31 +18,41 @@ import ase
 from ase.io import vasp
 import tsase
 from tsase.data import *
+from console import Console
+
 
 class queueitem:
     def __init__(self, kind):
         self.kind = kind
 
+
+banner = \
+"""
+Python console for tsase-xyz
+----------------------------
+The variable p in this console is the ase.atoms.Atoms object or list of them that is being displayed.
+"""
+
 class xyz(gtk.Window):
-#
-# GUI -------------------------------------------------------------------------------------------
-#
+
     def __init__(self):
         gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
         self.acquire_widgets()
+        self.console = Console(callback=self.event_console_command, banner = banner)
+        self.consolebox.add(self.console)
         self.connect_events()
         self.add(self.gladewindow)
         self.set_resizable(True)
         self.moviescale.set_increments(1, 1)
         self.statusbar.modify_font(pango.FontDescription("monospace 10"))
         self.area.set_size_request(384, 384)
-        self.show()
+        self.show_all()
         self.initialize_members()
         self.event_configure()
         self.gfx_setup_colors()
         self.gfx_reset_transform()
         gobject.timeout_add(8, self.event_timeout)
-        
+
     def acquire_widgets(self):
         filename = os.path.join(os.path.dirname(__file__), "xyz.glade")
         gladetree = gtk.glade.XML(filename)
@@ -64,6 +73,7 @@ class xyz(gtk.Window):
         self.repeaty               = gladetree.get_widget("repeaty")
         self.repeatz               = gladetree.get_widget("repeatz")
         self.holder                = gladetree.get_widget("holder")
+        self.consolebox            = gladetree.get_widget("consolebox")
         self.statusbar             = gladetree.get_widget("statusbar")
         self.area                  = gladetree.get_widget("atomview")
         self.menuFileOpen          = gladetree.get_widget("menuFileOpen")
@@ -142,7 +152,7 @@ class xyz(gtk.Window):
         self.pwd = os.getcwd()
 
     def gui_key_on(self, key):
-        return self.keys.has_key(key)
+        return key in self.keys
         
 #
 # EVENT -----------------------------------------------------------------------------------------
@@ -163,7 +173,6 @@ class xyz(gtk.Window):
             self.event_toggle_play()
         if key == 'c' and (event.state & gdk.CONTROL_MASK):
             sys.exit()
-
 
     def event_key_released(self, widget, event):
         key = gdk.keyval_name(event.keyval)
@@ -330,7 +339,6 @@ class xyz(gtk.Window):
             self.zoombutton.set_value(view['zoom'])
             self.translate = np.array(view['translate'])
             self.rotation = np.array(view['rotation'])
-            self.resize(view['width'], view['height'])
             self.repeatx.set_value(view['repeat'][0])
             self.repeaty.set_value(view['repeat'][1])
             self.repeatz.set_value(view['repeat'][2])
@@ -350,7 +358,6 @@ class xyz(gtk.Window):
         response, filename = self.getFilenameSave()
         if response == gtk.RESPONSE_OK:
             self.pwd = os.path.dirname(filename)
-            width, height = self.get_size()
             repeat = (int(self.repeatx.get_value()), 
                       int(self.repeaty.get_value()), 
                       int(self.repeatz.get_value()))
@@ -358,8 +365,6 @@ class xyz(gtk.Window):
                          'zoom':      self.zoombutton.get_value(), 
                          'rotation':  self.rotation.tolist(), 
                          'translate': self.translate.tolist(),
-                         'width':     width,
-                         'height':    height,
                          'repeat':    repeat})
             f = open(filename, 'w')
             f.write(view)
@@ -391,7 +396,24 @@ class xyz(gtk.Window):
             csurf.finish()
         return True
 
-
+    def event_console_command(self):
+        pass
+        p = self.console.get_item("p")
+        if p is None:
+            return
+        if type(p) == ase.atoms.Atoms:
+            self.data_set(p)
+            return
+        if type(p) == list:
+            for i in p:
+                if type(i) != ase.atoms.Atoms:
+                    self.console.write("1 The p variable must be an ase.atoms.Atoms type or a list of them.\n")
+                    return
+            self.data_set(p)
+            return
+        self.console.write("2 The p variable must be an ase.atoms.Atoms type or a list of them.\n")
+            
+        
 
 #
 # GRAPHICS --------------------------------------------------------------------------------------
@@ -538,7 +560,6 @@ class xyz(gtk.Window):
         
             
     def gfx_transform_queue(self):
-        r = self.get_frame_atoms().get_positions()
         for i in range(len(self.queue)):
             q = self.queue[i]
             if q.kind == "atom":
@@ -656,6 +677,7 @@ class xyz(gtk.Window):
         if type(data) != type([]):
             data = [data]
         self.trajectory = data
+        self.console.set_item("p", self.trajectory)
         self.moviescale.set_range(0, 1)
         self.moviebox.set_sensitive(False)
         if len(self.trajectory) > 1:
