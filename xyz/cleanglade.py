@@ -18,6 +18,10 @@ for line in lines:
         continue
     if "use_action_appearance" in line:
         continue
+    if "invisible_char_set" in line:
+        continue
+    if "round_digits" in line:
+        continue
     f.write(line)
 f.close()
 

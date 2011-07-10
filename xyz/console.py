@@ -17,7 +17,7 @@ gray    ="#657b83"
 offwhite="#FDF6E3"
 
 
-class ColorWriter():
+class ColorWriter:
     def __init__(self, textbuffer, color):
         self.textbuffer = textbuffer
         self.tag = self.textbuffer.create_tag(None, foreground=color)

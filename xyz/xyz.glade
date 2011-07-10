@@ -546,7 +546,6 @@
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="invisible_char">•</property>
-                        <property name="invisible_char_set">True</property>
                         <property name="adjustment">1 1 64 1 1 0</property>
                         <property name="numeric">True</property>
                       </widget>
@@ -560,7 +559,6 @@
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="invisible_char">•</property>
-                        <property name="invisible_char_set">True</property>
                         <property name="adjustment">1 1 64 1 1 0</property>
                         <property name="numeric">True</property>
                       </widget>
@@ -576,7 +574,6 @@
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="invisible_char">•</property>
-                        <property name="invisible_char_set">True</property>
                         <property name="adjustment">1 1 64 1 1 0</property>
                         <property name="numeric">True</property>
                       </widget>
@@ -605,7 +602,6 @@
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="invisible_char">•</property>
-                        <property name="invisible_char_set">True</property>
                         <property name="adjustment">1 1 64 0.10000000000000001 1 0</property>
                         <property name="digits">3</property>
                         <property name="numeric">True</property>
@@ -635,7 +631,6 @@
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
                         <property name="invisible_char">•</property>
-                        <property name="invisible_char_set">True</property>
                         <property name="adjustment">1.5 0.10000000000000001 8 0.10000000000000001 1 0</property>
                         <property name="digits">3</property>
                         <property name="numeric">True</property>
@@ -735,7 +730,6 @@
                       <widget class="GtkHScale" id="moviescale">
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
-                        <property name="round_digits">0</property>
                         <property name="digits">0</property>
                         <property name="value_pos">left</property>
                       </widget>
@@ -783,7 +777,6 @@
                         <property name="can_focus">True</property>
                         <property name="invisible_char">•</property>
                         <property name="width_chars">3</property>
-                        <property name="invisible_char_set">True</property>
                         <property name="adjustment">30 1 120 1 10 0</property>
                         <property name="numeric">True</property>
                       </widget>
