@@ -20,7 +20,8 @@ offwhite="#FDF6E3"
 class ColorWriter:
     def __init__(self, textbuffer, color):
         self.textbuffer = textbuffer
-        self.tag = self.textbuffer.create_tag(None, foreground=color)
+        self.tag = self.textbuffer.create_tag()
+        self.tag.set_property("foreground", color)
     def write(self, text):
         end = self.textbuffer.get_end_iter()
         self.textbuffer.insert_with_tags(end, text, self.tag)
