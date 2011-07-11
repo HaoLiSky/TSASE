@@ -30,7 +30,7 @@ banner = \
 """
 Python console for tsase-xyz
 ----------------------------
-The variable p in this console is the ase.atoms.Atoms object or list of them that is being displayed.
+The variable p in this console is the ase.atoms.Atoms object or list of them that is being displayed. The modules ase and tsase have already been imported.
 """
 
 class xyz(gtk.Window):
@@ -39,6 +39,8 @@ class xyz(gtk.Window):
         gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
         self.acquire_widgets()
         self.console = Console(callback=self.event_console_command, banner = banner)
+        self.console.push("import ase\n")
+        self.console.push("import tsase\n")
         self.consolebox.add(self.console)
         self.connect_events()
         self.add(self.gladewindow)
