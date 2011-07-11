@@ -169,7 +169,7 @@ class xyz(gtk.Window):
     def event_key_pressed(self, widget, event):
         key = gdk.keyval_name(event.keyval)
         self.keys[key] = True
-        if key == "space" and len(self.trajectory) > 1:
+        if key == "space" and self.trajectory is not None and len(self.trajectory) > 1:
             self.event_toggle_play()
         if key == 'c' and (event.state & gdk.CONTROL_MASK):
             sys.exit()
