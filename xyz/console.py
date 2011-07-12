@@ -3,7 +3,6 @@ import sys
 import gtk
 import pango
 import code
-import gobject
 
 yellow  ="#b58900"
 orange  ="#cb4b16"
@@ -40,7 +39,7 @@ class Console(gtk.ScrolledWindow):
         self.textview.modify_base(0, gtk.gdk.color_parse(offwhite))
         self.textview.modify_text(0, gtk.gdk.color_parse(blue))
         self.textview.set_wrap_mode(gtk.WRAP_WORD_CHAR)
-        self.textview.connect("expose-event", self.event_exposed)
+        self.textview.set_left_margin(4)
         self.textview.connect("event-after", self.event_after)
         self.textbuffer = self.textview.get_buffer()
         self.errorWriter = ColorWriter(self.textbuffer, magenta)
@@ -48,6 +47,7 @@ class Console(gtk.ScrolledWindow):
         self.outputWriter = ColorWriter(self.textbuffer, gray)
         self.outputWriter.write(banner)
         self.inputWriter.write(">>> ")
+        self.scroll_to_bottom()
         self.promptoffset = self.textbuffer.get_end_iter().get_offset()
         self.textbuffer.connect("mark-set", self.event_mark_set)
         self.textbuffer.connect("changed", lambda w: self.textview.queue_draw)
@@ -73,9 +73,9 @@ class Console(gtk.ScrolledWindow):
                 self.callback()
         return more
 
-    def event_exposed(self, *args):
-        self.textview.scroll_to_iter(self.textbuffer.get_end_iter(), 0.0)
-        return False        
+    def scroll_to_bottom(self):
+        if self.get_visible():
+            self.textview.scroll_to_iter(self.textbuffer.get_end_iter(), 0.0)
 
     def event_mark_set(self, tb, iter, textmark):
         if iter.get_offset() < self.promptoffset:
@@ -104,6 +104,7 @@ class Console(gtk.ScrolledWindow):
 
     def event_key_pressed(self, widget, event):
         key = gtk.gdk.keyval_name(event.keyval)
+        self.scroll_to_bottom()
         if key == "Up":
             self.history_index = max(0, self.history_index - 1)
             self.delete_current_command()
@@ -137,8 +138,6 @@ class Console(gtk.ScrolledWindow):
                 return
             self.history_index = len(self.history) - 1
             self.history[self.history_index] = self.get_current_command()     
-            
-#gobject.type_register(Console)
             
 
 if __name__ == "__main__":

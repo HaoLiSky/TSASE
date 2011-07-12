@@ -38,22 +38,26 @@ class xyz(gtk.Window):
     def __init__(self):
         gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
         self.acquire_widgets()
-        self.console = Console(callback=self.event_console_command, banner = banner)
-        self.console.push("import ase\n")
-        self.console.push("import tsase\n")
-        self.consolebox.add(self.console)
+        self.initialize_console()
         self.connect_events()
         self.add(self.gladewindow)
         self.set_resizable(True)
         self.moviescale.set_increments(1, 1)
         self.statusbar.modify_font(pango.FontDescription("monospace 10"))
-        self.area.set_size_request(384, 384)
-        self.show_all()
+        self.area.set_size_request(128, 128)
+        self.set_default_size(640, 512)
+        self.show()
         self.initialize_members()
         self.event_configure()
         self.gfx_setup_colors()
         self.gfx_reset_transform()
         gobject.timeout_add(8, self.event_timeout)
+
+    def initialize_console(self):
+        self.console = Console(callback=self.event_console_command, banner = banner)
+        self.console.push("from ase import *\n")
+        self.console.push("import tsase\n")
+        self.consolebox.add(self.console)
 
     def acquire_widgets(self):
         filename = os.path.join(os.path.dirname(__file__), "xyz.glade")
@@ -84,6 +88,7 @@ class xyz(gtk.Window):
         self.menuFileSaveView      = gladetree.get_widget("menuFileSaveView")
         self.menuFileExport        = gladetree.get_widget("menuFileExport")
         self.menuFileQuit          = gladetree.get_widget("menuFileQuit")
+        self.menuToolsConsole      = gladetree.get_widget("menuToolsConsole")
         self.menuHelpDocumentation = gladetree.get_widget("menuHelpDocumentation")
 
     def connect_events(self):
@@ -113,6 +118,7 @@ class xyz(gtk.Window):
         self.menuFileSaveView.connect("activate", self.event_menuFileSaveView)
         self.menuFileExport.connect("activate", self.event_menuFileExport)
         self.menuFileQuit.connect("activate", self.event_close)
+        self.menuToolsConsole.connect("activate", self.event_menuToolsConsole)
         self.menuHelpDocumentation.connect("activate", self.display_docs)
 
     def display_docs(self, *args):
@@ -130,7 +136,6 @@ class xyz(gtk.Window):
         helpwindow.show_all()
 
     def initialize_members(self):
-        self.triage_queue = []
         self.last_draw = 0.0
         self.playing = False
         self.queue = []
@@ -288,11 +293,8 @@ class xyz(gtk.Window):
                         
             
     def event_timeout(self):
-        if len(self.triage_queue) > 0:
-            q = self.triage_queue.pop(0)
-            self.triage(q[0], q[1], q[2])
         if self.trajectory is None:
-            return
+            return True
         if self.playing and len(self.trajectory) > 1:
             if time.time() - self.last_draw > 1.0/self.fps.get_value():
                 nextframe = self.moviescale.get_value() + 1
@@ -398,6 +400,12 @@ class xyz(gtk.Window):
             csurf.finish()
         return True
 
+    def event_menuToolsConsole(self, *args):
+        if self.menuToolsConsole.get_active():
+            self.consolebox.show_all()
+        else:
+            self.consolebox.hide()
+
     def event_console_command(self):
         pass
         p = self.console.get_item("p")
@@ -409,11 +417,11 @@ class xyz(gtk.Window):
         if type(p) == list:
             for i in p:
                 if type(i) != ase.atoms.Atoms:
-                    self.console.write("1 The p variable must be an ase.atoms.Atoms type or a list of them.\n")
+                    self.console.write("The p variable must be an ase.atoms.Atoms type or a list of them.\n")
                     return
             self.data_set(p)
             return
-        self.console.write("2 The p variable must be an ase.atoms.Atoms type or a list of them.\n")
+        self.console.write("The p variable must be an ase.atoms.Atoms type or a list of them.\n")
             
         
 
