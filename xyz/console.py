@@ -1,4 +1,3 @@
-
 import sys
 import gtk
 import pango
@@ -74,7 +73,7 @@ class Console(gtk.ScrolledWindow):
         return more
 
     def scroll_to_bottom(self):
-        if self.get_visible():
+        if self.get_property("visible"):
             self.textview.scroll_to_iter(self.textbuffer.get_end_iter(), 0.0)
 
     def event_mark_set(self, tb, iter, textmark):
