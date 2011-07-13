@@ -31,7 +31,7 @@ class Console(gtk.ScrolledWindow):
         gtk.ScrolledWindow.__init__(self)
         self.interpreter = code.InteractiveInterpreter(locals)
         self.resetbuffer()
-        self.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_ALWAYS)
+        self.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         self.textview = gtk.TextView()
         self.textview.connect("key_press_event", self.event_key_pressed)
         self.textview.modify_font(pango.FontDescription("monospace 9"))
@@ -66,6 +66,7 @@ class Console(gtk.ScrolledWindow):
         more = self.interpreter.runsource(source, "<console>")
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
+        self.scroll_to_bottom()
         if not more:
             self.resetbuffer()
             if self.callback is not None:
@@ -74,7 +75,7 @@ class Console(gtk.ScrolledWindow):
 
     def scroll_to_bottom(self):
         if self.get_property("visible"):
-            self.textview.scroll_to_iter(self.textbuffer.get_end_iter(), 0.0)
+            self.textview.scroll_to_mark(self.textbuffer.get_insert(), 0.0)
 
     def event_mark_set(self, tb, iter, textmark):
         if iter.get_offset() < self.promptoffset:
@@ -103,16 +104,17 @@ class Console(gtk.ScrolledWindow):
 
     def event_key_pressed(self, widget, event):
         key = gtk.gdk.keyval_name(event.keyval)
-        self.scroll_to_bottom()
         if key == "Up":
             self.history_index = max(0, self.history_index - 1)
             self.delete_current_command()
             self.inputWriter.write(self.history[self.history_index])
+            self.scroll_to_bottom()
             return True
         if key == "Down":
             self.history_index = min(len(self.history) - 1, self.history_index + 1)
             self.delete_current_command()
             self.inputWriter.write(self.history[self.history_index])
+            self.scroll_to_bottom()
             return True
         if key == "Return":
             source = self.get_current_command()
@@ -127,6 +129,7 @@ class Console(gtk.ScrolledWindow):
             else:
                 self.inputWriter.write(">>> ")
             self.promptoffset = self.textbuffer.get_end_iter().get_offset()
+            self.scroll_to_bottom()
             return True
         
     
