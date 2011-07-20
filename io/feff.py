@@ -34,11 +34,7 @@ def read_feff(filename):
             z = float(fields[2])
             pot = int(fields[3])
             z = potential_to_z[pot]
-            if pot == 0:
-                #absorber
-                tag = 0
-            else:
-                tag = 1
+            tag = pot
             atoms.append(ase.Atom(symbol=z,position=(x,y,z), tag=tag))
     return atoms
 
