@@ -33,9 +33,10 @@ def read_feff(filename):
             y = float(fields[1])
             z = float(fields[2])
             pot = int(fields[3])
-            z = potential_to_z[pot]
+            atomic_number = potential_to_z[pot]
             tag = pot
-            atoms.append(ase.Atom(symbol=z,position=(x,y,z), tag=tag))
+            atoms.append(ase.Atom(symbol=atomic_number ,position=(x,y,z),
+                                  tag=tag))
     return atoms
 
 
