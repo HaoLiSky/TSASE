@@ -8,6 +8,7 @@ import tempfile
 import subprocess
 import shutil
 import itertools
+import atexit
 
 __all__ = [ "load_chi_dat", "run_feff", "exafs" ]
 
@@ -73,7 +74,7 @@ def load_feff_dat(filename):
              "mean_free_path":mean_free_path,
            }
 
-def load_files_dat(filename):
+def load_files_diat(filename):
     begin = False
     filenames = []
     f = open(filename)
@@ -140,13 +141,25 @@ def run_feff(atoms, absorber, tmp_dir="."):
     shutil.rmtree(tmp_dir_path)
     return k, chi
 
-def exafs(atoms, tmp_dir="."):
+def exafs(atoms, tmp_dir=".", txt="-", comm=None):
     from mpi4py import MPI
-    comm = MPI.COMM_WORLD
+
+    if not comm:
+        comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     size = comm.Get_size()
 
     chi_total = []
+
+    atoms_done = 0
+    bars_written = 0
+    bars_width = 40
+    if rank == 0:
+        print "\nCalculating EXAFS Spectra"
+        print "Number of Atoms: %i" % len(atoms)
+        print "Number of Cores: %i" % size 
+        print " 0%                50%               100% "
+        print "[",
 
     for i in range(len(atoms)):
         if i%size != rank:
@@ -154,14 +167,49 @@ def exafs(atoms, tmp_dir="."):
         k, chi = run_feff(atoms, i, tmp_dir)
         chi_total.append(chi)
 
+        if rank:
+            comm.isend(True)
+        else:
+            atoms_done += 1
+            msg = comm.Iprobe(MPI.ANY_SOURCE)
+            while msg:
+                atoms_done += 1
+                comm.recv(source=MPI.ANY_SOURCE)
+                msg = comm.Iprobe(MPI.ANY_SOURCE)
+        if rank == 0:
+            fraction_done = float(atoms_done)/len(atoms)
+            target_bars = int(bars_width*fraction_done+0.5)
+            bars_to_write = target_bars - bars_written
+            if bars_written < target_bars:
+                s = "="*bars_to_write
+                print "\b"+s,
+            bars_written += bars_to_write
+
+            if txt == "-":
+                sys.stdout.flush()
+
+    if rank == 0:
+        while atoms_done != len(atoms):
+            comm.recv(source=MPI.ANY_SOURCE)
+            atoms_done += 1
+            fraction_done = float(atoms_done)/len(atoms)
+            target_bars = int(bars_width*fraction_done+0.5)
+            bars_to_write = target_bars - bars_written
+            if bars_written < target_bars:
+                s = "="*bars_to_write
+                print "\b"+s,
+            bars_written += bars_to_write
+            sys.stdout.flush()
+        print "\b]\n"
+
     chi_total = numpy.average(numpy.array(chi_total), axis=0)
     chi_total = comm.gather(chi_total)
 
     if rank == 0:
         chi_total = numpy.array(chi_total)
         chi_total = numpy.average(chi_total, axis=0)
-        return k,chi_total
-    return (None, None)
+    k, chi_total = comm.bcast([k, chi_total])
+    return k, chi_total
 
 if __name__ == "__main__":
     from mpi4py import MPI
