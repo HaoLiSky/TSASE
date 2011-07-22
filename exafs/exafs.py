@@ -141,6 +141,11 @@ def run_feff(atoms, absorber, tmp_dir="."):
     shutil.rmtree(tmp_dir_path)
     return k, chi
 
+class DevNull:
+    def write(self, string): pass
+    def flush(self): pass
+    def close(self): pass
+
 def exafs(atoms, tmp_dir=".", txt="-", comm=None):
     from mpi4py import MPI
 
@@ -151,15 +156,22 @@ def exafs(atoms, tmp_dir=".", txt="-", comm=None):
 
     chi_total = []
 
+    if txt == "-":
+        outfile = sys.stdout
+    elif txt == None:
+        outfile = DevNull()
+    else:
+        outfile = open(txt, "a")
+
     atoms_done = 0
     bars_written = 0
     bars_width = 40
     if rank == 0:
-        print "\nCalculating EXAFS Spectra"
-        print "Number of Atoms: %i" % len(atoms)
-        print "Number of Cores: %i" % size 
-        print " 0%                50%               100% "
-        print "[",
+        outfile.write("\nCalculating EXAFS Spectra\n")
+        outfile.write("Number of Atoms: %i\n" % len(atoms))
+        outfile.write("Number of Cores: %i\n" % size)
+        outfile.write(" 0%                50%               100% \n")
+        outfile.write("[")
 
     for i in range(len(atoms)):
         if i%size != rank:
@@ -182,7 +194,7 @@ def exafs(atoms, tmp_dir=".", txt="-", comm=None):
             bars_to_write = target_bars - bars_written
             if bars_written < target_bars:
                 s = "="*bars_to_write
-                print "\b"+s,
+                outfile.write(s)
             bars_written += bars_to_write
 
             if txt == "-":
@@ -197,10 +209,10 @@ def exafs(atoms, tmp_dir=".", txt="-", comm=None):
             bars_to_write = target_bars - bars_written
             if bars_written < target_bars:
                 s = "="*bars_to_write
-                print "\b"+s,
+                outfile.write("\b"+s)
             bars_written += bars_to_write
             sys.stdout.flush()
-        print "\b]\n"
+        outfile.write("\b]\n\n")
 
     chi_total = numpy.average(numpy.array(chi_total), axis=0)
     chi_total = comm.gather(chi_total)
