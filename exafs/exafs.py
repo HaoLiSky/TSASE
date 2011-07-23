@@ -74,23 +74,23 @@ def load_feff_dat(filename):
              "mean_free_path":mean_free_path,
            }
 
-def load_files_diat(filename):
-    begin = False
-    filenames = []
-    f = open(filename)
-    for line in f:
-        line = line.strip()
-        if len(line) == 0:
-            continue
-        fields = line.split()
-        if fields[0] == "file" and fields[1] == "sig2":
-            begin = True
-            continue
+    def load_files_diat(filename):
+        begin = False
+        filenames = []
+        f = open(filename)
+        for line in f:
+            line = line.strip()
+            if len(line) == 0:
+                continue
+            fields = line.split()
+            if fields[0] == "file" and fields[1] == "sig2":
+                begin = True
+                continue
 
-        if begin:
-            filenames.append(fields[0])
+            if begin:
+                filenames.append(fields[0])
 
-    return filenames
+        return filenames
 
 #def calculate_chi(feff):
 #    chi = numpy.zeros(len(feff[0]["k"]))
@@ -163,15 +163,13 @@ def exafs(atoms, tmp_dir=".", txt="-", comm=None):
     else:
         outfile = open(txt, "a")
 
-    atoms_done = 0
-    bars_written = 0
-    bars_width = 40
     if rank == 0:
         outfile.write("\nCalculating EXAFS Spectra\n")
         outfile.write("Number of Atoms: %i\n" % len(atoms))
         outfile.write("Number of Cores: %i\n" % size)
-        outfile.write(" 0%                50%               100% \n")
-        outfile.write("[")
+        outfile.flush()
+
+    comm.barrier()
 
     for i in range(len(atoms)):
         if i%size != rank:
@@ -179,40 +177,15 @@ def exafs(atoms, tmp_dir=".", txt="-", comm=None):
         k, chi = run_feff(atoms, i, tmp_dir)
         chi_total.append(chi)
 
-        if rank:
-            comm.isend(True)
-        else:
-            atoms_done += 1
-            msg = comm.Iprobe(MPI.ANY_SOURCE)
-            while msg:
-                atoms_done += 1
-                comm.recv(source=MPI.ANY_SOURCE)
-                msg = comm.Iprobe(MPI.ANY_SOURCE)
-        if rank == 0:
-            fraction_done = float(atoms_done)/len(atoms)
-            target_bars = int(bars_width*fraction_done+0.5)
-            bars_to_write = target_bars - bars_written
-            if bars_written < target_bars:
-                s = "="*bars_to_write
-                outfile.write(s)
-            bars_written += bars_to_write
+        outfile.write("%i " % i)
+        if txt == "-":
+            outfile.flush()
 
-            if txt == "-":
-                sys.stdout.flush()
+    if rank==0:
+        outfile.write("\n")
+        outfile.flush()
 
-    if rank == 0:
-        while atoms_done != len(atoms):
-            comm.recv(source=MPI.ANY_SOURCE)
-            atoms_done += 1
-            fraction_done = float(atoms_done)/len(atoms)
-            target_bars = int(bars_width*fraction_done+0.5)
-            bars_to_write = target_bars - bars_written
-            if bars_written < target_bars:
-                s = "="*bars_to_write
-                outfile.write("\b"+s)
-            bars_written += bars_to_write
-            sys.stdout.flush()
-        outfile.write("\b]\n\n")
+    comm.barrier()
 
     chi_total = numpy.average(numpy.array(chi_total), axis=0)
     chi_total = comm.gather(chi_total)
@@ -221,6 +194,7 @@ def exafs(atoms, tmp_dir=".", txt="-", comm=None):
         chi_total = numpy.array(chi_total)
         chi_total = numpy.average(chi_total, axis=0)
     k, chi_total = comm.bcast([k, chi_total])
+    outfile.flush()
     return k, chi_total
 
 if __name__ == "__main__":
