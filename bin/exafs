@@ -1,0 +1,196 @@
+#!/usr/bin/env python
+
+import sys
+from optparse import OptionParser
+import math
+import resource
+
+from mpi4py import MPI
+class ASE_MPI4PY:
+    def __init__(self):
+        from mpi4py import MPI
+        self.comm = MPI.COMM_WORLD
+        self.rank = self.comm.rank
+        self.size = self.comm.size
+
+    def sum(self, a):
+        return self.comm.allreduce(a)
+
+    def barrier(self):
+        self.comm.barrier()
+
+    def broadcast(self, a, rank):
+        a[:] = self.comm.bcast(a, rank)
+
+import ase
+ase.parallel.world = ASE_MPI4PY()
+ase.parallel.rank = ase.parallel.world.rank
+ase.parallel.size = ase.parallel.world.size
+ase.parallel.barrier = ase.parallel.world.barrier
+from ase.parallel import parprint, paropen
+from ase.utils import devnull
+from ase.md.langevin import Langevin
+from ase.md import MDLogger
+from ase import units
+from ase.io.trajectory import PickleTrajectory
+import tsase
+import numpy
+from qsc import QSC
+
+world = MPI.COMM_WORLD
+rank = world.rank
+size = world.size
+
+class MDSnapshots:
+    def __init__(self, atoms, options):
+        self.atoms = atoms
+        self.options = options
+        self.max_snapshot_steps = 1000
+        self.nsnapshots = 0
+
+        calc = QSC()
+        self.atoms.set_calculator(calc)
+
+        self.dyn = Langevin(self.atoms, options.time_step*units.fs, 
+                             options.temperature*units.kB, 0.02)
+        traj = PickleTrajectory("exafs_md.traj", 'w', self.atoms,
+                                backup=False)
+        self.dyn.attach(traj, interval=options.snapshot_steps)
+
+        mdlog = MDLogger(self.dyn, self.atoms, "exafs_md.log", stress=False,
+                         peratom=True, header=True)
+        self.dyn.attach(mdlog, interval=options.snapshot_steps)
+
+        self.simulation_time = options.equillibration_steps*options.time_step
+        parprint("equillibrating for %.2e s" % (1e-15*self.simulation_time))
+        self.dyn.run(options.equillibration_steps)
+        self.first_time = True
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        if self.nsnapshots == self.max_snapshot_steps:
+            raise StopIteration
+
+        if self.first_time:
+            self.first_time = False
+            return self.atoms.copy()
+        self.nsnapshots += 1
+
+        self.dyn.run(self.options.snapshot_steps)
+        self.simulation_time += self.options.snapshot_steps * \
+                                self.options.time_step
+        return self.atoms.copy()
+
+class TrajectorySnapshots:
+    def __init__(self, traj, options):
+        self.traj = traj
+        self.options = options
+        self.frame = self.options.equillibration_steps
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        if self.frame >= len(self.traj):
+            raise StopIteration
+        rframe = self.traj[self.frame]
+        self.frame += options.snapshot_steps
+        return rframe
+
+def main(options, filename):
+    if options.read_trajectory:
+        traj = PickleTrajectory(filename)
+        snapshots = TrajectorySnapshots(traj, options)
+    else:
+        if filename[-3:] == "con" and '.' in filename:
+            atoms = tsase.io.read_con(filename)
+        else:
+            atoms = ase.io.read(filename)
+        snapshots = MDSnapshots(atoms, options)
+
+
+    #convergence options
+    residual = 1e-4
+    convergence_iterations = 10
+
+    chi_md = []
+    iter_below_tol = 0
+    for i, atoms in enumerate(snapshots):
+        k, chi = tsase.exafs.exafs(atoms, txt=None, tmp_dir=".")
+        chi_md.append(chi)
+        average_chi = numpy.average(numpy.array(chi_md), axis=0)
+        if i>0:
+            err = numpy.linalg.norm(average_chi-prev_average_chi)
+            if err < residual:
+                iter_below_tol += 1
+            else:
+                iter_below_tol = 0
+            s = "iter: %3i log10(residual): %.1f %2i" % (i, math.log10(err), 
+                                                         iter_below_tol)
+            parprint(s)
+        prev_average_chi = average_chi
+
+        #convergence check
+        if iter_below_tol == convergence_iterations:
+            parprint("spectra calculation complete")
+            parprint("averaged over %i MD configurations" % i)
+
+            parprint("writing chi_md.dat")
+            f = paropen("chi_md.dat", "w")
+            for j in range(len(k)):
+                f.write("%f %f\n" % (k[j], average_chi[j]))
+            f.close()
+
+            parprint("writing kchi_md.dat")
+            f = paropen("kchi_md.dat", "w")
+            for j in range(len(k)):
+                f.write("%f %f\n" % (k[j], k[j]*average_chi[j]))
+            f.close()
+            break
+
+    rusage = resource.getrusage(resource.RUSAGE_SELF)
+    utime = world.reduce(rusage.ru_utime)
+    stime = world.reduce(rusage.ru_stime)
+
+    if rank == 0:
+        parprint("user:  %.2f" % utime)
+        parprint("system: %.2f" % stime)
+
+
+
+if __name__ == "__main__":
+    parser = OptionParser(usage="%prog [options] FILE")
+    parser.add_option("-r", "--read-trajectory",
+                      action="store_true", default=False,
+                      help="instead of running an md simulation read " \
+                           "in a ASE trajectory file")
+    parser.add_option("-t", "--temperature",
+                      type="float", action="store", default=300.0,
+                      help="temperature for md simulation in Kelvin")
+    parser.add_option("--time-step", dest="time_step",
+                      type="float", action="store", default=1.0,
+                      help="time step for md simulation in fs")
+    parser.add_option("-e", "--equillibration-steps",
+                      type="int", action="store", default=5000,
+                      help="number of time steps/traj frames skipped " \
+                           "before the exafs averaging begins")
+    parser.add_option("-s", "--snapshot-steps",
+                      type="int", default=10,
+                      help="the number of steps/frames between each exafs " \
+                           "calculation")
+
+    options, args = parser.parse_args()
+
+    if len(args) != 1:
+        parser.print_help(sys.stderr)
+        if options.read_trajectory:
+            if rank == 0:
+                sys.stderr.write("Error: must specify an ASE traj file\n")
+        else:
+            if rank == 0:
+                sys.stderr.write("Error: must specify a con file\n")
+        sys.exit(1)
+
+    main(options, args[0])
