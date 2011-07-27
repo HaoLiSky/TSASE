@@ -74,40 +74,23 @@ def load_feff_dat(filename):
              "mean_free_path":mean_free_path,
            }
 
-    def load_files_diat(filename):
-        begin = False
-        filenames = []
-        f = open(filename)
-        for line in f:
-            line = line.strip()
-            if len(line) == 0:
-                continue
-            fields = line.split()
-            if fields[0] == "file" and fields[1] == "sig2":
-                begin = True
-                continue
+def load_files_dat(filename):
+    begin = False
+    filenames = []
+    f = open(filename)
+    for line in f:
+        line = line.strip()
+        if len(line) == 0:
+            continue
+        fields = line.split()
+        if fields[0] == "file" and fields[1] == "sig2":
+            begin = True
+            continue
 
-            if begin:
-                filenames.append(fields[0])
+        if begin:
+            filenames.append(fields[0])
 
-        return filenames
-
-#def calculate_chi(feff):
-#    chi = numpy.zeros(len(feff[0]["k"]))
-#    for shell in feff:
-#        for i in range(len(shell["k"])):
-#            k = shell["k"][i]
-#            f = shell["amplitude"][i]
-#            d = shell["phase"][i]
-#            r = shell["r_eff"]
-#            l = shell["mean_free_path"][i]
-#
-#            if k==0.0:
-#                continue
-#            chi_partial  = f*(len(shell["atoms"])-1)/(k*r*r)
-#            chi_partial *= math.exp(-2*r/l)*math.sin(2*k*r+d)
-#            chi[i] += chi_partial
-#    return feff[0]["k"],chi
+    return filenames
 
 def load_chi_dat(filename):
     f = open(filename)
@@ -129,7 +112,7 @@ def load_chi_dat(filename):
             chi.append(float(fields[1]))
     return numpy.array(k), numpy.array(chi)
 
-def run_feff(atoms, absorber, tmp_dir="."):
+def run_feff(atoms, absorber, tmp_dir=None):
     tmp_dir_path = tempfile.mkdtemp(prefix="tmp_feff_", dir=tmp_dir)
     tsase.io.write_feff(os.path.join(tmp_dir_path, "feff.inp"), atoms, absorber)
     p = subprocess.Popen(["feff"], cwd=tmp_dir_path, stdout=subprocess.PIPE)
@@ -146,55 +129,53 @@ class DevNull:
     def flush(self): pass
     def close(self): pass
 
-def exafs(atoms, tmp_dir=".", txt="-", comm=None):
+def exafs(atoms, txt="-", tmp_dir=None, comm=None):
     from mpi4py import MPI
 
     if not comm:
         comm = MPI.COMM_WORLD
-    rank = comm.Get_rank()
-    size = comm.Get_size()
 
-    chi_total = []
+    size = comm.size
+    rank = comm.rank
 
-    if txt == "-":
+    if txt == "-" and rank == 0:
         outfile = sys.stdout
-    elif txt == None:
+    elif txt == None and rank == 0:
         outfile = DevNull()
-    else:
+    elif rank == 0:
         outfile = open(txt, "a")
+    else:
+        outfile = DevNull()
 
-    if rank == 0:
-        outfile.write("\nCalculating EXAFS Spectra\n")
-        outfile.write("Number of Atoms: %i\n" % len(atoms))
-        outfile.write("Number of Cores: %i\n" % size)
-        outfile.flush()
+    outfile.write("\nCalculating EXAFS Spectra\n")
+    outfile.write("Number of Atoms: %i\n" % len(atoms))
+    outfile.write("Number of Cores: %i\n" % size)
+    outfile.flush()
 
-    comm.barrier()
+    chi_total = {}
+    atomic_symbols = set( [ a.symbol for a in atoms ] )
+    for symbol in atomic_symbols:
+        chi_total[symbol] = []
 
+    k = None
     for i in range(len(atoms)):
         if i%size != rank:
             continue
         k, chi = run_feff(atoms, i, tmp_dir)
-        chi_total.append(chi)
+        chi_total[atoms[i].symbol].append(chi)
 
-        outfile.write("%i " % i)
-        if txt == "-":
-            outfile.flush()
+    #in case more ranks than atoms
+    k = comm.bcast(k)
 
-    if rank==0:
-        outfile.write("\n")
-        outfile.flush()
+    for symbol in atomic_symbols:
+        if len(chi_total[symbol]) == 0:
+            chi_total[symbol] = numpy.zeros(len(k))
 
-    comm.barrier()
+        chi_total[symbol]  = numpy.sum(numpy.array(chi_total[symbol]), axis=0)
+        chi_total[symbol]  = comm.allreduce(chi_total[symbol])
+        natoms = len( [ a for a in atoms if a.symbol == symbol ] )
+        chi_total[symbol] /= float(natoms)
 
-    chi_total = numpy.average(numpy.array(chi_total), axis=0)
-    chi_total = comm.gather(chi_total)
-
-    if rank == 0:
-        chi_total = numpy.array(chi_total)
-        chi_total = numpy.average(chi_total, axis=0)
-    k, chi_total = comm.bcast([k, chi_total])
-    outfile.flush()
     return k, chi_total
 
 if __name__ == "__main__":
@@ -202,7 +183,6 @@ if __name__ == "__main__":
     rank = MPI.COMM_WORLD.Get_rank()
     atoms = tsase.io.read_con(sys.argv[1])
     k, chi_total = exafs(atoms)
+
     if rank == 0:
-        import pylab
-        pylab.plot(k,chi_total)
-        pylab.show()
+        print k, chi_total
