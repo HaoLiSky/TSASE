@@ -99,6 +99,36 @@ class TrajectorySnapshots:
         self.frame += options.snapshot_steps
         return rframe
 
+class AverageChi:
+    def __init__(self):
+        self.chis = {}
+        self.residual = None
+
+    def append(self, chi):
+        old_average = self.get_average()
+        for symbol in chi:
+            if symbol not in self.chis:
+                self.chis[symbol] = []
+            self.chis[symbol].append(chi[symbol])
+        new_average = self.get_average()
+
+        if old_average == None:
+            return
+        residuals = []
+        for symbol in self.chis:
+            residual = numpy.linalg.norm(new_average[symbol] - 
+                                         old_average[symbol])
+            residuals.append(residual)
+        self.residual = max(residuals)
+
+    def get_average(self):
+        if len(self.chis) == 0:
+            return None
+        result = {}
+        for symbol in self.chis:
+            result[symbol] = numpy.average(self.chis[symbol], axis=0)
+        return result
+
 def main(options, filename):
     if options.read_trajectory:
         traj = PickleTrajectory(filename)
@@ -117,37 +147,38 @@ def main(options, filename):
 
     chi_md = []
     iter_below_tol = 0
+
+    average_chi = AverageChi()
     for i, atoms in enumerate(snapshots):
         k, chi = tsase.exafs.exafs(atoms, txt=None, tmp_dir=".")
-        chi_md.append(chi)
-        average_chi = numpy.average(numpy.array(chi_md), axis=0)
-        if i>0:
-            err = numpy.linalg.norm(average_chi-prev_average_chi)
-            if err < residual:
+        average_chi.append(chi)
+
+        res = average_chi.residual
+        if res:
+            if res < residual:
                 iter_below_tol += 1
             else:
                 iter_below_tol = 0
-            s = "iter: %3i log10(residual): %.1f %2i" % (i, math.log10(err), 
+            s = "iter: %3i log10(residual): %.1f %2i" % (i, math.log10(res), 
                                                          iter_below_tol)
             parprint(s)
-        prev_average_chi = average_chi
 
         #convergence check
         if iter_below_tol == convergence_iterations:
             parprint("spectra calculation complete")
             parprint("averaged over %i MD configurations" % i)
 
-            parprint("writing chi_md.dat")
-            f = paropen("chi_md.dat", "w")
-            for j in range(len(k)):
-                f.write("%f %f\n" % (k[j], average_chi[j]))
-            f.close()
+            chi = average_chi.get_average()
+            for symbol in chi:
+                parprint("writing chi_%s.dat"%symbol)
+                f_chi = paropen("chi_%s.dat"%symbol, "w")
+                f_kchi = paropen("kchi_%s.dat"%symbol, "w")
+                for j in range(len(k)):
+                    f_chi.write("%f %f\n"%(k[j],chi[symbol][j]))
+                    f_kchi.write("%f %f\n"%(k[j],k[j]*chi[symbol][j]))
+                f_chi.close()
+                f_kchi.close()
 
-            parprint("writing kchi_md.dat")
-            f = paropen("kchi_md.dat", "w")
-            for j in range(len(k)):
-                f.write("%f %f\n" % (k[j], k[j]*average_chi[j]))
-            f.close()
             break
 
     rusage = resource.getrusage(resource.RUSAGE_SELF)
