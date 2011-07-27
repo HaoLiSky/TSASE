@@ -129,6 +129,24 @@ class AverageChi:
             result[symbol] = numpy.average(self.chis[symbol], axis=0)
         return result
 
+def write_chi(k, average_chi, number=None):
+    chi = average_chi.get_average()
+    for symbol in chi:
+        if number:
+            fn_chi = "chi_%s_%i.dat" % (symbol, number)
+            fn_kchi = "kchi_%s_%i.dat" % (symbol, number)
+        else:
+            fn_chi = "chi_%s.dat" % symbol
+            fn_kchi = "kchi_%s.dat" % symbol
+        f_chi = paropen(fn_chi, "w")
+        f_kchi = paropen(fn_kchi, "w")
+        for j in range(len(k)):
+            f_chi.write("%f %f\n"%(k[j],chi[symbol][j]))
+            f_kchi.write("%f %f\n"%(k[j],k[j]*chi[symbol][j]))
+        f_chi.close()
+        f_kchi.close()
+
+
 def main(options, filename):
     if options.read_trajectory:
         traj = PickleTrajectory(filename)
@@ -141,54 +159,44 @@ def main(options, filename):
         snapshots = MDSnapshots(atoms, options)
 
 
-    #convergence options
-    residual = 1e-4
-    convergence_iterations = 10
-
     chi_md = []
     iter_below_tol = 0
 
     average_chi = AverageChi()
+
+    f_converge = open("convergance.dat", "w")
     for i, atoms in enumerate(snapshots):
-        k, chi = tsase.exafs.exafs(atoms, txt=None, tmp_dir=".")
+        k, chi = tsase.exafs.exafs(atoms, txt=None)
         average_chi.append(chi)
 
         res = average_chi.residual
         if res:
-            if res < residual:
+            if res < options.residual:
                 iter_below_tol += 1
             else:
                 iter_below_tol = 0
             s = "iter: %3i log10(residual): %.1f %2i" % (i, math.log10(res), 
                                                          iter_below_tol)
             parprint(s)
-
+            f_converge.write("%i %f\n" % (i, math.log10(res)))
+        if options.write_every_step:
+            write_chi(k, average_chi, i)
         #convergence check
-        if iter_below_tol == convergence_iterations:
-            parprint("spectra calculation complete")
-            parprint("averaged over %i MD configurations" % i)
-
-            chi = average_chi.get_average()
-            for symbol in chi:
-                parprint("writing chi_%s.dat"%symbol)
-                f_chi = paropen("chi_%s.dat"%symbol, "w")
-                f_kchi = paropen("kchi_%s.dat"%symbol, "w")
-                for j in range(len(k)):
-                    f_chi.write("%f %f\n"%(k[j],chi[symbol][j]))
-                    f_kchi.write("%f %f\n"%(k[j],k[j]*chi[symbol][j]))
-                f_chi.close()
-                f_kchi.close()
-
+        if iter_below_tol == options.residual_steps:
             break
+    f_converge.close()
+    parprint("spectra calculation complete")
+    parprint("averaged over %i MD configurations" % i)
+
+    write_chi(k, average_chi)
 
     rusage = resource.getrusage(resource.RUSAGE_SELF)
     utime = world.reduce(rusage.ru_utime)
     stime = world.reduce(rusage.ru_stime)
 
     if rank == 0:
-        parprint("user:  %.2f" % utime)
-        parprint("system: %.2f" % stime)
-
+        parprint("user:  %.2f" % (utime/float(world.size)))
+        parprint("system: %.2f" % (stime/float(world.size)))
 
 
 if __name__ == "__main__":
@@ -197,12 +205,15 @@ if __name__ == "__main__":
                       action="store_true", default=False,
                       help="instead of running an md simulation read " \
                            "in a ASE trajectory file")
-    parser.add_option("-t", "--temperature",
-                      type="float", action="store", default=300.0,
-                      help="temperature for md simulation in Kelvin")
-    parser.add_option("--time-step", dest="time_step",
-                      type="float", action="store", default=1.0,
-                      help="time step for md simulation in fs")
+    parser.add_option("--write-every-step", default=False,
+                      action="store_true",
+                      help="write out chi and kchi at every step intead " \
+                           "of just at the end")
+    parser.add_option("--residual", default=1e-4, type="float",
+                      help="residual convergence critera")
+    parser.add_option("--residual-steps", default=10, type="int",
+                      help="number of consecutive steps that the residual "\
+                           "critera must be satisfied for")
     parser.add_option("-e", "--equillibration-steps",
                       type="int", action="store", default=5000,
                       help="number of time steps/traj frames skipped " \
@@ -211,6 +222,12 @@ if __name__ == "__main__":
                       type="int", default=10,
                       help="the number of steps/frames between each exafs " \
                            "calculation")
+    parser.add_option("-t", "--temperature",
+                      type="float", action="store", default=300.0,
+                      help="temperature for md simulation in Kelvin")
+    parser.add_option("--time-step", dest="time_step",
+                      type="float", action="store", default=1.0,
+                      help="time step for md simulation in fs")
 
     options, args = parser.parse_args()
 
@@ -223,5 +240,8 @@ if __name__ == "__main__":
             if rank == 0:
                 sys.stderr.write("Error: must specify a con file\n")
         sys.exit(1)
+
+    if options.read_trajectory:
+        options.equillibration_steps = 0
 
     main(options, args[0])
