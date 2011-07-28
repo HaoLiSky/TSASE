@@ -4,6 +4,7 @@ import sys
 from optparse import OptionParser
 import math
 import resource
+import time
 
 from mpi4py import MPI
 class ASE_MPI4PY:
@@ -148,6 +149,7 @@ def write_chi(k, average_chi, number=None):
 
 
 def main(options, filename):
+    start_time = time.time()
     if options.read_trajectory:
         traj = PickleTrajectory(filename)
         snapshots = TrajectorySnapshots(traj, options)
@@ -179,12 +181,14 @@ def main(options, filename):
                                                          iter_below_tol)
             parprint(s)
             f_converge.write("%i %f\n" % (i, math.log10(res)))
+            f_converge.flush()
         if options.write_every_step:
             write_chi(k, average_chi, i)
         #convergence check
         if iter_below_tol == options.residual_steps:
             break
     f_converge.close()
+    end_time = time.time()
     parprint("spectra calculation complete")
     parprint("averaged over %i MD configurations" % i)
 
@@ -195,7 +199,8 @@ def main(options, filename):
     stime = world.reduce(rusage.ru_stime)
 
     if rank == 0:
-        parprint("user:  %.2f" % (utime/float(world.size)))
+        parprint("real:   %.2f" % (end_time-start_time))
+        parprint("user:   %.2f" % (utime/float(world.size)))
         parprint("system: %.2f" % (stime/float(world.size)))
 
 

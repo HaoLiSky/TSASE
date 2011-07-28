@@ -115,11 +115,18 @@ def load_chi_dat(filename):
 def run_feff(atoms, absorber, tmp_dir=None):
     tmp_dir_path = tempfile.mkdtemp(prefix="tmp_feff_", dir=tmp_dir)
     tsase.io.write_feff(os.path.join(tmp_dir_path, "feff.inp"), atoms, absorber)
-    p = subprocess.Popen(["feff"], cwd=tmp_dir_path, stdout=subprocess.PIPE)
+    p = subprocess.Popen(["feff"], cwd=tmp_dir_path, stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE)
     retval = p.wait()
     if retval != 0:
         print "Problem with feff calculation in %s" % tmp_dir_path
         return
+    stdout, stderr = p.communicate()
+    stderr = stderr.strip()
+    if stderr == "hash error":
+        atoms[absorber].set_position(atoms[absorber].get_position()+0.001)
+        sys.stderr.write("%s\n"%stderr)
+        return run_feff(atoms, absorber, tmp_dir)
     k, chi = load_chi_dat(os.path.join(tmp_dir_path, "chi.dat"))
     shutil.rmtree(tmp_dir_path)
     return k, chi
@@ -158,6 +165,8 @@ def exafs(atoms, txt="-", tmp_dir=None, comm=None):
         chi_total[symbol] = []
 
     k = None
+    #absorbers = numpy.where((numpy.array(range(len(atoms)))%size)==rank)[0]
+    
     for i in range(len(atoms)):
         if i%size != rank:
             continue
