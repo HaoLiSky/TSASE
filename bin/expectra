@@ -31,16 +31,94 @@ ase.parallel.barrier = ase.parallel.world.barrier
 from ase.parallel import parprint, paropen
 from ase.utils import devnull
 from ase.md.langevin import Langevin
+from ase.md.velocitydistribution import MaxwellBoltzmannDistribution
 from ase.md import MDLogger
 from ase import units
 from ase.io.trajectory import PickleTrajectory
 import tsase
 import numpy
 from qsc import QSC
+from ase.optimize.optimize import Dynamics
+from ase.units import kB
+from ase.io.trajectory import PickleTrajectory
 
 world = MPI.COMM_WORLD
 rank = world.rank
 size = world.size
+
+
+
+class MetropolisMonteCarlo(Dynamics):
+    def __init__(self, atoms,
+                 temperature=100 * kB,
+                 dr=0.001,
+                 logfile='-', 
+                 trajectory='monte_carlo.traj',
+                 adjust_cm=True):
+        Dynamics.__init__(self, atoms, logfile, trajectory)
+        self.kT = temperature
+        self.dr = dr
+        self.accepts = 0
+        self.total_steps = 0
+        if adjust_cm:
+            self.cm = atoms.get_center_of_mass()
+        else:
+            self.cm = None
+        self.initialize()
+
+    def initialize(self):
+        self.positions = 0.0 * self.atoms.get_positions()
+        self.positions = self.atoms.get_positions()
+        self.call_observers()
+        self.log(-1, self.atoms.get_potential_energy())
+                
+    def step(self):
+        while True:
+            yield self.run(1)
+                
+    def run(self, steps):
+        E_current = self.atoms.get_potential_energy()
+        for step in range(steps):
+            ro = self.atoms.get_positions()
+            self.move()
+            E_trial = self.atoms.get_potential_energy()
+
+            accept = numpy.exp((E_current - E_trial) / self.kT) > numpy.random.uniform()
+            if accept:
+                E_current = E_trial
+                self.accepts += 1
+            else:
+                self.atoms.set_positions(ro)
+            self.total_steps += 1
+            self.log(self.total_steps, E_current)
+            self.call_observers()
+
+    def get_acceptance_ratio(self):
+        return float(self.accepts)/float(self.total_steps)
+
+
+    def log(self, step, E_current):
+        if self.logfile is None:
+            return
+        name = self.__class__.__name__
+        self.logfile.write('%s: step %2d, energy %15.6f\n'
+                           % (name, step, E_current))
+        self.logfile.flush()
+
+    def move(self):
+        atoms = self.atoms
+        # displace coordinates
+        disp = numpy.random.uniform(-1., 1., (len(atoms), 3))
+        rn = atoms.get_positions() + self.dr * disp
+        atoms.set_positions(rn)
+        if self.cm is not None:
+            cm = atoms.get_center_of_mass()
+            atoms.translate(self.cm - cm)
+        rn = atoms.get_positions()
+        ase.parallel.world.broadcast(rn, 0)
+        atoms.set_positions(rn)
+        return atoms.get_positions()
+
 
 class MDSnapshots:
     def __init__(self, atoms, options):
@@ -51,7 +129,7 @@ class MDSnapshots:
 
         calc = QSC()
         self.atoms.set_calculator(calc)
-
+        MaxwellBoltzmannDistribution(atoms, options.temperature*units.kB)
         self.dyn = Langevin(self.atoms, options.time_step*units.fs, 
                              options.temperature*units.kB, 0.02)
         traj = PickleTrajectory("exafs_md.traj", 'w', self.atoms,
