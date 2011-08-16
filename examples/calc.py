@@ -3,7 +3,7 @@ import ase
 import tsase
 
 a = ase.io.read("al.traj")
-al = tsase.calc.al()
+al = tsase.calculators.al()
 a.set_calculator(al)
 
 u = a.get_potential_energy()

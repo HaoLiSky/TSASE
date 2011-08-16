@@ -7,8 +7,8 @@ head = "%5s %16s" % ("Natom", "ljocl speedup")
 print head
 print "=" * len(head)
 
-ljocl = tsase.calc.ljocl()
-lj = tsase.calc.lj()
+ljocl = tsase.calculators.ljocl()
+lj = tsase.calculators.lj()
 
 for N in range(10, 400, 20):
     a = ase.Atoms(["H"]*N, positions=numpy.random.normal(0, 1, (N,3)))
