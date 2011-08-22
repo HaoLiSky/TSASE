@@ -9,7 +9,7 @@ import time
 from mpi4py import MPI
 def mpiexcepthook(type, value, traceback):
     sys.__excepthook__(type, value, traceback)
-    sys.stderr.write("exception occured on rank %i\n", MPI.COMM_WORLD.rank);
+    sys.stderr.write("exception occured on rank %i\n" % MPI.COMM_WORLD.rank);
     MPI.COMM_WORLD.Abort()
 sys.excepthook = mpiexcepthook
 
