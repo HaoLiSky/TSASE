@@ -7,6 +7,12 @@ import resource
 import time
 
 from mpi4py import MPI
+def mpiexcepthook(type, value, traceback):
+    sys.__excepthook__(type, value, traceback)
+    sys.stderr.write("exception occured on rank %i\n", MPI.COMM_WORLD.rank);
+    MPI.COMM_WORLD.Abort()
+sys.excepthook = mpiexcepthook
+
 class ASE_MPI4PY:
     def __init__(self):
         from mpi4py import MPI
@@ -287,30 +293,30 @@ if __name__ == "__main__":
     parser.add_option("-r", "--read-trajectory",
                       action="store_true", default=False,
                       help="instead of running an md simulation read " \
-                           "in a ASE trajectory file")
+                           "in a ASE trajectory file [default: %default]")
     parser.add_option("--write-every-step", default=False,
                       action="store_true",
                       help="write out chi and kchi at every step intead " \
-                           "of just at the end")
+                           "of just at the end [default: %default]")
     parser.add_option("--residual", default=1e-4, type="float",
-                      help="residual convergence critera")
+                      help="residual convergence critera [default: %default]")
     parser.add_option("--residual-steps", default=10, type="int",
                       help="number of consecutive steps that the residual "\
-                           "critera must be satisfied for")
+                           "critera must be satisfied for [default: %default]")
     parser.add_option("-e", "--equillibration-steps",
                       type="int", action="store", default=5000,
                       help="number of time steps/traj frames skipped " \
-                           "before the exafs averaging begins")
+                           "before the exafs averaging begins [default: %default]")
     parser.add_option("-s", "--snapshot-steps",
                       type="int", default=10,
                       help="the number of steps/frames between each exafs " \
-                           "calculation")
+                           "calculation [default: %default]")
     parser.add_option("-t", "--temperature",
                       type="float", action="store", default=300.0,
-                      help="temperature for md simulation in Kelvin")
+                      help="temperature for md simulation in Kelvin [default: %default]")
     parser.add_option("--time-step", dest="time_step",
                       type="float", action="store", default=1.0,
-                      help="time step for md simulation in fs")
+                      help="time step for md simulation in fs [default: %default]")
 
     options, args = parser.parse_args()
 
