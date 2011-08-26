@@ -14,6 +14,10 @@ try:
     from ljocl import ljocl
 except:
     pass
+try:
+    import lammps_xph
+except:
+    pass
 
 def pt():
     return morse()
