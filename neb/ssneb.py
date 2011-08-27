@@ -13,8 +13,9 @@ class ssneb:
     The generalized nudged elastic path (ssneb) class.
     """
 
-    def __init__(self, p1, p2, numImages = 8, k = 5.0, tangent = "new",       \
-                 dneb = False, dnebOrg = False, method = 'normal', onlyci = 0, weight = 1):
+    def __init__(self, p1, p2, numImages = 7, k = 5.0, tangent = "new",       \
+                 dneb = False, dnebOrg = False, method = 'normal',            \
+                 onlyci = False, weight = 1, parallel = False):
         """
         The neb constructor.
         Parameters:
@@ -39,6 +40,7 @@ class ssneb:
         self.method = method
         self.onlyci = onlyci
         self.weight = weight 
+        self.parallel = parallel 
 
         #set the path by linear interpolation between end points
         n = self.numImages - 1
@@ -92,10 +94,12 @@ class ssneb:
         """
     
         # Calculate the force due to the potential on the intermediate points.
-        self.Umax  = self.path[0].get_potential_energy()
+        self.Umax  = self.path[0].u
         self.Umaxi = 0
+        if not self.parallel:
         for i in range(1, self.numImages - 1):
             self.path[i].u     = self.path[i].get_potential_energy()
+            self.path[i].f     = self.path[i].get_forces()
             self.path[i].cellt = self.path[i].get_cell() * self.jacobian 
             self.path[i].icell = numpy.linalg.inv(self.path[i].get_cell())
             self.path[i].vdir  = self.path[i].get_scaled_positions()
@@ -103,7 +107,7 @@ class ssneb:
                 self.path[i].st
             except:
                 self.path[i].st = numpy.zeros((3,3))
-            vol = self.path[i].get_volume()
+            vol = self.path[i].get_volume()*(-1)
             stt = self.path[i].get_stress()
             self.path[i].st[0][0] = stt[0] * vol
             self.path[i].st[1][1] = stt[1] * vol
@@ -117,19 +121,22 @@ class ssneb:
             if self.path[i].u > self.Umax:
                 self.Umax  = self.path[i].u
                 self.Umaxi = i
+        else:
+            i = self.world.rank * (self.nimages - 2) // self.world.size + 1
             
         # Loop over each intermediate point and calculate the tangents.
         for i in range(1, self.numImages - 1):
 
             # Here st should be cauchy stress tensor times cell volume. 
             # Timing box volume should have been done.
-	    self.path[i].totalf = numpy.vstack((self.path[i].get_forces(), self.path[i].st / self.jacobian))
+	    self.path[i].totalf = numpy.vstack((self.path[i].f, self.path[i].st / self.jacobian))
             # realtf that needed by nebspline.pl is saved for output 
             self.path[i].realtf = self.path[i].totalf
             
             # If we're using the 'old' tangent, the tangent is defined as the
             # vector from the point behind the current image to the point in
             # front of the current image.
+            # Haven't implemented for ssneb
             if self.tangent == 'old':
                 self.path[i].n = (self.path[i + 1].r - self.path[i - 1].r)
             
@@ -188,13 +195,11 @@ class ssneb:
                         avgbox  = 0.5*(self.path[i].get_cell() + self.path[i - 1].get_cell())
                         sn     += numpy.dot(dr_dir,avgbox) * Umax
 
-			#---------------01/26/11 average strain-------------------------------------------------
                         dh   = self.path[i + 1].cellt - self.path[i].cellt
 			snb1 = numpy.dot(self.path[i].icell, dh)*0.5 + numpy.dot(self.path[i + 1].icell, dh)*0.5
                         dh   = self.path[i].cellt - self.path[i - 1].cellt
 			snb2 = numpy.dot(self.path[i].icell, dh)*0.5 + numpy.dot(self.path[i - 1].icell, dh)*0.5
                         snb  = snb1 * Umin + snb2 * Umax
-			#---------------------------------------------------------------------------------------
 			self.path[i].n = numpy.vstack((sn,snb))
                     else:
                         dr_dir  = sPBC(self.path[i + 1].vdir - self.path[i].vdir)
@@ -204,13 +209,11 @@ class ssneb:
                         avgbox  = 0.5*(self.path[i].get_cell() + self.path[i - 1].get_cell())
                         sn     += numpy.dot(dr_dir,avgbox) * Umin
 
-			#---------------01/26/11---------------------------------------------------------------
                         dh   = self.path[i + 1].cellt - self.path[i].cellt
 			snb1 = numpy.dot(self.path[i].icell, dh)*0.5 + numpy.dot(self.path[i + 1].icell, dh)*0.5
                         dh   = self.path[i].cellt - self.path[i - 1].cellt
 			snb2 = numpy.dot(self.path[i].icell, dh)*0.5 + numpy.dot(self.path[i - 1].icell, dh)*0.5
                         snb  = snb1 * Umax + snb2 * Umin
-			#---------------------------------------------------------------------------------------
 			self.path[i].n = numpy.vstack((sn,snb))
         
         # Normalize the tangents.
