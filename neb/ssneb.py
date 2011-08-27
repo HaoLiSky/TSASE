@@ -96,7 +96,6 @@ class ssneb:
         # Calculate the force due to the potential on the intermediate points.
         self.Umax  = self.path[0].u
         self.Umaxi = 0
-        if not self.parallel:
         for i in range(1, self.numImages - 1):
             self.path[i].u     = self.path[i].get_potential_energy()
             self.path[i].f     = self.path[i].get_forces()
@@ -121,8 +120,6 @@ class ssneb:
             if self.path[i].u > self.Umax:
                 self.Umax  = self.path[i].u
                 self.Umaxi = i
-        else:
-            i = self.world.rank * (self.nimages - 2) // self.world.size + 1
             
         # Loop over each intermediate point and calculate the tangents.
         for i in range(1, self.numImages - 1):
