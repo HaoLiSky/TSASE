@@ -143,10 +143,8 @@ class LAMMPS:
         self.update(atoms)
         tc = self.thermo_content[-1]
         # 1 bar (used by lammps for metal units) = 1e-4 GPa
-        #return np.array([tc[i] for i in ('pxx','pyy','pzz',
-        #                                 'pyz','pxz','pxy')])*(-1e-4*GPa)
         return np.array([tc[i] for i in ('pxx','pyy','pzz',
-                                         'pyz','pxz','pxy')])*(1e-4*GPa)
+                                         'pyz','pxz','pxy')])*(-1e-4*GPa)
 
     def update(self, atoms):
         # TODO: check if (re-)calculation is necessary
