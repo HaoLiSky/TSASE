@@ -60,6 +60,10 @@ class ssneb:
         dR    = (vdir2 - vdir1) / n # path for direct coordinates
         calc  = p1.get_calculator()
         for i in range(1, n):
+            # making a directory for each image, which is nessary for vasp to read last step's WAVECAR  
+            # also, it is good to prevent overwriting files for parallelizaiton over images
+            fdname = '0'+str(i)
+            os.mkdir(fdname)
             cellt = cell1 + dRB * i
             vdirt = vdir1 + dR * i
             rt    = numpy.dot(vdirt,cellt)
@@ -80,11 +84,16 @@ class ssneb:
 	self.path[0].cellt = self.path[0].get_cell() * self.jacobian 
 	self.path[0].icell = numpy.linalg.inv(cell1)
 	self.path[0].vdir  = self.path[0].get_scaled_positions()
-        self.path[0].u     = self.path[0].get_potential_energy()
 	self.path[n].cellt = self.path[n].get_cell() * self.jacobian 
 	self.path[n].icell = numpy.linalg.inv(cell2)
 	self.path[n].vdir  = self.path[n].get_scaled_positions()
         self.path[n].u     = self.path[n].get_potential_energy()
+        for i in [0,n]:
+            fdname = '0'+str(i)
+            os.mkdir(fdname)
+            os.chdir(fdname)
+            self.path[i].u     = self.path[i].get_potential_energy()
+            os.chdir('../')
 
     def forces(self):
         """
@@ -98,10 +107,8 @@ class ssneb:
         self.Umax  = self.path[0].u
         self.Umaxi = 0
         for i in range(1, self.numImages - 1):
-            # making a directory for each image, which is nessary for vasp to read last step's WAVECAR  
-            # also, it is good to prevent overwriting files for parallelizaiton over images
+            # writing input and do the calculation in images' directories respectly
             fdname = '0'+str(i)
-            os.mkdir(fdname)
             os.chdir(fdname)
             self.path[i].u     = self.path[i].get_potential_energy()
             self.path[i].f     = self.path[i].get_forces()
