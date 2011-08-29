@@ -3,6 +3,7 @@ The generalized nudged elastic path (ssneb) module.
 """
 
 import numpy
+import os
 from copy import deepcopy
 from math import sqrt, atan, pi
 from util import vmag, vunit, vproj, vdot, sPBC
@@ -97,8 +98,15 @@ class ssneb:
         self.Umax  = self.path[0].u
         self.Umaxi = 0
         for i in range(1, self.numImages - 1):
+            # making a directory for each image, which is nessary for vasp to read last step's WAVECAR  
+            # also, it is good to prevent overwriting files for parallelizaiton over images
+            fdname = '0'+str(i)
+            os.mkdir(fdname)
+            os.chdir(fdname)
             self.path[i].u     = self.path[i].get_potential_energy()
             self.path[i].f     = self.path[i].get_forces()
+            stt                = self.path[i].get_stress()
+            os.chdir('../')
             self.path[i].cellt = self.path[i].get_cell() * self.jacobian 
             self.path[i].icell = numpy.linalg.inv(self.path[i].get_cell())
             self.path[i].vdir  = self.path[i].get_scaled_positions()
@@ -107,7 +115,6 @@ class ssneb:
             except:
                 self.path[i].st = numpy.zeros((3,3))
             vol = self.path[i].get_volume()*(-1)
-            stt = self.path[i].get_stress()
             self.path[i].st[0][0] = stt[0] * vol
             self.path[i].st[1][1] = stt[1] * vol
             self.path[i].st[2][2] = stt[2] * vol
