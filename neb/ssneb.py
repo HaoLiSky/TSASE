@@ -63,7 +63,7 @@ class ssneb:
             # making a directory for each image, which is nessary for vasp to read last step's WAVECAR  
             # also, it is good to prevent overwriting files for parallelizaiton over images
             fdname = '0'+str(i)
-            os.mkdir(fdname)
+            if not os.path.exists(fdname): os.mkdir(fdname)
             cellt = cell1 + dRB * i
             vdirt = vdir1 + dR * i
             rt    = numpy.dot(vdirt,cellt)
@@ -87,12 +87,11 @@ class ssneb:
 	self.path[n].cellt = self.path[n].get_cell() * self.jacobian 
 	self.path[n].icell = numpy.linalg.inv(cell2)
 	self.path[n].vdir  = self.path[n].get_scaled_positions()
-        self.path[n].u     = self.path[n].get_potential_energy()
         for i in [0,n]:
             fdname = '0'+str(i)
-            os.mkdir(fdname)
+            if not os.path.exists(fdname): os.mkdir(fdname)
             os.chdir(fdname)
-            self.path[i].u     = self.path[i].get_potential_energy()
+            self.path[i].u = self.path[i].get_potential_energy()
             os.chdir('../')
 
     def forces(self):
