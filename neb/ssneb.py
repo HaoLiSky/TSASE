@@ -52,12 +52,12 @@ class ssneb:
         cell2 = p2.get_cell()
         dRB   = (cell2 - cell1) / n # path for cell
         #don't use get_scaled_positions() or applay sPBC() here 
-        #because the atoms can move over half of the lattice from initail to final
+        #if the atoms can move over half of the lattice from initail to final
         icell = numpy.linalg.inv(cell1)
         vdir1 = numpy.dot(p1.get_positions(),icell)
         icell = numpy.linalg.inv(cell2)
         vdir2 = numpy.dot(p2.get_positions(),icell)
-        dR    = (vdir2 - vdir1) / n # path for direct coordinates
+        dR    = sPBC(vdir2 - vdir1) / n # path for direct coordinates
         calc  = p1.get_calculator()
         for i in range(1, n):
             # making a directory for each image, which is nessary for vasp to read last step's WAVECAR  
