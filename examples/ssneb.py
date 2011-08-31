@@ -26,6 +26,17 @@ p2.set_charges(charges)
 pair_coeff = [ '1 1 0.00145 1.98', '2 2 0.00128 5.24' ]
 parameters = { 'pair_style':'lj/cut/coul/long 10.0 10.0', 'pair_coeff':pair_coeff, 'kspace_style':'ewald/n 1.0e-8', 'atom_style':'charge','mass':['1 1','2 1'], 'pair_modify':'table 12 mix arithmetic'}
 calc = LAMMPS(parameters=parameters)
+# or set calculator to VASP
+#calc = Vasp(prec = 'Accurate',
+#            ediff = 1e-6,
+#            kpts = (6,6,6),
+#            voskown = 1,
+#            lcharg = False,
+#            algo = 'Fast',
+#            lreal= False,
+#            lplane=True
+#              )
+
 p1.set_calculator(calc)
 p2.set_calculator(calc)
 
