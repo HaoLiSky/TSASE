@@ -36,7 +36,6 @@ class qm_ssneb(minimizer_ssneb):
 	self.band.forces()
         for i in range(1, len(self.band.path) - 1):
 	    totalf = self.band.path[i].totalf
-            totalf[0] *= 0.0 #prevent translation
 	    Power = vdot(totalf,self.v[i-1])
             if Power > 0.0 :
                 self.v[i-1]  = vproj(self.v[i-1], totalf)

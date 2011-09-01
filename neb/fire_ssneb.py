@@ -47,7 +47,6 @@ class fire_ssneb(minimizer_ssneb):
         self.band.forces()
         for i in range(1, self.band.numImages - 1):
 	        totalf = self.band.path[i].totalf
-                totalf[0] *= 0.0 #prevent translation
 		Power = vdot(totalf,self.v[i-1])
 		if Power > 0.0:
 		    self.v[i-1] = (1.0-self.a)*self.v[i-1]+self.a*vmag(self.v[i-1])*vunit(totalf)
