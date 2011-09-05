@@ -15,7 +15,7 @@ try:
 except:
     pass
 try:
-    import lammps_xph
+    import lammps_ext
 except:
     pass
 
