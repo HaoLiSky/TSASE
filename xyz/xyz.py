@@ -716,15 +716,24 @@ class xyz(gtk.Window):
             except:
                 try:
                     data = tsase.io.read_con(filename)
+                    if len(data) < 1:
+                        raise
                 except:
-                    print "Failed to load", filename
-                    return
+                    try:
+                        data = tsase.io.read_bopfox(filename)
+                        if len(data) < 1:
+                            raise
+                    except:
+                        print "Failed to load", filename
+                        return
         self.data_set(data)
         self.set_title(os.path.abspath(filename))
 
     def data_write(self, filename):
         if filename.endswith(".con"):
             tsase.io.write_con(filename, self.get_frame_atoms())
+        elif filename.endswith(".bx"):
+                tsase.io.write_bopfox(filename, self.get_frame_atoms())
         else:
             if '.' not in filename:
                 vasp.write_vasp(filename, self.get_frame_atoms())
