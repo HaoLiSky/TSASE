@@ -1,0 +1,2 @@
+- getting reactantNeighbors should use memoized distance functions in kdb.py
+
