@@ -15,8 +15,6 @@ from kdb import *
 PBC_MAPPING_CHECK = False
 REBOX_SUGGESTIONS = False
 REMOVE_DUPLICATES = False
-AUTOSCALE         = True
-
 
 def isDistance(pbcvector, target, box):
     for x in [-1, 0, 1]:
@@ -123,8 +121,8 @@ if __name__ == "__main__":
     parser.add_option("-d", "--kdbdir", dest = "kdbdir", 
                       help = "the path to the kinetic database",
                       default = "./kdb")
-    parser.add_option("-a", "--af", dest = "af", action="store", type="float", 
-                      help = "angstrom fudge parameter",
+    parser.add_option("-c", "--dc", dest = "dc", action="store", type="float", 
+                      help = "distance cutoff parameter",
                       default = DISTANCE_CUTOFF)
     parser.add_option("-n", "--nf", dest = "nf", action="store", type="float", 
                       help = "neighbor fudge parameter",
@@ -132,7 +130,7 @@ if __name__ == "__main__":
     parser.add_option("--nodupes", dest = "nodupes", action="store_true",
                       help = "detect and remove duplicate suggestions (can be expensive)")
     options, args = parser.parse_args()
-    DISTANCE_CUTOFF = options.af
+    DISTANCE_CUTOFF = options.dc
     NEIGHBOR_FUDGE = options.nf
     REMOVE_DUPLICATES = options.nodupes
 

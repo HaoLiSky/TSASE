@@ -135,8 +135,8 @@ if __name__ == "__main__":
     parser.add_option("-n", "--nf", dest = "nf", action="store", type="float", 
                       help = "neighbor fudge parameter",
                       default = NEIGHBOR_FUDGE)
-    parser.add_option("-a", "--af", dest = "af", action="store", type="float", 
-                      help = "angstrom fudge parameter",
+    parser.add_option("-c", "--dc", dest = "dc", action="store", type="float", 
+                      help = "distance cutoff parameter",
                       default = DISTANCE_CUTOFF)
     parser.add_option("--barrier1", dest = "b1", action="store", type="float", 
                       help = "barrier energy for reactant to saddle",
@@ -152,7 +152,7 @@ if __name__ == "__main__":
                       default = -1.0)
     options, args = parser.parse_args()
     NEIGHBOR_FUDGE = options.nf
-    DISTANCE_CUTOFF = options.af
+    DISTANCE_CUTOFF = options.dc
     
 
     # Make sure we get the reactant, saddle, product, and mode files.
