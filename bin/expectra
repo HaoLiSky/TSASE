@@ -9,7 +9,7 @@ import time
 from mpi4py import MPI
 def mpiexcepthook(type, value, traceback):
     sys.__excepthook__(type, value, traceback)
-    sys.stderr.write("exception occured on rank %i\n" % MPI.COMM_WORLD.rank);
+    sys.stderr.write("exception occured on rank %i\n" % MPI.COMM_WORLD.rank)
     MPI.COMM_WORLD.Abort()
 sys.excepthook = mpiexcepthook
 
@@ -224,14 +224,13 @@ class AverageChi:
         return result
 
     def get_weighted_average(self):
-        average_chis = self.get_average()
-        if average_chis == None:
+        if len(self.chis) == 0:
             return None
-        for symbol in average_chis:
-            average_chis[symbol] = [ self.k[i]**self.k_weight*average_chis[symbol][self.k[i]] for i in range(len(self.k)) ]
-            average_chis[symbol] = numpy.array(average_chis[symbol])
-        return average_chis
-
+        result = {}
+        for symbol in self.chis:
+            result[symbol] = self.chis[symbol]*self.k**self.k_weight
+            result[symbol] = numpy.average(self.chis[symbol], axis=0)
+        return result
 
 def write_chi(k, average_chi, number=None):
     chi = average_chi.get_average()
