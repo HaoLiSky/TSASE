@@ -35,7 +35,6 @@ ase.parallel.rank = ase.parallel.world.rank
 ase.parallel.size = ase.parallel.world.size
 ase.parallel.barrier = ase.parallel.world.barrier
 from ase.parallel import parprint, paropen
-from ase.utils import devnull
 from ase.md.langevin import Langevin
 from ase.md.velocitydistribution import MaxwellBoltzmannDistribution
 from ase.md import MDLogger
@@ -46,7 +45,13 @@ import numpy
 from qsc import QSC
 from ase.optimize.optimize import Dynamics
 from ase.units import kB
-from ase.io.trajectory import PickleTrajectory
+
+def mpiexcepthook(type, value, traceback):
+    sys.__excepthook__(type, value, traceback)
+    from mpi4py import MPI
+    sys.stderr.write("exception occured on rank %i\n" % MPI.COMM_WORLD.rank);
+    MPI.COMM_WORLD.Abort()
+sys.excepthook = mpiexcepthook
 
 world = MPI.COMM_WORLD
 rank = world.rank
@@ -130,7 +135,7 @@ class MDSnapshots:
     def __init__(self, atoms, options):
         self.atoms = atoms
         self.options = options
-        self.max_snapshot_steps = 1000
+        self.max_snapshot_steps = 100000
         self.nsnapshots = 0
 
         calc = QSC()
@@ -185,20 +190,24 @@ class TrajectorySnapshots:
         return rframe
 
 class AverageChi:
-    def __init__(self):
+    def __init__(self, options):
         self.chis = {}
+        self.k = None
+        self.k_weight = options.k_weight
         self.residual = None
 
-    def append(self, chi):
-        old_average = self.get_average()
+    def append(self, k, chi):
+        self.k = k
+        old_average = self.get_weighted_average()
         for symbol in chi:
             if symbol not in self.chis:
                 self.chis[symbol] = []
             self.chis[symbol].append(chi[symbol])
-        new_average = self.get_average()
+        new_average = self.get_weighted_average()
 
         if old_average == None:
             return
+
         residuals = []
         for symbol in self.chis:
             residual = numpy.linalg.norm(new_average[symbol] - 
@@ -213,6 +222,16 @@ class AverageChi:
         for symbol in self.chis:
             result[symbol] = numpy.average(self.chis[symbol], axis=0)
         return result
+
+    def get_weighted_average(self):
+        average_chis = self.get_average()
+        if average_chis == None:
+            return None
+        for symbol in average_chis:
+            average_chis[symbol] = [ self.k[i]**self.k_weight*average_chis[symbol][self.k[i]] for i in range(len(self.k)) ]
+            average_chis[symbol] = numpy.array(average_chis[symbol])
+        return average_chis
+
 
 def write_chi(k, average_chi, number=None):
     chi = average_chi.get_average()
@@ -231,8 +250,33 @@ def write_chi(k, average_chi, number=None):
         f_chi.close()
         f_kchi.close()
 
+class Logger:
+    def __init__(self, logpath):
+        self.logpath = logpath
+        self.logfile = None
+        
+    def log(self, msg):
+        if not self.logfile:
+            self.logfile = open(self.logpath, 'w', 1)
+        if rank == 0:
+            self.logfile.write(msg+'\n')
+            print msg
+log = Logger('expectra.log').log
+
+
+def calculate_pdf(atoms):
+    bond_lengths = []
+    pos = atoms.get_positions()
+    for i in range(0, len(atoms)):
+        for j in range(i+1, len(atoms)):
+            d = numpy.linalg.norm(pos[i]-pos[j])
+            bond_lengths.append(d)
+    return bond_lengths
 
 def main(options, filename):
+    log("Options:")
+    for option, value in options.__dict__.iteritems():
+        log("    %s: %r" % (option, value))
     start_time = time.time()
     if options.read_trajectory:
         traj = PickleTrajectory(filename)
@@ -245,15 +289,17 @@ def main(options, filename):
         snapshots = MDSnapshots(atoms, options)
 
 
-    chi_md = []
     iter_below_tol = 0
+    pdf = []
 
-    average_chi = AverageChi()
+    average_chi = AverageChi(options)
 
-    f_converge = open("convergance.dat", "w")
     for i, atoms in enumerate(snapshots):
         k, chi = tsase.exafs.exafs(atoms, txt=None)
-        average_chi.append(chi)
+        average_chi.append(k, chi)
+
+        if options.pdf:
+            pdf.extend(calculate_pdf(atoms))
 
         res = average_chi.residual
         if res:
@@ -263,29 +309,40 @@ def main(options, filename):
                 iter_below_tol = 0
             s = "iter: %3i log10(residual): %.1f %2i" % (i, math.log10(res), 
                                                          iter_below_tol)
-            parprint(s)
-            f_converge.write("%i %f\n" % (i, math.log10(res)))
-            f_converge.flush()
+            log(s)
         if options.write_every_step:
             write_chi(k, average_chi, i)
         #convergence check
         if iter_below_tol == options.residual_steps:
             break
-    f_converge.close()
     end_time = time.time()
-    parprint("spectra calculation complete")
-    parprint("averaged over %i MD configurations" % i)
+    log("spectra calculation complete")
+    log("averaged over %i MD configurations" % i)
 
     write_chi(k, average_chi)
+
+    if options.pdf:
+        log("writing pdf histogram to pdf.dat")
+        pdf = [ r for r in pdf if r <= 3.4 ]
+        pdf = numpy.array(pdf)
+        bins = [ 2.6, 2.8, 3.0, 3.2, 3.4 ]
+        hist, bins = numpy.histogram(pdf, bins=bins)
+        center = (bins[:-1]+bins[1:])/2.0
+        f = paropen('pdf.dat', 'w')
+        hist = numpy.array(hist, dtype='float')
+        hist = hist/numpy.sum(hist)
+        for i in xrange(len(hist)):
+            f.write("%8.4f %.6f\n" % (center[i], hist[i]))
+        f.close()
 
     rusage = resource.getrusage(resource.RUSAGE_SELF)
     utime = world.reduce(rusage.ru_utime)
     stime = world.reduce(rusage.ru_stime)
 
     if rank == 0:
-        parprint("real:   %.2f" % (end_time-start_time))
-        parprint("user:   %.2f" % (utime/float(world.size)))
-        parprint("system: %.2f" % (stime/float(world.size)))
+        log("real:   %.2f" % (end_time-start_time))
+        log("user:   %.2f" % (utime/float(world.size)))
+        log("system: %.2f" % (stime/float(world.size)))
 
 
 if __name__ == "__main__":
@@ -298,11 +355,17 @@ if __name__ == "__main__":
                       action="store_true",
                       help="write out chi and kchi at every step intead " \
                            "of just at the end [default: %default]")
+    parser.add_option("--pdf", default=False,
+                      action="store_true",
+                      help="write out pdf [default: %default]")
     parser.add_option("--residual", default=1e-4, type="float",
                       help="residual convergence critera [default: %default]")
     parser.add_option("--residual-steps", default=10, type="int",
                       help="number of consecutive steps that the residual "\
                            "critera must be satisfied for [default: %default]")
+    parser.add_option("-k", "--k-weight", default=1, type="int",
+                      help="the k-weight used for the residual calculation: " \
+                           "k^w * chi(k) [default: %default]")
     parser.add_option("-e", "--equillibration-steps",
                       type="int", action="store", default=5000,
                       help="number of time steps/traj frames skipped " \
