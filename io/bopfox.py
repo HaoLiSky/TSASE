@@ -26,6 +26,8 @@ def read_bopfox(filename):
     scale = 1.0
     while line_index < len(lines):
         l = lines[line_index]
+        if "magnetisation" in l:
+            break
         if "=" in l:
             key = l.split("=")[0].strip()
             if key == "StrucName":
