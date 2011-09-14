@@ -74,6 +74,44 @@ class Atoms:
             counts[name] += 1
         return counts
         
+
+def atomAtomPbcVector(atoms, a, b):
+    if not hasattr(atoms, 'ibox'):
+        atoms.ibox = numpy.linalg.inv(atoms.get_cell())
+    if not hasattr(atoms, 'pbcVectors'):
+        atoms.pbcVectors = {}
+    if (a, b) not in atoms.pbcVectors or (b, a) not in atoms.pbcVectors:
+        atoms.pbcVectors[(a, b)] = pbc(atoms.positions[b] - atoms.positions[a], atoms.get_cell(), atoms.ibox)
+        atoms.pbcVectors[(b, a)] = -atoms.pbcVectors[(a, b)]
+    return atoms.pbcVectors[(a, b)]
+            
+def atomAtomPbcDistance(atoms, a, b):
+    if not hasattr(atoms, 'pbcDistances'):
+        atoms.pbcDistances = {}
+    if (a, b) not in atoms.pbcDistances or (b, a) not in atoms.pbcDistances:
+        atoms.pbcDistances[(a, b)] = numpy.linalg.norm(atomAtomPbcVector(atoms, a, b))
+        atoms.pbcDistances[(b, a)] = atoms.pbcDistances[(a, b)]
+    return atoms.pbcDistances[(a, b)]
+        
+def atomAtomDistance(atoms, a, b):
+    if not hasattr(atoms, 'distances'):
+        atoms.distances = {}
+    if (a, b) not in atoms.distances or (b, a) not in atoms.distances:
+        atoms.distances[(a, b)] = numpy.linalg.norm(atoms.positions[a] - atoms.positions[b])
+        atoms.distances[(b, a)] = atoms.distances[(a, b)]
+    return atoms.distances[(a, b)]
+
+def getNameList(atoms):
+    """
+    Returns a sorted list of element names.
+    """
+    nl = []
+    for name in atoms.get_chemical_symbols():
+        if name not in nl:
+            nl.append(name)
+    return sorted(nl)
+
+
 def pbc(r, box, ibox = None):
     """
     Applies periodic boundary conditions.

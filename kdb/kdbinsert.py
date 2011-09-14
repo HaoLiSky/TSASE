@@ -7,6 +7,10 @@ import glob
 
 from optparse import OptionParser
 
+from tsase.io import read_con
+import ase
+from ase.io.xyz import read_xyz, write_xyz
+
 from kdb import *
 
 def coordination_numbers(p, cutoff):
@@ -15,8 +19,9 @@ def coordination_numbers(p, cutoff):
         nl.append([])
         for b in range(len(p)):
             if b != a:
-                dist = numpy.linalg.norm(p.r[a] - p.r[b])        
-                if dist < (elements[p.names[a]]["radius"] + elements[p.names[b]]["radius"]) * (1.0 + NEIGHBOR_FUDGE):
+                dist = numpy.linalg.norm(p.get_positions()[a] - p.get_positions()[b])        
+                if dist < (elements[p.get_chemical_symbols()[a]]["radius"] + 
+                           elements[p.get_chemical_symbols()[b]]["radius"]) * (1.0 + NEIGHBOR_FUDGE):
                     nl[a].append(b)
     return [len(l) for l in nl]
 
@@ -58,7 +63,7 @@ def getMappings(a, b, mappings = None):
         for i in range(len(bCoordinations)):
             if bCoordinations[i] == bLeastCommonCoordination:
                 # Make sure the element types are the same.
-                if a.names[aAtom] != b.names[i]:
+                if a.get_chemical_symbols()[aAtom] != b.get_chemical_symbols()[i]:
                     continue
                 mappings = getMappings(a, b, {aAtom:i})
                 # If the result is not none, then we found a successful mapping.
@@ -78,7 +83,7 @@ def getMappings(a, b, mappings = None):
         # Calculate the distances from unmappedA to all mapped a atoms.
         distances = {}
         for i in mappings.keys():
-            distances[i] = a.atomAtomDistance(unmappedA, i)
+            distances[i] = atomAtomDistance(a, unmappedA, i)
         
         # Loop over each unmapped b atom. Compare the distances between it and 
         # the mapped b atoms to the corresponding distances between unmappedA 
@@ -88,10 +93,10 @@ def getMappings(a, b, mappings = None):
             if bAtom not in mappings.values():
                 for aAtom in distances:
                     # Break if type check fails.
-                    if b.names[bAtom] != a.names[unmappedA]:
+                    if b.get_chemical_symbols()[bAtom] != a.get_chemical_symbols()[unmappedA]:
                         break
                     # Break if distance check fails  
-                    bDist = b.atomAtomDistance(bAtom, mappings[aAtom])
+                    bDist = atomAtomDistance(b, bAtom, mappings[aAtom])
                     if abs(distances[aAtom] - bDist) > DISTANCE_CUTOFF:
                         break
                 else:
@@ -110,20 +115,25 @@ def getMappings(a, b, mappings = None):
         return None 
 
 
-def stripUnselectedAtoms(con, selected):
-    """ Removes any atoms from con that are not in selected and returns a new
+def stripUnselectedAtoms(atoms, selected):
+    """ Removes any atoms from atoms that are not in selected and returns a new
     structure and a mapping from atoms in the old structure to atoms in the new 
     structure. """
+    src = atoms.copy()
+    dest = atoms.copy()
+    while len(dest) > 0:
+        dest.pop()
     mapping = {}
-    new = Atoms(len(selected))
-    new.box = con.box.copy()
-    for i in range(len(selected)):
-        new.r[i] = con.r[selected[i]]
-        new.free[i] = con.free[selected[i]]
-        new.names[i] = con.names[selected[i]]
-        new.mass[i] = con.mass[selected[i]]
-        mapping[selected[i]] = i
-    return new, mapping
+    index = 0
+    constraints = []
+    for i in selected:
+        mapping[i] = index
+        index += 1
+        if i in src.constraints[0].index: 
+            constraints.append(index)
+        dest.append(src[i])
+    dest.set_constraint(ase.constraints.FixAtoms(constraints))
+    return dest, mapping
     
 if __name__ == "__main__":
 
@@ -162,9 +172,9 @@ if __name__ == "__main__":
         
 
     # Load the reactant, saddle, product, and mode files.
-    reactant = loadcon(args[0])
-    saddle = loadcon(args[1])
-    product = loadcon(args[2])
+    reactant = read_con(args[0])
+    saddle = read_con(args[1])
+    product = read_con(args[2])
     mode = load_mode(args[3])
 
     #TODO: check that the numbers and types of atoms are the same, and that the mode
@@ -172,9 +182,9 @@ if __name__ == "__main__":
 
     # Make a list of mobile atoms.
     mobileAtoms = []
-    reactant2saddle = per_atom_norm(saddle.r - reactant.r, saddle.box)
-    product2saddle = per_atom_norm(saddle.r - product.r, saddle.box)
-    reactant2product = per_atom_norm(product.r - reactant.r, saddle.box)
+    reactant2saddle = per_atom_norm(saddle.positions - reactant.positions, saddle.get_cell())
+    product2saddle = per_atom_norm(saddle.positions - product.positions, saddle.get_cell())
+    reactant2product = per_atom_norm(product.positions - reactant.positions, saddle.get_cell())
     for i in range(len(saddle)):
         if max(reactant2saddle[i], product2saddle[i], reactant2product[i]) > MOBILE_ATOM_CUTOFF:
             mobileAtoms.append(i)
@@ -187,17 +197,17 @@ if __name__ == "__main__":
     # Make a list of atoms that neighbor the mobile atoms.
     neighborAtoms = []
     for atom in mobileAtoms:
-        r1 = elements[saddle.names[atom]]["radius"]
+        r1 = elements[saddle.get_chemical_symbols()[atom]]["radius"]
         for i in range(len(saddle)):
             if i in mobileAtoms or i in neighborAtoms:
                 continue
-            r2 = elements[saddle.names[i]]["radius"]
+            r2 = elements[saddle.get_chemical_symbols()[i]]["radius"]
             maxDist = (r1 + r2) * (1.0 + NEIGHBOR_FUDGE)
-            if reactant.atomAtomPbcDistance(atom, i) < maxDist:
+            if atomAtomPbcDistance(reactant, atom, i) < maxDist:
                 neighborAtoms.append(i)
-            elif saddle.atomAtomPbcDistance(atom, i) < maxDist:
+            elif atomAtomPbcDistance(saddle, atom, i) < maxDist:
                 neighborAtoms.append(i)
-            elif product.atomAtomPbcDistance(atom, i) < maxDist:
+            elif atomAtomPbcDistance(product, atom, i) < maxDist:
                 neighborAtoms.append(i)
 
     selectedAtoms = mobileAtoms + neighborAtoms
@@ -228,38 +238,40 @@ if __name__ == "__main__":
             sys.exit()
         a = working.pop()
         for i in undone[:]:
-            v = pbc(temp.r[i] - temp.r[a], temp.box)
+            v = pbc(temp.positions[i] - temp.positions[a], temp.get_cell())
             d = numpy.linalg.norm(v)
-            if d < (elements[temp.names[a]]["radius"] + elements[temp.names[i]]["radius"]) * (1.0 + NEIGHBOR_FUDGE):
-                temp.r[i] = temp.r[a] + v
+            if d < (elements[temp.get_chemical_symbols()[a]]["radius"] + 
+                    elements[temp.get_chemical_symbols()[i]]["radius"]) * (1.0 + NEIGHBOR_FUDGE):
+                temp[i].position = temp[a].position + v
                 working.append(i)
                 undone.remove(i)
-    v1s = pbc(saddle.r - reactant.r, reactant.box)
-    v12 = pbc(product.r - reactant.r, reactant.box)
+    v1s = pbc(saddle.positions - reactant.positions, reactant.get_cell())
+    v12 = pbc(product.positions - reactant.positions, reactant.get_cell())
     reactant = temp
-    saddle.r = reactant.r + v1s
-    product.r = reactant.r + v12
+    saddle.positions = reactant.positions + v1s
+    product.positions = reactant.positions + v12
     
+
     # Find saddle center of coordinates.
     coc = numpy.zeros((1,3))
     for i in range(len(saddle)):
-        coc += saddle.r[i]
+        coc += saddle[i].position
     coc = coc / len(saddle)
     
     # Shift all structures so that the saddle center of coordinates is at 
     # [0, 0, 0].
-    reactant.r -= coc    
-    saddle.r -= coc    
-    product.r -= coc    
-    
+    reactant.positions = reactant.positions - coc    
+    saddle.positions = saddle.positions - coc    
+    product.positions = product.positions - coc    
+
     # Give all structures a huge box.
     # TODO: all references to boxes should be removed after PBCs are removed.
-    reactant.box = numpy.identity(3) * 1024
-    saddle.box = numpy.identity(3) * 1024
-    product.box = numpy.identity(3) * 1024
+    reactant.cell = numpy.identity(3) * 1024
+    saddle.cell = numpy.identity(3) * 1024
+    product.cell = numpy.identity(3) * 1024
 
     # Get the element path for this process
-    elementPath = "".join(reactant.getNameList())
+    elementPath = "".join(getNameList(reactant))
     elementPath = os.path.join(options.kdbdir, elementPath)
     if not os.path.exists(elementPath):
         os.makedirs(elementPath)
@@ -269,7 +281,7 @@ if __name__ == "__main__":
 
     # Loop over the existing process and check for matches to the saddle.
     for procdir in procdirs:
-        dbSaddle = loadxyz(os.path.join(procdir, "saddle.xyz"))
+        dbSaddle = read_xyz(os.path.join(procdir, "saddle.xyz"))
         if len(saddle) != len(dbSaddle):
             continue
         if getMappings(saddle, dbSaddle) is not None:
@@ -284,9 +296,9 @@ if __name__ == "__main__":
     os.makedirs(processPath)
 
     # Save the configurations for this process.  
-    savexyz(os.path.join(processPath, "min1.xyz"), reactant)
-    savexyz(os.path.join(processPath, "saddle.xyz"), saddle)
-    savexyz(os.path.join(processPath, "min2.xyz"), product)
+    write_xyz(os.path.join(processPath, "min1.xyz"), reactant)
+    write_xyz(os.path.join(processPath, "saddle.xyz"), saddle)
+    write_xyz(os.path.join(processPath, "min2.xyz"), product)
     save_mode(os.path.join(processPath, "mode"), mode)
 
     def numberfile(filename, number):
@@ -307,17 +319,19 @@ if __name__ == "__main__":
     f.close()
     
     # Save a movie of the local process.
-    mr = reactant.copy()
     steps = 8
-    savexyz(os.path.join(processPath, "movie.xyz"), mr, 'w')
+    movie = [reactant.copy()]
     for i in range(1, steps):
-        mr.r = reactant.r + (saddle.r - reactant.r) * (i / float(steps))
-        savexyz(os.path.join(processPath, "movie.xyz"), mr, 'a')
-    savexyz(os.path.join(processPath, "movie.xyz"), saddle, 'a')
+        temp = reactant.copy()
+        temp.positions = reactant.positions + (saddle.positions - reactant.positions) * (i / float(steps))
+        movie.append(temp)
+    movie.append(saddle.copy())
     for i in range(1, steps):
-        mr.r = saddle.r + (product.r - saddle.r) * (i / float(steps))
-        savexyz(os.path.join(processPath, "movie.xyz"), mr, 'a')
-    savexyz(os.path.join(processPath, "movie.xyz"), product, 'a')
+        temp = reactant.copy()
+        temp.positions = saddle.positions + (product.positions - saddle.positions) * (i / float(steps))
+        movie.append(temp)
+    movie.append(product.copy())
+    write_xyz(os.path.join(processPath, "movie.xyz"), movie)
         
     # Indicate that the process was inserted successfully.
     print "good"
