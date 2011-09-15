@@ -12,6 +12,9 @@ from optparse import OptionParser
 
 from kdb import *
 
+from tsase.io import read_con, write_con
+from ase.io.xyz import read_xyz, write_xyz
+
 PBC_MAPPING_CHECK = False
 REBOX_SUGGESTIONS = False
 REMOVE_DUPLICATES = False
@@ -34,7 +37,7 @@ def centroid(a, which=None):
         which = range(len(a))
     c = numpy.array([0.0, 0.0, 0.0])
     for i in which:
-        c += a.r[i]
+        c += a.positions[i]
     c /= len(which)
     return c
 
@@ -50,10 +53,10 @@ def clump(c, atoms):
             sys.exit()
         a = working.pop()
         for i in undone[:]:
-            v = pbc(temp.r[i] - temp.r[a], temp.box)
+            v = pbc(temp.positions[i] - temp.positions[a], temp.cell)
             d = numpy.linalg.norm(v)
-            if d < (elements[temp.names[a]]["radius"] + elements[temp.names[i]]["radius"]) * (1.0 + NEIGHBOR_FUDGE):
-                temp.r[i] = temp.r[a] + v
+            if d < (elements[temp.get_chemical_symbols()[a]]["radius"] + elements[temp.get_chemical_symbols()[i]]["radius"]) * (1.0 + NEIGHBOR_FUDGE):
+                temp.positions[i] = temp.positions[a] + v
                 working.append(i)
                 undone.remove(i)
     return temp
@@ -69,7 +72,7 @@ def namePermutations(nameList):
 
 
 def getKDBentries(kdbdir, reactant):
-    elementPaths = [os.path.join(kdbdir, nameList) for nameList in namePermutations(sorted(reactant.getNameList()))]
+    elementPaths = [os.path.join(kdbdir, nameList) for nameList in namePermutations(sorted(getNameList(reactant)))]
     entries = []
     for elementPath in elementPaths:
         if not os.path.isdir(elementPath):
@@ -140,10 +143,10 @@ if __name__ == "__main__":
         sys.exit()
         
     # Load the reactant con file.
-    reactant = loadcon(args[0])
+    reactant = read_con(args[0])
     
     # Get the ibox to speed up pbcs.
-    ibox = numpy.linalg.inv(reactant.box)
+    ibox = numpy.linalg.inv(reactant.cell)
     
     # Create a directory for any suggestions we might make.
     if os.path.isdir("kdbmatches"):
@@ -165,23 +168,23 @@ if __name__ == "__main__":
     # TODO: this can use SAP for ortho boxes.
     reactantNeighbors = {}
     for i in range(len(reactant)):
-        if not reactant.free[i]:
+        if i in reactant.constraints[0].index:
             continue
-        r1 = elements[reactant.names[i]]["radius"]
+        r1 = elements[reactant.get_chemical_symbols()[i]]["radius"]
         reactantNeighbors[i] = {}
         for j in range(len(reactant)):
             if j == i:
                 continue
-            r2 = elements[reactant.names[j]]["radius"]
-            d = numpy.linalg.norm(pbc(reactant.r[i] - reactant.r[j], reactant.box, ibox))
+            r2 = elements[reactant.get_chemical_symbols()[j]]["radius"]
+            d = numpy.linalg.norm(pbc(reactant.positions[i] - reactant.positions[j], reactant.cell, ibox))
             if d > (r1 + r2) * (1 + NEIGHBOR_FUDGE):
                 continue
-            if reactant.names[j] not in reactantNeighbors[i]:
-                reactantNeighbors[i][reactant.names[j]] = 0
-            reactantNeighbors[i][reactant.names[j]] += 1
+            if reactant.get_chemical_symbols()[j] not in reactantNeighbors[i]:
+                reactantNeighbors[i][reactant.get_chemical_symbols()[j]] = 0
+            reactantNeighbors[i][reactant.get_chemical_symbols()[j]] += 1
     
     # Create a list of element types and counts for the entire reactant. 
-    reactantNameCount = reactant.nameCount()
+    reactantNameCount = nameCount(reactant)
     numMatches = 0
     
     ###########################################################################
@@ -197,12 +200,12 @@ if __name__ == "__main__":
         print "checking %32s %16s" % (entry["minimum"], mirrored), 
         
         # Load the minimum.
-        kdbmin = loadxyz(entry["minimum"])        
+        kdbmin = read_xyz(entry["minimum"])        
 
         # Make sure the reactant has at least as many atoms of each type as the
         # kdb configuration.
         passedNameCount = True
-        kdbNameCount = kdbmin.nameCount()
+        kdbNameCount = nameCount(kdbmin)
         for name in kdbNameCount:
             if name not in reactantNameCount:
                 passedNameCount = False
@@ -220,24 +223,24 @@ if __name__ == "__main__":
         # Mirror the minimum if the mirror flag is set for this entry.
         if entry["mirror"]:
             for i in range(len(kdbmin)):
-                kdbmin.r[i] += 2.0 * (kdbmin.r[0] - kdbmin.r[i])
+                kdbmin.positions[i] += 2.0 * (kdbmin.positions[0] - kdbmin.positions[i])
         
         # For each mobile atom in kdbmin, create a list of neighboring element
         # types and the count of each type.
         kdbNeighbors = {}
         for i in kdbmobile:
-            r1 = elements[kdbmin.names[i]]["radius"]
+            r1 = elements[kdbmin.get_chemical_symbols()[i]]["radius"]
             kdbNeighbors[i] = {}
             for j in range(len(kdbmin)):
                 if j == i:
                     continue
-                r2 = elements[kdbmin.names[j]]["radius"]
-                d = numpy.linalg.norm(kdbmin.r[i] - kdbmin.r[j])
+                r2 = elements[kdbmin.get_chemical_symbols()[j]]["radius"]
+                d = numpy.linalg.norm(kdbmin.positions[i] - kdbmin.positions[j])
                 if d > (r1 + r2) * (1 + NEIGHBOR_FUDGE):
                     continue
-                if kdbmin.names[j] not in kdbNeighbors[i]:
-                    kdbNeighbors[i][kdbmin.names[j]] = 0
-                kdbNeighbors[i][kdbmin.names[j]] += 1
+                if kdbmin.get_chemical_symbols()[j] not in kdbNeighbors[i]:
+                    kdbNeighbors[i][kdbmin.get_chemical_symbols()[j]] = 0
+                kdbNeighbors[i][kdbmin.get_chemical_symbols()[j]] += 1
 
         kdbUnmapped = range(len(kdbmin)) # Keep track of the kdb atoms that have been mapped.
 
@@ -272,7 +275,7 @@ if __name__ == "__main__":
             # configuration.
             kdbDistances = {}
             for i in range(len(kdbmin)):
-                kdbDistances[i] = numpy.linalg.norm(kdbmin.r[kdbAtom] - kdbmin.r[i])
+                kdbDistances[i] = numpy.linalg.norm(kdbmin.positions[kdbAtom] - kdbmin.positions[i])
             # Loop over each mapping and try to place kdbAtom.
             for mapping in mappings:
                 # Loop over each atom in the reactant.
@@ -286,12 +289,12 @@ if __name__ == "__main__":
                     # and mapping.keys() atoms.
                     for DA in mapping.keys():
                         RA = mapping[DA]
-                        pbcVector = reactant.atomAtomPbcVector(RA, reactantAtom)
+                        pbcVector = atomAtomPbcVector(reactant, RA, reactantAtom)
                         if PBC_MAPPING_CHECK:
-                            if not isDistance(pbcVector, kdbDistances[DA], reactant.box):
+                            if not isDistance(pbcVector, kdbDistances[DA], reactant.cell):
                                 break
                         else:
-                            if abs(kdbDistances[DA] - reactant.atomAtomPbcDistance(RA, reactantAtom)) > DISTANCE_CUTOFF:
+                            if abs(kdbDistances[DA] - atomAtomPbcDistance(reactant, RA, reactantAtom)) > DISTANCE_CUTOFF:
                                 break
                     else:
                         newMapping = mapping.copy()
@@ -310,19 +313,19 @@ if __name__ == "__main__":
         
             # Make a copy of kdbmin for rotation and put it in the box.
             kdbrot = kdbmin.copy()
-            kdbrot.box = reactant.box.copy()
+            kdbrot.cell = reactant.cell.copy()
             
             # Rotation Matrix calculation start
             tb = kdbrot.copy()
-            tb.r -= centroid(tb)
+            tb.positions -= centroid(tb)
             ta = tb.copy()
             offset = centroid(reactantrot, mapping.values())
             i = 0
             for m in mapping:
-                ta.r[i] = tb.r[m] + pbc((reactantrot.r[mapping[m]] - offset) - tb.r[m], reactantrot.box)
+                ta.positions[i] = tb.positions[m] + pbc((reactantrot.positions[mapping[m]] - offset) - tb.positions[m], reactantrot.cell)
                 i += 1
-            ta.r -= centroid(ta)
-            m = numpy.dot(tb.r.transpose(), ta.r)
+            ta.positions -= centroid(ta)
+            m = numpy.dot(tb.positions.transpose(), ta.positions)
             sxx = m[0][0]
             sxy = m[0][1]
             sxz = m[0][2]
@@ -375,68 +378,68 @@ if __name__ == "__main__":
             # Rotation Matrix calculation end
 
             translation1 = centroid(kdbrot)
-            kdbrot.r -= translation1
-            kdbrot.r = numpy.dot(kdbrot.r, Rmat)
+            kdbrot.positions -= translation1
+            kdbrot.positions = numpy.dot(kdbrot.positions, Rmat)
             
             translation2 = centroid(reactantrot, mapping.values())
             
-            kdbrot.r += translation2
+            kdbrot.positions += translation2
 
             # Calculate a score for this mapping.
-            score = max([numpy.linalg.norm(pbc(kdbrot.r[m] - reactantrot.r[mapping[m]], reactantrot.box)) for m in mapping])
+            score = max([numpy.linalg.norm(pbc(kdbrot.positions[m] - reactantrot.positions[mapping[m]], reactantrot.cell)) for m in mapping])
             
             if score > DISTANCE_CUTOFF:
                 continue
             
             # Load the saddle from the database.
-            kdbSaddle = loadxyz(entry["saddle"])    
+            kdbSaddle = read_xyz(entry["saddle"])    
             
             # Mirror the saddle if the mirror flag is set for this entry.
             if entry["mirror"]:
                 for i in range(len(kdbSaddle)):
-                    kdbSaddle.r[i] += 2.0 * (kdbmin.r[0] - kdbSaddle.r[i])
+                    kdbSaddle.positions[i] += 2.0 * (kdbmin.positions[0] - kdbSaddle.positions[i])
 
             # Load the product from the database.
-            kdbProduct = loadxyz(entry["product"])    
+            kdbProduct = read_xyz(entry["product"])    
             
             # Mirror the product if the mirror flag is set for this entry.
             if entry["mirror"]:
                 for i in range(len(kdbProduct)):
-                    kdbProduct.r[i] += 2.0 * (kdbmin.r[0] - kdbProduct.r[i])
+                    kdbProduct.positions[i] += 2.0 * (kdbmin.positions[0] - kdbProduct.positions[i])
 
             # Map the mode.
-            modeTemp = reactantrot.r * 0.0
+            modeTemp = reactantrot.positions * 0.0
             for m in mapping:
                 modeTemp[mapping[m]] = mode[m]
             modeTemp /= numpy.linalg.norm(modeTemp)
 
             # Perform the saddle transformation.
-            kdbSaddle.r -= translation1
-            kdbSaddle.r = numpy.dot(kdbSaddle.r, Rmat)
-            kdbSaddle.r += translation2
+            kdbSaddle.positions -= translation1
+            kdbSaddle.positions = numpy.dot(kdbSaddle.positions, Rmat)
+            kdbSaddle.positions += translation2
             
             # Perform the mode transformation.
             modeTemp = numpy.dot(modeTemp, Rmat)
 
             # Perform the product transformation.
-            kdbProduct.r -= translation1
-            kdbProduct.r = numpy.dot(kdbProduct.r, Rmat)
-            kdbProduct.r += translation2
+            kdbProduct.positions -= translation1
+            kdbProduct.positions = numpy.dot(kdbProduct.positions, Rmat)
+            kdbProduct.positions += translation2
             
             # Create the suggestion.
             suggestion = reactant.copy()
             sugproduct = reactant.copy()
             for m in mapping:
-                if suggestion.free[mapping[m]]:
-                    suggestion.r[mapping[m]] = kdbSaddle.r[m]
-                if sugproduct.free[mapping[m]]:
-                    sugproduct.r[mapping[m]] = kdbProduct.r[m]
+                if mapping[m] not in suggestion.constraints[0].index:
+                    suggestion.positions[mapping[m]] = kdbSaddle.positions[m]
+                if mapping[m] not in sugproduct.constraints[0].index:
+                    sugproduct.positions[mapping[m]] = kdbProduct.positions[m]
             
             # Check for duplicates.
             if REMOVE_DUPLICATES:
                 isdupe = False
                 for unique in uniques:
-                    pan = per_atom_norm(unique.r - suggestion.r, suggestion.box, ibox)
+                    pan = per_atom_norm(unique.positions - suggestion.positions, suggestion.cell, ibox)
                     if max(pan) <= DISTANCE_CUTOFF:
                         isdupe = True
                         break
@@ -446,19 +449,19 @@ if __name__ == "__main__":
             
             # Rebox.
             if REBOX_SUGGESTIONS:
-                suggestion.r = pbc(suggestion.r, suggestion.box)
-                sugproduct.r = pbc(sugproduct.r, sugproduct.box)
+                suggestion.positions = pbc(suggestion.positions, suggestion.cell)
+                sugproduct.positions = pbc(sugproduct.positions, sugproduct.cell)
                 
             # Write suggestion.
-            savecon("kdbmatches/SADDLE_%d" % numMatches, suggestion)
-            savecon("kdbmatches/PRODUCT_%d" % numMatches, sugproduct)
+            write_con("kdbmatches/SADDLE_%d" % numMatches, suggestion)
+            write_con("kdbmatches/PRODUCT_%d" % numMatches, sugproduct)
             save_mode("kdbmatches/MODE_%d" % numMatches, modeTemp)
             if os.path.isfile(entry["barrier"]): shutil.copyfile(entry["barrier"], "kdbmatches/BARRIER_%d" % numMatches)
             if os.path.isfile(entry["prefactor"]): shutil.copyfile(entry["prefactor"], "kdbmatches/PREFACTOR_%d" % numMatches)
             os.system("touch kdbmatches/.done_%d" % numMatches)                        
             
             #save debug xyz suggestion file.
-            savexyz("kdbmatches/saddle_%d.xyz" % numMatches, suggestion)
+            write_xyz("kdbmatches/saddle_%d.xyz" % numMatches, suggestion)
 
             entryMatches += 1
             numMatches += 1

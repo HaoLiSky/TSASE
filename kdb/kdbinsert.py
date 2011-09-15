@@ -8,6 +8,7 @@ import glob
 from optparse import OptionParser
 
 from tsase.io import read_con
+
 import ase
 from ase.io.xyz import read_xyz, write_xyz
 
