@@ -35,8 +35,8 @@ class fire_ssneb(minimizer_ssneb):
         self.Nsteps=0
 
         #self.v contains the velocity for both atoms and box for one image
-    	i = self.band.numImages-2
-    	j = self.band.natom+3
+        i = self.band.numImages-2
+        j = self.band.natom+3
         self.v = np.zeros((i,j,3))
 	
         
@@ -47,8 +47,8 @@ class fire_ssneb(minimizer_ssneb):
         self.band.forces()
         totalf = self.v.copy()
         for i in range(1, self.band.numImages - 1):
-	        totalf[i-1] = self.band.path[i].totalf
-	Power = vdot(totalf,self.v)
+            totalf[i-1] = self.band.path[i].totalf
+        Power = vdot(totalf,self.v)
 
         if Power > 0.0:
             self.v = (1.0-self.a)*self.v + self.a*vmag(self.v)*vunit(totalf)
@@ -65,7 +65,7 @@ class fire_ssneb(minimizer_ssneb):
 
         # Euler step
         self.v += self.dt * totalf
-	# check for max step
+        # check for max step
         if vmag(self.v[i-1]) > self.maxmove/self.dt :
             self.v[i-1] = self.maxmove/self.dt * vunit(self.v[i-1])
 
@@ -81,17 +81,3 @@ class fire_ssneb(minimizer_ssneb):
             ct += np.dot(ct, dR[-3:]) / self.band.jacobian
             self.band.path[i].set_cell(ct, scale_atoms=True)
 
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        

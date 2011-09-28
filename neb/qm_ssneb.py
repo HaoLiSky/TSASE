@@ -24,8 +24,8 @@ class qm_ssneb(minimizer_ssneb):
         self.dt=dt
 
         #self.v contains the velocity for both atoms and box for one image
-	i = self.band.numImages-2
-	j = self.band.natom+3
+        i = self.band.numImages-2
+        j = self.band.natom+3
         self.v = np.zeros((i,j,3))
 
 
@@ -33,10 +33,10 @@ class qm_ssneb(minimizer_ssneb):
         '''
         Take a step
         '''
-	self.band.forces()
+        self.band.forces()
         for i in range(1, len(self.band.path) - 1):
-	    totalf = self.band.path[i].totalf
-	    Power = vdot(totalf,self.v[i-1])
+            totalf = self.band.path[i].totalf
+            Power = vdot(totalf,self.v[i-1])
             if Power > 0.0 :
                 self.v[i-1]  = vproj(self.v[i-1], totalf)
             else:
@@ -51,11 +51,11 @@ class qm_ssneb(minimizer_ssneb):
             dR = self.dt * self.v[i-1]
             # move R
             rt  = self.band.path[i].get_positions()
-	    rt += dR[:-3]
+            rt += dR[:-3]
             self.band.path[i].set_positions(rt)
-	    # move box and update cartesian coordinates 
+            # move box and update cartesian coordinates 
             ct  = self.band.path[i].get_cell()
-	    ct += np.dot(ct, dR[-3:]) / self.band.jacobian
+            ct += np.dot(ct, dR[-3:]) / self.band.jacobian
             self.band.path[i].set_cell(ct, scale_atoms=True)
         
         

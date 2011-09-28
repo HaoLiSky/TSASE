@@ -77,16 +77,16 @@ class ssneb:
         vol2     = self.path[self.numImages-1].get_volume()
         vol      = (vol1+vol2)*0.5
         self.natom = len(self.path[0]) 
-	avglen   = (vol/self.natom)**(1.0/3.0)
+        avglen   = (vol/self.natom)**(1.0/3.0)
         self.jacobian = avglen * self.natom**0.5 * self.weight
 
         #add some new properties
-	self.path[0].cellt = self.path[0].get_cell() * self.jacobian 
-	self.path[0].icell = numpy.linalg.inv(cell1)
-	self.path[0].vdir  = self.path[0].get_scaled_positions()
-	self.path[n].cellt = self.path[n].get_cell() * self.jacobian 
-	self.path[n].icell = numpy.linalg.inv(cell2)
-	self.path[n].vdir  = self.path[n].get_scaled_positions()
+        self.path[0].cellt = self.path[0].get_cell() * self.jacobian 
+        self.path[0].icell = numpy.linalg.inv(cell1)
+        self.path[0].vdir  = self.path[0].get_scaled_positions()
+        self.path[n].cellt = self.path[n].get_cell() * self.jacobian 
+        self.path[n].icell = numpy.linalg.inv(cell2)
+        self.path[n].vdir  = self.path[n].get_scaled_positions()
         for i in [0,n]:
             fdname = '0'+str(i)
             if not os.path.exists(fdname): os.mkdir(fdname)
@@ -139,7 +139,7 @@ class ssneb:
 
             # Here st should be cauchy stress tensor times cell volume. 
             # Timing box volume should have been done.
-	    self.path[i].totalf = numpy.vstack((self.path[i].f, self.path[i].st / self.jacobian))
+            self.path[i].totalf = numpy.vstack((self.path[i].f, self.path[i].st / self.jacobian))
             # realtf that needed by nebspline.pl is saved for output 
             self.path[i].realtf = self.path[i].totalf
             
@@ -173,24 +173,24 @@ class ssneb:
                         dr_dir  = sPBC(self.path[i].vdir - self.path[i - 1].vdir)
                         avgbox  = 0.5*(self.path[i].get_cell() + self.path[i - 1].get_cell())
                         sn  = numpy.dot(dr_dir,avgbox)
-			dh  = self.path[i].cellt - self.path[i - 1].cellt
-			snb = numpy.dot(self.path[i].icell, dh)*0.5 + numpy.dot(self.path[i - 1].icell, dh)*0.5
+                        dh  = self.path[i].cellt - self.path[i - 1].cellt
+                        snb = numpy.dot(self.path[i].icell, dh)*0.5 + numpy.dot(self.path[i - 1].icell, dh)*0.5
                         #---------------another way to average strain----------------------
                         #iavgbox = numpy.linalg.inv(avgbox)
-			#snb = numpy.dot(iavgbox, snb)
+                        #snb = numpy.dot(iavgbox, snb)
                         #------------------------------------------------------------------
-			self.path[i].n = numpy.vstack((sn,snb))
+                        self.path[i].n = numpy.vstack((sn,snb))
                     else:
                         dr_dir  = sPBC(self.path[i + 1].vdir - self.path[i].vdir)
                         avgbox  = 0.5*(self.path[i+1].get_cell() + self.path[i].get_cell())
                         sn  = numpy.dot(dr_dir,avgbox)
                         dh  = self.path[i + 1].cellt - self.path[i].cellt
-			snb = numpy.dot(self.path[i].icell, dh)*0.5 + numpy.dot(self.path[i + 1].icell, dh)*0.5
+                        snb = numpy.dot(self.path[i].icell, dh)*0.5 + numpy.dot(self.path[i + 1].icell, dh)*0.5
                         #---------------another way to average strain----------------------
                         #iavgbox = numpy.linalg.inv(avgbox)
-			#snb = numpy.dot(iavgbox, snb)
+                        #snb = numpy.dot(iavgbox, snb)
                         #------------------------------------------------------------------
-			self.path[i].n = numpy.vstack((sn,snb))
+                        self.path[i].n = numpy.vstack((sn,snb))
                 # otherwise, we are near some extremum 
                 else:
                     Um1 = self.path[i - 1].u - self.path[i].u
@@ -206,11 +206,11 @@ class ssneb:
                         sn     += numpy.dot(dr_dir,avgbox) * Umax
 
                         dh   = self.path[i + 1].cellt - self.path[i].cellt
-			snb1 = numpy.dot(self.path[i].icell, dh)*0.5 + numpy.dot(self.path[i + 1].icell, dh)*0.5
+                        snb1 = numpy.dot(self.path[i].icell, dh)*0.5 + numpy.dot(self.path[i + 1].icell, dh)*0.5
                         dh   = self.path[i].cellt - self.path[i - 1].cellt
-			snb2 = numpy.dot(self.path[i].icell, dh)*0.5 + numpy.dot(self.path[i - 1].icell, dh)*0.5
+                        snb2 = numpy.dot(self.path[i].icell, dh)*0.5 + numpy.dot(self.path[i - 1].icell, dh)*0.5
                         snb  = snb1 * Umin + snb2 * Umax
-			self.path[i].n = numpy.vstack((sn,snb))
+                        self.path[i].n = numpy.vstack((sn,snb))
                     else:
                         dr_dir  = sPBC(self.path[i + 1].vdir - self.path[i].vdir)
                         avgbox  = 0.5*(self.path[i + 1].get_cell() + self.path[i].get_cell())
@@ -220,11 +220,11 @@ class ssneb:
                         sn     += numpy.dot(dr_dir,avgbox) * Umin
 
                         dh   = self.path[i + 1].cellt - self.path[i].cellt
-			snb1 = numpy.dot(self.path[i].icell, dh)*0.5 + numpy.dot(self.path[i + 1].icell, dh)*0.5
+                        snb1 = numpy.dot(self.path[i].icell, dh)*0.5 + numpy.dot(self.path[i + 1].icell, dh)*0.5
                         dh   = self.path[i].cellt - self.path[i - 1].cellt
-			snb2 = numpy.dot(self.path[i].icell, dh)*0.5 + numpy.dot(self.path[i - 1].icell, dh)*0.5
+                        snb2 = numpy.dot(self.path[i].icell, dh)*0.5 + numpy.dot(self.path[i - 1].icell, dh)*0.5
                         snb  = snb1 * Umax + snb2 * Umin
-			self.path[i].n = numpy.vstack((sn,snb))
+                        self.path[i].n = numpy.vstack((sn,snb))
         
         # Normalize the tangents.
         for i in range(1,self.numImages-1):
@@ -250,14 +250,14 @@ class ssneb:
                 avgbox  = 0.5*(self.path[i - 1].get_cell() + self.path[i].get_cell())
                 Rm1  = numpy.dot(Rm1,avgbox) 
                 dh   = self.path[i - 1].cellt - self.path[i].cellt
-		Rm1b = numpy.dot(self.path[i].icell, dh)*0.5 + numpy.dot(self.path[i - 1].icell, dh)*0.5
+                Rm1b = numpy.dot(self.path[i].icell, dh)*0.5 + numpy.dot(self.path[i - 1].icell, dh)*0.5
                 Rm1  = numpy.sqrt(numpy.vdot(Rm1,Rm1)+numpy.vdot(Rm1b,Rm1b))
 
                 Rp1  = sPBC(self.path[i + 1].vdir - self.path[i].vdir)
                 avgbox  = 0.5*(self.path[i + 1].get_cell() + self.path[i].get_cell())
                 Rp1  = numpy.dot(Rp1,avgbox)
                 dh   = self.path[i + 1].cellt - self.path[i].cellt
-		Rp1b = numpy.dot(self.path[i].icell, dh)*0.5+numpy.dot(self.path[i + 1].icell, dh)*0.5
+                Rp1b = numpy.dot(self.path[i].icell, dh)*0.5+numpy.dot(self.path[i + 1].icell, dh)*0.5
                 Rp1  = numpy.sqrt(numpy.vdot(Rp1,Rp1)+numpy.vdot(Rp1b,Rp1b))
 
                 self.path[i].fsN = (Rp1 - Rm1) * self.k * self.path[i].n
@@ -292,7 +292,7 @@ class ssneb:
                 self.path[i].totalf = self.path[i].fsdneb + self.path[i].fsN +     \
                                  self.path[i].fPerp
 
-		# only move the climing image
-		if(self.method == 'ci' and self.onlyci): 
+                # only move the climing image
+                if(self.method == 'ci' and self.onlyci): 
                     self.path[i].totalf *= 0.0
                 
