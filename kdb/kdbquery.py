@@ -117,34 +117,12 @@ def getKDBentries(kdbdir, reactant):
     return entries
 
 
-if __name__ == "__main__":
+def query(reactant, kdbdir, nf, dc, nodupes = False):
+    global DISTANCE_CUTOFF, NEIGHBOR_FUDGE, REMOVE_DUPLICATES
+    DISTANCE_CUTOFF = dc
+    NEIGHBOR_FUDGE = nf
+    REMOVE_DUPLICATES = nodupes
 
-    # Parse command line options.
-    parser = OptionParser(usage = "%prog [options] reactant.con")
-    parser.add_option("-d", "--kdbdir", dest = "kdbdir", 
-                      help = "the path to the kinetic database",
-                      default = "./kdb")
-    parser.add_option("-c", "--dc", dest = "dc", action="store", type="float", 
-                      help = "distance cutoff parameter",
-                      default = DISTANCE_CUTOFF)
-    parser.add_option("-n", "--nf", dest = "nf", action="store", type="float", 
-                      help = "neighbor fudge parameter",
-                      default = NEIGHBOR_FUDGE)
-    parser.add_option("--nodupes", dest = "nodupes", action="store_true",
-                      help = "detect and remove duplicate suggestions (can be expensive)")
-    options, args = parser.parse_args()
-    DISTANCE_CUTOFF = options.dc
-    NEIGHBOR_FUDGE = options.nf
-    REMOVE_DUPLICATES = options.nodupes
-
-    # Make sure we get the reactant, saddle, product, and mode file names.
-    if len(args) < 1:
-        parser.print_help()
-        sys.exit()
-        
-    # Load the reactant con file.
-    reactant = read_con(args[0])
-    
     # Get the ibox to speed up pbcs.
     ibox = numpy.linalg.inv(reactant.cell)
     
@@ -157,7 +135,7 @@ if __name__ == "__main__":
     uniques = []
 
     # Get a list of kdb entries that match the query configuration elementally.
-    entries = getKDBentries(options.kdbdir, reactant)
+    entries = getKDBentries(kdbdir, reactant)
     if len(entries) == 0:
         print "No entries for those elements."
         sys.exit()
@@ -467,6 +445,35 @@ if __name__ == "__main__":
             numMatches += 1
 
         print "%10d" % entryMatches
+
+
+if __name__ == "__main__":
+
+    # Parse command line options.
+    parser = OptionParser(usage = "%prog [options] reactant.con")
+    parser.add_option("-d", "--kdbdir", dest = "kdbdir", 
+                      help = "the path to the kinetic database",
+                      default = "./kdb")
+    parser.add_option("-c", "--dc", dest = "dc", action="store", type="float", 
+                      help = "distance cutoff parameter",
+                      default = DISTANCE_CUTOFF)
+    parser.add_option("-n", "--nf", dest = "nf", action="store", type="float", 
+                      help = "neighbor fudge parameter",
+                      default = NEIGHBOR_FUDGE)
+    parser.add_option("--nodupes", dest = "nodupes", action="store_true",
+                      help = "detect and remove duplicate suggestions (can be expensive)")
+    options, args = parser.parse_args()
+
+    # Make sure we get the reactant, saddle, product, and mode file names.
+    if len(args) < 1:
+        parser.print_help()
+        sys.exit()
+        
+    # Load the reactant con file.
+    reactant = read_con(args[0])
+    
+    query(reactant, options.kdbdir, options.dc, options.nf, options.nodupes)
+
             
 
             
