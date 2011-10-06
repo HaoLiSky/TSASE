@@ -136,50 +136,11 @@ def stripUnselectedAtoms(atoms, selected):
     dest.set_constraint(ase.constraints.FixAtoms(constraints))
     return dest, mapping
     
-if __name__ == "__main__":
-
-    # Parse command line options.
-    parser = OptionParser(usage = "%prog [options] reactant.con saddle.con product.con mode")
-    parser.add_option("-d", "--kdbdir", dest = "kdbdir", 
-                      help = "the path to the kinetic database",
-                      default = "./kdb")
-    parser.add_option("-n", "--nf", dest = "nf", action="store", type="float", 
-                      help = "neighbor fudge parameter",
-                      default = NEIGHBOR_FUDGE)
-    parser.add_option("-c", "--dc", dest = "dc", action="store", type="float", 
-                      help = "distance cutoff parameter",
-                      default = DISTANCE_CUTOFF)
-    parser.add_option("--barrier1", dest = "b1", action="store", type="float", 
-                      help = "barrier energy for reactant to saddle",
-                      default = -1.0)
-    parser.add_option("--barrier2", dest = "b2", action="store", type="float", 
-                      help = "barrier energy for product to saddle",
-                      default = -1.0)
-    parser.add_option("--prefactor1", dest = "p1", action="store", type="float", 
-                      help = "prefactor for reactant to saddle",
-                      default = -1.0)
-    parser.add_option("--prefactor2", dest = "p2", action="store", type="float", 
-                      help = "prefactor for product to saddle",
-                      default = -1.0)
-    options, args = parser.parse_args()
-    NEIGHBOR_FUDGE = options.nf
-    DISTANCE_CUTOFF = options.dc
     
-
-    # Make sure we get the reactant, saddle, product, and mode files.
-    if len(args) < 4:
-        parser.print_help()
-        sys.exit()
-        
-
-    # Load the reactant, saddle, product, and mode files.
-    reactant = read_con(args[0])
-    saddle = read_con(args[1])
-    product = read_con(args[2])
-    mode = load_mode(args[3])
-
-    #TODO: check that the numbers and types of atoms are the same, and that the mode
-    #      is the same length as the configs.
+def insert(reactant, saddle, product, mode, kdbdir, nf, dc, barrier1, barrier2, prefactor1, prefactor2):
+    global NEIGHBOR_FUDGE, DISTANCE_CUTOFF
+    NEIGHBOR_FUDGE = nf
+    DISTANCE_CUTOFF = dc
 
     # Make a list of mobile atoms.
     mobileAtoms = []
@@ -273,7 +234,7 @@ if __name__ == "__main__":
 
     # Get the element path for this process
     elementPath = "".join(getNameList(reactant))
-    elementPath = os.path.join(options.kdbdir, elementPath)
+    elementPath = os.path.join(kdbdir, elementPath)
     if not os.path.exists(elementPath):
         os.makedirs(elementPath)
 
@@ -308,10 +269,10 @@ if __name__ == "__main__":
         f.close()
         
     # Save the barriers and prefactors.
-    if options.b1 > 0.0: numberfile(os.path.join(processPath, "barrier1"), options.b1)
-    if options.b2 > 0.0: numberfile(os.path.join(processPath, "barrier2"), options.b2)
-    if options.p1 > 0.0: numberfile(os.path.join(processPath, "prefactor1"), options.p1)
-    if options.p2 > 0.0: numberfile(os.path.join(processPath, "prefactor2"), options.p2)
+    if barrier1 > 0.0: numberfile(os.path.join(processPath, "barrier1"), barrier1)
+    if barrier2 > 0.0: numberfile(os.path.join(processPath, "barrier2"), barrier2)
+    if prefactor1 > 0.0: numberfile(os.path.join(processPath, "prefactor1"), prefactor1)
+    if prefactor2 > 0.0: numberfile(os.path.join(processPath, "prefactor2"), prefactor2)
     
     # Save the list of mobile atoms.
     f = open(os.path.join(processPath, "mobile"), 'w')
@@ -336,6 +297,48 @@ if __name__ == "__main__":
         
     # Indicate that the process was inserted successfully.
     print "good"
+
+
+if __name__ == "__main__":
+
+    # Parse command line options.
+    parser = OptionParser(usage = "%prog [options] reactant.con saddle.con product.con mode")
+    parser.add_option("-d", "--kdbdir", dest = "kdbdir", 
+                      help = "the path to the kinetic database",
+                      default = "./kdb")
+    parser.add_option("-n", "--nf", dest = "nf", action="store", type="float", 
+                      help = "neighbor fudge parameter",
+                      default = NEIGHBOR_FUDGE)
+    parser.add_option("-c", "--dc", dest = "dc", action="store", type="float", 
+                      help = "distance cutoff parameter",
+                      default = DISTANCE_CUTOFF)
+    parser.add_option("--barrier1", dest = "b1", action="store", type="float", 
+                      help = "barrier energy for reactant to saddle",
+                      default = -1.0)
+    parser.add_option("--barrier2", dest = "b2", action="store", type="float", 
+                      help = "barrier energy for product to saddle",
+                      default = -1.0)
+    parser.add_option("--prefactor1", dest = "p1", action="store", type="float", 
+                      help = "prefactor for reactant to saddle",
+                      default = -1.0)
+    parser.add_option("--prefactor2", dest = "p2", action="store", type="float", 
+                      help = "prefactor for product to saddle",
+                      default = -1.0)
+    options, args = parser.parse_args()
+
+    # Make sure we get the reactant, saddle, product, and mode files.
+    if len(args) < 4:
+        parser.print_help()
+        sys.exit()
+
+    # Load the reactant, saddle, product, and mode files.
+    reactant = read_con(args[0])
+    saddle = read_con(args[1])
+    product = read_con(args[2])
+    mode = load_mode(args[3])
+
+    insert(reactant, saddle, product, mode, options.kdbdir, options.nf, options.dc, options.b1, options.b2, options.p1, options.p2)
+
 
     
         

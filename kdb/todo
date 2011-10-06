@@ -1,2 +1,3 @@
+- should try to use ASE's PBC functions
 - getting reactantNeighbors should use memoized distance functions in kdb.py
 
