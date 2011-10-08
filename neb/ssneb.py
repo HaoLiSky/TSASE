@@ -81,18 +81,25 @@ class ssneb:
         self.jacobian = avglen * self.natom**0.5 * self.weight
 
         #add some new properties
-        self.path[0].cellt = self.path[0].get_cell() * self.jacobian 
-        self.path[0].icell = numpy.linalg.inv(cell1)
-        self.path[0].vdir  = self.path[0].get_scaled_positions()
-        self.path[n].cellt = self.path[n].get_cell() * self.jacobian 
-        self.path[n].icell = numpy.linalg.inv(cell2)
-        self.path[n].vdir  = self.path[n].get_scaled_positions()
         for i in [0,n]:
             fdname = '0'+str(i)
             if not os.path.exists(fdname): os.mkdir(fdname)
             os.chdir(fdname)
             self.path[i].u = self.path[i].get_potential_energy()
+            self.path[i].f = self.path[i].get_forces()
+            stt            = self.path[i].get_stress()
             os.chdir('../')
+            self.path[i].cellt = self.path[i].get_cell() * self.jacobian 
+            self.path[i].icell = numpy.linalg.inv(self.path[i].get_cell())
+            self.path[i].vdir  = self.path[i].get_scaled_positions()
+            self.path[i].st = numpy.zeros((3,3))
+            vol = self.path[i].get_volume()*(-1)
+            self.path[i].st[0][0] = stt[0] * vol
+            self.path[i].st[1][1] = stt[1] * vol
+            self.path[i].st[2][2] = stt[2] * vol
+            self.path[i].st[2][1] = stt[3] * vol
+            self.path[i].st[2][0] = stt[4] * vol
+            self.path[i].st[1][0] = stt[5] * vol
 
     def forces(self):
         """
@@ -247,13 +254,16 @@ class ssneb:
                                                             self.path[i].n)
                 # Calculate the spring force.
                 Rm1  = sPBC(self.path[i - 1].vdir - self.path[i].vdir)
+                print i,"th, Rm1 in vdir", vmag(Rm1)
                 avgbox  = 0.5*(self.path[i - 1].get_cell() + self.path[i].get_cell())
                 Rm1  = numpy.dot(Rm1,avgbox) 
                 dh   = self.path[i - 1].cellt - self.path[i].cellt
                 Rm1b = numpy.dot(self.path[i].icell, dh)*0.5 + numpy.dot(self.path[i - 1].icell, dh)*0.5
+                print i,"th, Rm1b ", vmag(Rm1b)
                 Rm1  = numpy.sqrt(numpy.vdot(Rm1,Rm1)+numpy.vdot(Rm1b,Rm1b))
 
                 Rp1  = sPBC(self.path[i + 1].vdir - self.path[i].vdir)
+                print i,"th, Rp1 in vdir", vmag(Rp1)
                 avgbox  = 0.5*(self.path[i + 1].get_cell() + self.path[i].get_cell())
                 Rp1  = numpy.dot(Rp1,avgbox)
                 dh   = self.path[i + 1].cellt - self.path[i].cellt
@@ -261,6 +271,7 @@ class ssneb:
                 Rp1  = numpy.sqrt(numpy.vdot(Rp1,Rp1)+numpy.vdot(Rp1b,Rp1b))
 
                 self.path[i].fsN = (Rp1 - Rm1) * self.k * self.path[i].n
+                print i,"th, Rm1, Rp1", Rm1,Rp1
                 #---------------01/26/11 to speedup by weakening spring force's convergence-----------
                 #if vmag(self.path[i].fsN) < 0.01:
                     #self.path[i].fsN = 0.0
