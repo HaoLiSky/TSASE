@@ -254,16 +254,13 @@ class ssneb:
                                                             self.path[i].n)
                 # Calculate the spring force.
                 Rm1  = sPBC(self.path[i - 1].vdir - self.path[i].vdir)
-                print i,"th, Rm1 in vdir", vmag(Rm1)
                 avgbox  = 0.5*(self.path[i - 1].get_cell() + self.path[i].get_cell())
                 Rm1  = numpy.dot(Rm1,avgbox) 
                 dh   = self.path[i - 1].cellt - self.path[i].cellt
                 Rm1b = numpy.dot(self.path[i].icell, dh)*0.5 + numpy.dot(self.path[i - 1].icell, dh)*0.5
-                print i,"th, Rm1b ", vmag(Rm1b)
                 Rm1  = numpy.sqrt(numpy.vdot(Rm1,Rm1)+numpy.vdot(Rm1b,Rm1b))
 
                 Rp1  = sPBC(self.path[i + 1].vdir - self.path[i].vdir)
-                print i,"th, Rp1 in vdir", vmag(Rp1)
                 avgbox  = 0.5*(self.path[i + 1].get_cell() + self.path[i].get_cell())
                 Rp1  = numpy.dot(Rp1,avgbox)
                 dh   = self.path[i + 1].cellt - self.path[i].cellt
@@ -271,7 +268,6 @@ class ssneb:
                 Rp1  = numpy.sqrt(numpy.vdot(Rp1,Rp1)+numpy.vdot(Rp1b,Rp1b))
 
                 self.path[i].fsN = (Rp1 - Rm1) * self.k * self.path[i].n
-                print i,"th, Rm1, Rp1", Rm1,Rp1
                 #---------------01/26/11 to speedup by weakening spring force's convergence-----------
                 #if vmag(self.path[i].fsN) < 0.01:
                     #self.path[i].fsN = 0.0
