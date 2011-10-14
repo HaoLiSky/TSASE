@@ -724,8 +724,13 @@ class xyz(gtk.Window):
                         if len(data) < 1:
                             raise
                     except:
-                        print "Failed to load", filename
-                        return
+                        try:
+                            data = tsase.io.read_xdatcar(filename)
+                            if len(data) < 1:
+                                raise
+                        except:
+                            print "Failed to load", filename
+                            return
         self.data_set(data)
         self.set_title(os.path.abspath(filename))
 
