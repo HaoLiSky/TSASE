@@ -136,43 +136,51 @@ def stripUnselectedAtoms(atoms, selected):
     dest.set_constraint(ase.constraints.FixAtoms(constraints))
     return dest, mapping
     
-    
-def insert(reactant, saddle, product, mode, kdbdir, nf, dc, barrier1, barrier2, prefactor1, prefactor2):
-    global NEIGHBOR_FUDGE, DISTANCE_CUTOFF
-    NEIGHBOR_FUDGE = nf
-    DISTANCE_CUTOFF = dc
-
-    # Make a list of mobile atoms.
+def getProcessMobileAtoms(r, s, p, mac):
+    """ Returns a list of atom indices that move more than mac 
+    between reactant and saddle, saddle and product, or 
+    reactant and product. If no atoms move more than mac, returns
+    the atom that moves the most. """
     mobileAtoms = []
-    reactant2saddle = per_atom_norm(saddle.positions - reactant.positions, saddle.get_cell())
-    product2saddle = per_atom_norm(saddle.positions - product.positions, saddle.get_cell())
-    reactant2product = per_atom_norm(product.positions - reactant.positions, saddle.get_cell())
-    for i in range(len(saddle)):
+    reactant2saddle = per_atom_norm(s.positions - r.positions, s.get_cell())
+    product2saddle = per_atom_norm(s.positions - p.positions, s.get_cell())
+    reactant2product = per_atom_norm(p.positions - r.positions, s.get_cell())
+    for i in range(len(s)):
         if max(reactant2saddle[i], product2saddle[i], reactant2product[i]) > MOBILE_ATOM_CUTOFF:
             mobileAtoms.append(i)
-    
-    # If no atoms made the mobile atom cutoff, choose the one that moves the most 
-    # between reactant and product.
     if len(mobileAtoms) == 0:
         mobileAtoms.append(list(reactant2product).index(max(reactant2product)))
-        
-    # Make a list of atoms that neighbor the mobile atoms.
+    return mobileAtoms
+
+def getProcessNeighbors(mobileAtoms, r, s, p, nf):
+    """ Given a list mobile atoms, a reactant, saddle, and product, 
+    returns a list of neighboring atoms according to the NEIGHBOR_FUDGE
+    paramter."""
     neighborAtoms = []
     for atom in mobileAtoms:
-        r1 = elements[saddle.get_chemical_symbols()[atom]]["radius"]
-        for i in range(len(saddle)):
+        r1 = elements[s.get_chemical_symbols()[atom]]["radius"]
+        for i in range(len(s)):
             if i in mobileAtoms or i in neighborAtoms:
                 continue
-            r2 = elements[saddle.get_chemical_symbols()[i]]["radius"]
+            r2 = elements[s.get_chemical_symbols()[i]]["radius"]
             maxDist = (r1 + r2) * (1.0 + NEIGHBOR_FUDGE)
-            if atomAtomPbcDistance(reactant, atom, i) < maxDist:
+            if atomAtomPbcDistance(r, atom, i) < maxDist:
                 neighborAtoms.append(i)
-            elif atomAtomPbcDistance(saddle, atom, i) < maxDist:
+            elif atomAtomPbcDistance(s, atom, i) < maxDist:
                 neighborAtoms.append(i)
-            elif atomAtomPbcDistance(product, atom, i) < maxDist:
+            elif atomAtomPbcDistance(p, atom, i) < maxDist:
                 neighborAtoms.append(i)
+    return neighborAtoms
 
-    selectedAtoms = mobileAtoms + neighborAtoms
+def insert(reactant, saddle, product, mode, kdbdir, nf, dc, mac, barrier1, barrier2, prefactor1, prefactor2):
+    global NEIGHBOR_FUDGE, DISTANCE_CUTOFF, MOBILE_ATOM_CUTOFF
+    NEIGHBOR_FUDGE = nf
+    DISTANCE_CUTOFF = dc
+    MOBILE_ATOM_CUTOFF = mac
+
+    mobileAtoms = getProcessMobileAtoms(reactant, saddle, product, MOBILE_ATOM_CUTOFF)
+        
+    selectedAtoms = mobileAtoms + getProcessNeighbors(mobileAtoms, reactant, product, saddle, NEIGHBOR_FUDGE)
     
     # Quit if not enough selected atoms.
     if len(selectedAtoms) < 2:
@@ -312,6 +320,9 @@ if __name__ == "__main__":
     parser.add_option("-c", "--dc", dest = "dc", action="store", type="float", 
                       help = "distance cutoff parameter",
                       default = DISTANCE_CUTOFF)
+    parser.add_option("-m", "--mac", dest = "mac", action="store", type="float", 
+                      help = "mobile atom cutoff parameter",
+                      default = MOBILE_ATOM_CUTOFF)
     parser.add_option("--barrier1", dest = "b1", action="store", type="float", 
                       help = "barrier energy for reactant to saddle",
                       default = -1.0)
@@ -337,7 +348,7 @@ if __name__ == "__main__":
     product = read_con(args[2])
     mode = load_mode(args[3])
 
-    insert(reactant, saddle, product, mode, options.kdbdir, options.nf, options.dc, options.b1, options.b2, options.p1, options.p2)
+    insert(reactant, saddle, product, mode, options.kdbdir, options.nf, options.dc, options.mac, options.b1, options.b2, options.p1, options.p2)
 
 
     
