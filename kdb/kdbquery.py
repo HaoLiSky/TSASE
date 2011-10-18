@@ -50,7 +50,7 @@ def clump(c, atoms):
     while len(undone) > 0:
         if len(working) == 0:
             print "Dissociated reactant, or neighbor_fudge too small."
-            sys.exit()
+            return
         a = working.pop()
         for i in undone[:]:
             v = pbc(temp.positions[i] - temp.positions[a], temp.cell)
@@ -117,7 +117,7 @@ def getKDBentries(kdbdir, reactant):
     return entries
 
 
-def query(reactant, kdbdir, nf, dc, nodupes = False):
+def query(reactant, kdbdir, outputdir = "./kdbmatches", nf=0.2, dc=0.3, nodupes = False):
     global DISTANCE_CUTOFF, NEIGHBOR_FUDGE, REMOVE_DUPLICATES
     DISTANCE_CUTOFF = dc
     NEIGHBOR_FUDGE = nf
@@ -127,9 +127,9 @@ def query(reactant, kdbdir, nf, dc, nodupes = False):
     ibox = numpy.linalg.inv(reactant.cell)
     
     # Create a directory for any suggestions we might make.
-    if os.path.isdir("kdbmatches"):
-        shutil.rmtree("kdbmatches")
-    os.mkdir("kdbmatches")
+    if os.path.isdir(outputdir):
+        shutil.rmtree(outputdir)
+    os.mkdir(outputdir)
 
     # A list of unique saddles, used for duplicate removal.
     uniques = []
@@ -138,7 +138,7 @@ def query(reactant, kdbdir, nf, dc, nodupes = False):
     entries = getKDBentries(kdbdir, reactant)
     if len(entries) == 0:
         print "No entries for those elements."
-        sys.exit()
+        return
 
     # For each nonfrozen atom in reactant, create a list of neighboring element
     # types and the count of each type.
@@ -431,15 +431,15 @@ def query(reactant, kdbdir, nf, dc, nodupes = False):
                 sugproduct.positions = pbc(sugproduct.positions, sugproduct.cell)
                 
             # Write suggestion.
-            write_con("kdbmatches/SADDLE_%d" % numMatches, suggestion)
-            write_con("kdbmatches/PRODUCT_%d" % numMatches, sugproduct)
-            save_mode("kdbmatches/MODE_%d" % numMatches, modeTemp)
-            if os.path.isfile(entry["barrier"]): shutil.copyfile(entry["barrier"], "kdbmatches/BARRIER_%d" % numMatches)
-            if os.path.isfile(entry["prefactor"]): shutil.copyfile(entry["prefactor"], "kdbmatches/PREFACTOR_%d" % numMatches)
-            os.system("touch kdbmatches/.done_%d" % numMatches)                        
+            write_con(outputdir + "/SADDLE_%d" % numMatches, suggestion)
+            write_con(outputdir + "/PRODUCT_%d" % numMatches, sugproduct)
+            save_mode(outputdir + "/MODE_%d" % numMatches, modeTemp)
+            if os.path.isfile(entry["barrier"]): shutil.copyfile(entry["barrier"], outputdir + "/BARRIER_%d" % numMatches)
+            if os.path.isfile(entry["prefactor"]): shutil.copyfile(entry["prefactor"], outputdir + "/PREFACTOR_%d" % numMatches)
+            os.system("touch %s/.done_%d" % (outputdir, numMatches))                        
             
             #save debug xyz suggestion file.
-            write_xyz("kdbmatches/saddle_%d.xyz" % numMatches, suggestion)
+            write_xyz(outputdir + "/saddle_%d.xyz" % numMatches, suggestion)
 
             entryMatches += 1
             numMatches += 1
@@ -472,7 +472,7 @@ if __name__ == "__main__":
     # Load the reactant con file.
     reactant = read_con(args[0])
     
-    query(reactant, options.kdbdir, options.dc, options.nf, options.nodupes)
+    query(reactant, options.kdbdir, "./kdbmatches", options.dc, options.nf, options.nodupes)
 
             
 

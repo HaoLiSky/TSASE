@@ -137,6 +137,7 @@ def stripUnselectedAtoms(atoms, selected):
     return dest, mapping
     
 def getProcessMobileAtoms(r, s, p, mac):
+    #XXX: Need to use mac
     """ Returns a list of atom indices that move more than mac 
     between reactant and saddle, saddle and product, or 
     reactant and product. If no atoms move more than mac, returns
@@ -153,6 +154,7 @@ def getProcessMobileAtoms(r, s, p, mac):
     return mobileAtoms
 
 def getProcessNeighbors(mobileAtoms, r, s, p, nf):
+    #XXX: need to use nf
     """ Given a list mobile atoms, a reactant, saddle, and product, 
     returns a list of neighboring atoms according to the NEIGHBOR_FUDGE
     paramter."""
@@ -172,7 +174,7 @@ def getProcessNeighbors(mobileAtoms, r, s, p, nf):
                 neighborAtoms.append(i)
     return neighborAtoms
 
-def insert(reactant, saddle, product, mode, kdbdir, nf, dc, mac, barrier1, barrier2, prefactor1, prefactor2):
+def insert(reactant, saddle, product, mode, kdbdir="./kdb", nf=0.2, dc=0.3, mac=0.7, barrier1=0.0, barrier2=0.0, prefactor1=0.0, prefactor2=0.0):
     global NEIGHBOR_FUDGE, DISTANCE_CUTOFF, MOBILE_ATOM_CUTOFF
     NEIGHBOR_FUDGE = nf
     DISTANCE_CUTOFF = dc
@@ -185,8 +187,8 @@ def insert(reactant, saddle, product, mode, kdbdir, nf, dc, mac, barrier1, barri
     # Quit if not enough selected atoms.
     if len(selectedAtoms) < 2:
         print "Too few atoms in process, or neighbor_fudge too small."
-        sys.exit()
-    
+        return
+            
     # Remove unselected atoms.
     reactant, mapping = stripUnselectedAtoms(reactant, selectedAtoms)
     saddle, mapping = stripUnselectedAtoms(saddle, selectedAtoms)
@@ -205,7 +207,7 @@ def insert(reactant, saddle, product, mode, kdbdir, nf, dc, mac, barrier1, barri
     while len(undone) > 0:
         if len(working) == 0:
             print "Dissociated reactant, or neighbor_fudge too small."
-            sys.exit()
+            return
         a = working.pop()
         for i in undone[:]:
             v = pbc(temp.positions[i] - temp.positions[a], temp.get_cell())
@@ -256,7 +258,7 @@ def insert(reactant, saddle, product, mode, kdbdir, nf, dc, mac, barrier1, barri
             continue
         if getMappings(saddle, dbSaddle) is not None:
             print "duplicate of", procdir
-            sys.exit()
+            return      
 
     # Create the path for this process.
     i = 0
