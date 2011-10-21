@@ -258,16 +258,16 @@ class ssneb:
                 Rm1  = numpy.dot(Rm1,avgbox) 
                 dh   = self.path[i - 1].cellt - self.path[i].cellt
                 Rm1b = numpy.dot(self.path[i].icell, dh)*0.5 + numpy.dot(self.path[i - 1].icell, dh)*0.5
-                Rm1  = numpy.sqrt(numpy.vdot(Rm1,Rm1)+numpy.vdot(Rm1b,Rm1b))
+                Rm1  = numpy.vstack((Rm1,Rm1b))
 
                 Rp1  = sPBC(self.path[i + 1].vdir - self.path[i].vdir)
                 avgbox  = 0.5*(self.path[i + 1].get_cell() + self.path[i].get_cell())
                 Rp1  = numpy.dot(Rp1,avgbox)
                 dh   = self.path[i + 1].cellt - self.path[i].cellt
                 Rp1b = numpy.dot(self.path[i].icell, dh)*0.5+numpy.dot(self.path[i + 1].icell, dh)*0.5
-                Rp1  = numpy.sqrt(numpy.vdot(Rp1,Rp1)+numpy.vdot(Rp1b,Rp1b))
+                Rp1  = numpy.vstack((Rp1,Rp1b))
 
-                self.path[i].fsN = (Rp1 - Rm1) * self.k * self.path[i].n
+                self.path[i].fsN = (vmag(Rp1) - vmag(Rm1)) * self.k * self.path[i].n
                 #---------------01/26/11 to speedup by weakening spring force's convergence-----------
                 #if vmag(self.path[i].fsN) < 0.01:
                     #self.path[i].fsN = 0.0
