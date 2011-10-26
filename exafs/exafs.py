@@ -112,9 +112,10 @@ def load_chi_dat(filename):
             chi.append(float(fields[1]))
     return numpy.array(k), numpy.array(chi)
 
-def run_feff(atoms, absorber, tmp_dir=None):
+def run_feff(atoms, absorber, feff_options={}, tmp_dir=None):
     tmp_dir_path = tempfile.mkdtemp(prefix="tmp_feff_", dir=tmp_dir)
-    tsase.io.write_feff(os.path.join(tmp_dir_path, "feff.inp"), atoms, absorber)
+    feff_options["PRINT"] = "0 0 0 2"
+    tsase.io.write_feff(os.path.join(tmp_dir_path, "feff.inp"), atoms, absorber, feff_options)
     p = subprocess.Popen(["feff"], cwd=tmp_dir_path, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
     retval = p.wait()
@@ -136,9 +137,8 @@ class DevNull:
     def flush(self): pass
     def close(self): pass
 
-def exafs(atoms, txt="-", tmp_dir=None, comm=None):
+def exafs(atoms, txt="-", feff_options={}, tmp_dir=None, comm=None):
     from mpi4py import MPI
-
     if not comm:
         comm = MPI.COMM_WORLD
 
@@ -156,7 +156,7 @@ def exafs(atoms, txt="-", tmp_dir=None, comm=None):
 
     outfile.write("\nCalculating EXAFS Spectra\n")
     outfile.write("Number of Atoms: %i\n" % len(atoms))
-    outfile.write("Number of Cores: %i\n" % size)
+    outfile.write("Number of MPI Ranks: %i\n" % size)
     outfile.flush()
 
     chi_total = {}
@@ -165,12 +165,11 @@ def exafs(atoms, txt="-", tmp_dir=None, comm=None):
         chi_total[symbol] = []
 
     k = None
-    #absorbers = numpy.where((numpy.array(range(len(atoms)))%size)==rank)[0]
     
     for i in range(len(atoms)):
         if i%size != rank:
             continue
-        k, chi = run_feff(atoms, i, tmp_dir)
+        k, chi = run_feff(atoms, i, feff_options, tmp_dir)
         chi_total[atoms[i].symbol].append(chi)
 
     #in case more ranks than atoms
@@ -179,11 +178,13 @@ def exafs(atoms, txt="-", tmp_dir=None, comm=None):
     for symbol in atomic_symbols:
         if len(chi_total[symbol]) == 0:
             chi_total[symbol] = numpy.zeros(len(k))
+        else:
+            chi_total[symbol]  = numpy.sum(numpy.array(chi_total[symbol]), axis=0)
 
-        chi_total[symbol]  = numpy.sum(numpy.array(chi_total[symbol]), axis=0)
         chi_total[symbol]  = comm.allreduce(chi_total[symbol])
-        natoms = len( [ a for a in atoms if a.symbol == symbol ] )
-        chi_total[symbol] /= float(natoms)
+
+        #normalize signal
+        chi_total[symbol] /= atoms.get_chemical_symbols().count(symbol)
 
     return k, chi_total
 

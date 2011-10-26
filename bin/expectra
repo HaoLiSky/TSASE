@@ -294,7 +294,11 @@ def main(options, filename):
     average_chi = AverageChi(options)
 
     for i, atoms in enumerate(snapshots):
-        k, chi = tsase.exafs.exafs(atoms, txt=None)
+        feff_options = {'RMAX':str(options.rmax),
+                        'HOLE':'%i 1.0'%options.hole,
+                        'NLEG':'4'}
+        k, chi = tsase.exafs.exafs(atoms, feff_options=feff_options,txt=None)
+        f = open('chi.dat','w')
         average_chi.append(k, chi)
 
         if options.pdf:
@@ -309,8 +313,9 @@ def main(options, filename):
             s = "iter: %3i log10(residual): %.1f %2i" % (i, math.log10(res), 
                                                          iter_below_tol)
             log(s)
-        if options.write_every_step:
-            write_chi(k, average_chi, i)
+        if options.write_every != 0:
+            if i%options.write_every == 0:
+                write_chi(k, average_chi, i)
         #convergence check
         if iter_below_tol == options.residual_steps:
             break
@@ -322,9 +327,9 @@ def main(options, filename):
 
     if options.pdf:
         log("writing pdf histogram to pdf.dat")
-        pdf = [ r for r in pdf if r <= 3.4 ]
+        pdf = [ r for r in pdf if options.pdf_start <= r <= options.pdf_end ]
         pdf = numpy.array(pdf)
-        bins = [ 2.6, 2.8, 3.0, 3.2, 3.4 ]
+        bins = numpy.arange(options.pdf_start, options.pdf_end+options.bin_width, options.bin_width)
         hist, bins = numpy.histogram(pdf, bins=bins)
         center = (bins[:-1]+bins[1:])/2.0
         f = paropen('pdf.dat', 'w')
@@ -350,19 +355,24 @@ if __name__ == "__main__":
                       action="store_true", default=False,
                       help="instead of running an md simulation read " \
                            "in a ASE trajectory file [default: %default]")
-    parser.add_option("--write-every-step", default=False,
-                      action="store_true",
-                      help="write out chi and kchi at every step intead " \
-                           "of just at the end [default: %default]")
+    parser.add_option("--write-every", default=0, type="int", metavar="N",
+                      help="write out chi and kchi every N steps instead " \
+                           "of only at the end [default: %default]")
     parser.add_option("--pdf", default=False,
                       action="store_true",
                       help="write out pdf [default: %default]")
+    parser.add_option("--bin-width", type="float", metavar="width", default=.05,
+                      help="width of pdf bins [default: %default]")
+    parser.add_option("--pdf-start", type="float", default=2.6,
+                      help="the shortest bond length considered in the pdf [default: %default]")
+    parser.add_option("--pdf-end", type="float", default=3.4,
+                      help="the longest bond length considered in the pdf [default: %default]")
     parser.add_option("--residual", default=1e-4, type="float",
                       help="residual convergence critera [default: %default]")
     parser.add_option("--residual-steps", default=10, type="int",
                       help="number of consecutive steps that the residual "\
                            "critera must be satisfied for [default: %default]")
-    parser.add_option("-k", "--k-weight", default=1, type="int",
+    parser.add_option("-k", "--k-weight", default=0, type="int",
                       help="the k-weight used for the residual calculation: " \
                            "k^w * chi(k) [default: %default]")
     parser.add_option("-e", "--equillibration-steps",
@@ -379,6 +389,15 @@ if __name__ == "__main__":
     parser.add_option("--time-step", dest="time_step",
                       type="float", action="store", default=1.0,
                       help="time step for md simulation in fs [default: %default]")
+    parser.add_option("--hole", dest="hole",
+                      type="int", default=1,
+                      help="select where the electron hole should be created "\
+                      "a value of 1 is K-shell, 2 is LI-shell, 3 is "\
+                      "LII-shell, 4 is LIII-shell [default: %default]")
+    parser.add_option("--rmax", dest="rmax",
+                      type="float", default=6.0,
+                      help= "The maximum effective distance for a single path"\
+                            " [default: %default]")
 
     options, args = parser.parse_args()
 
