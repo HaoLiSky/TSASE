@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import sys
-from optparse import OptionParser
+from optparse import OptionParser, OptionGroup
 import math
 import resource
 import time
@@ -135,7 +135,7 @@ class MDSnapshots:
     def __init__(self, atoms, options):
         self.atoms = atoms
         self.options = options
-        self.max_snapshot_steps = 100000
+        self.max_snapshot_steps = options.max_steps
         self.nsnapshots = 0
 
         calc = QSC()
@@ -298,7 +298,6 @@ def main(options, filename):
                         'HOLE':'%i 1.0'%options.hole,
                         'NLEG':'4'}
         k, chi = tsase.exafs.exafs(atoms, feff_options=feff_options,txt=None)
-        f = open('chi.dat','w')
         average_chi.append(k, chi)
 
         if options.pdf:
@@ -334,7 +333,7 @@ def main(options, filename):
         center = (bins[:-1]+bins[1:])/2.0
         f = paropen('pdf.dat', 'w')
         hist = numpy.array(hist, dtype='float')
-        hist = hist/numpy.sum(hist)
+        hist = hist/len(atoms)
         for i in xrange(len(hist)):
             f.write("%8.4f %.6f\n" % (center[i], hist[i]))
         f.close()
@@ -351,53 +350,71 @@ def main(options, filename):
 
 if __name__ == "__main__":
     parser = OptionParser(usage="%prog [options] FILE")
-    parser.add_option("-r", "--read-trajectory",
+
+    io_group = OptionGroup(parser, "I/O Options")
+    io_group.add_option("-r", "--read-trajectory",
                       action="store_true", default=False,
                       help="instead of running an md simulation read " \
                            "in a ASE trajectory file [default: %default]")
-    parser.add_option("--write-every", default=0, type="int", metavar="N",
+    io_group.add_option("--write-every", default=0, type="int", metavar="N",
                       help="write out chi and kchi every N steps instead " \
                            "of only at the end [default: %default]")
-    parser.add_option("--pdf", default=False,
+    parser.add_option_group(io_group)
+
+    pdf_group = OptionGroup(parser, "PDF Options")
+    pdf_group.add_option("--pdf", default=False,
                       action="store_true",
                       help="write out pdf [default: %default]")
-    parser.add_option("--bin-width", type="float", metavar="width", default=.05,
+    pdf_group.add_option("--bin-width", type="float", metavar="width", default=.05,
                       help="width of pdf bins [default: %default]")
-    parser.add_option("--pdf-start", type="float", default=2.6,
+    pdf_group.add_option("--pdf-start", type="float", default=2.6,
                       help="the shortest bond length considered in the pdf [default: %default]")
-    parser.add_option("--pdf-end", type="float", default=3.4,
+    pdf_group.add_option("--pdf-end", type="float", default=3.4,
                       help="the longest bond length considered in the pdf [default: %default]")
-    parser.add_option("--residual", default=1e-4, type="float",
+    parser.add_option_group(pdf_group)
+
+    convergence_group = OptionGroup(parser, "Convergence Options")
+    convergence_group.add_option("--max-steps", default=500, type="int",
+                      help="maximum number of snapshots to be considered "\
+                           "[default: %default]")
+    convergence_group.add_option("--residual", default=0, type="float",
                       help="residual convergence critera [default: %default]")
-    parser.add_option("--residual-steps", default=10, type="int",
+    convergence_group.add_option("--residual-steps", default=10, type="int",
                       help="number of consecutive steps that the residual "\
                            "critera must be satisfied for [default: %default]")
-    parser.add_option("-k", "--k-weight", default=0, type="int",
+    convergence_group.add_option("-k", "--k-weight", default=0, type="int",
                       help="the k-weight used for the residual calculation: " \
                            "k^w * chi(k) [default: %default]")
-    parser.add_option("-e", "--equillibration-steps",
+    convergence_group.add_option("-e", "--equillibration-steps",
                       type="int", action="store", default=5000,
                       help="number of time steps/traj frames skipped " \
                            "before the exafs averaging begins [default: %default]")
-    parser.add_option("-s", "--snapshot-steps",
+    convergence_group.add_option("-s", "--snapshot-steps",
                       type="int", default=10,
                       help="the number of steps/frames between each exafs " \
                            "calculation [default: %default]")
-    parser.add_option("-t", "--temperature",
+    parser.add_option_group(convergence_group)
+
+    md_group = OptionGroup(parser, "MD Options")
+    md_group.add_option("-t", "--temperature",
                       type="float", action="store", default=300.0,
                       help="temperature for md simulation in Kelvin [default: %default]")
-    parser.add_option("--time-step", dest="time_step",
+    md_group.add_option("--time-step", dest="time_step",
                       type="float", action="store", default=1.0,
                       help="time step for md simulation in fs [default: %default]")
-    parser.add_option("--hole", dest="hole",
+    parser.add_option_group(md_group)
+
+    feff_group = OptionGroup(parser, "FEFF Options")
+    feff_group.add_option("--hole", dest="hole",
                       type="int", default=1,
                       help="select where the electron hole should be created "\
                       "a value of 1 is K-shell, 2 is LI-shell, 3 is "\
                       "LII-shell, 4 is LIII-shell [default: %default]")
-    parser.add_option("--rmax", dest="rmax",
+    feff_group.add_option("--rmax", dest="rmax",
                       type="float", default=6.0,
                       help= "The maximum effective distance for a single path"\
                             " [default: %default]")
+    parser.add_option_group(feff_group)
 
     options, args = parser.parse_args()
 
