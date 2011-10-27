@@ -318,6 +318,8 @@ def main(options, filename):
         #convergence check
         if iter_below_tol == options.residual_steps:
             break
+    number_of_iterations = i
+
     end_time = time.time()
     log("spectra calculation complete")
     log("averaged over %i MD configurations" % i)
@@ -333,7 +335,8 @@ def main(options, filename):
         center = (bins[:-1]+bins[1:])/2.0
         f = paropen('pdf.dat', 'w')
         hist = numpy.array(hist, dtype='float')
-        hist = hist/len(atoms)
+        hist /= len(atoms)
+        hist /= number_of_iterations
         for i in xrange(len(hist)):
             f.write("%8.4f %.6f\n" % (center[i], hist[i]))
         f.close()
