@@ -255,22 +255,44 @@ class Logger:
         self.logfile = None
         
     def log(self, msg):
-        if not self.logfile:
-            self.logfile = open(self.logpath, 'w', 1)
         if rank == 0:
+            if not self.logfile:
+                self.logfile = open(self.logpath, 'w', 1)
             self.logfile.write(msg+'\n')
             print msg
 log = Logger('expectra.log').log
 
 
-def calculate_pdf(atoms):
-    bond_lengths = []
-    pos = atoms.get_positions()
-    for i in range(0, len(atoms)):
-        for j in range(i+1, len(atoms)):
-            d = numpy.linalg.norm(pos[i]-pos[j])
-            bond_lengths.append(d)
-    return bond_lengths
+class PDF:
+    def __init__(self, options):
+        self.bond_lengths = []
+        self.r_min = options.pdf_start
+        self.r_max = options.pdf_end
+        self.updates = 0
+
+    def update(self, atoms):
+        self.atoms = atoms
+        self.updates += 1
+        pos = atoms.get_positions()
+        for i in range(0, len(atoms)):
+            for j in range(0, len(atoms)):
+                if i==j: continue
+                d = atoms.get_distance(i,j)
+                if d <= self.r_max and d >= self.r_min:
+                    self.bond_lengths.append(d)
+
+    def write(self):
+        log("writing pdf histogram to pdf.dat")
+        bins = numpy.arange(options.pdf_start, options.pdf_end+options.bin_width, options.bin_width)
+        hist, bins = numpy.histogram(self.bond_lengths, bins=bins, new=True)
+        center = (bins[:-1]+bins[1:])/2.0
+        f = paropen('pdf.dat', 'w')
+        hist = numpy.array(hist, dtype='float')
+        hist /= self.updates
+        hist /= len(self.atoms)
+        for i in xrange(len(hist)):
+            f.write("%8.4f %.6f\n" % (center[i], hist[i]))
+        f.close()
 
 def main(options, filename):
     log("Options:")
@@ -289,7 +311,9 @@ def main(options, filename):
 
 
     iter_below_tol = 0
-    pdf = []
+
+    if options.pdf:
+        pdf = PDF(options)
 
     average_chi = AverageChi(options)
 
@@ -301,7 +325,7 @@ def main(options, filename):
         average_chi.append(k, chi)
 
         if options.pdf:
-            pdf.extend(calculate_pdf(atoms))
+            pdf.update(atoms)
 
         res = average_chi.residual
         if res:
@@ -327,19 +351,7 @@ def main(options, filename):
     write_chi(k, average_chi)
 
     if options.pdf:
-        log("writing pdf histogram to pdf.dat")
-        pdf = [ r for r in pdf if options.pdf_start <= r <= options.pdf_end ]
-        pdf = numpy.array(pdf)
-        bins = numpy.arange(options.pdf_start, options.pdf_end+options.bin_width, options.bin_width)
-        hist, bins = numpy.histogram(pdf, bins=bins)
-        center = (bins[:-1]+bins[1:])/2.0
-        f = paropen('pdf.dat', 'w')
-        hist = numpy.array(hist, dtype='float')
-        hist /= len(atoms)
-        hist /= number_of_iterations
-        for i in xrange(len(hist)):
-            f.write("%8.4f %.6f\n" % (center[i], hist[i]))
-        f.close()
+        pdf.write()
 
     rusage = resource.getrusage(resource.RUSAGE_SELF)
     utime = world.reduce(rusage.ru_utime)
