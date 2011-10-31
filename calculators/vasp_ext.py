@@ -597,8 +597,8 @@ class Vasp(Calculator):
                          [[0, 1, 2, 4, 5, 3]] \
                          * 1e-1 * ase.units.GPa
             if line.find(' Pullay stress ') != -1:
-                pstress = float(line.split()[-2])
-        stress[0:3] += pstress    
+                pstress = float(line.split()[-2]) * -1e-1 * ase.units.GPa
+        stress[0:3] -= pstress    
         return stress
 
     def read_ldau(self):
