@@ -3,7 +3,7 @@ The generalized nudged elastic path (ssneb) module.
 """
 
 import numpy
-import os
+import os,sys
 from copy import deepcopy
 from math import sqrt, atan, pi
 from util import vmag, vunit, vproj, vdot, sPBC
@@ -43,6 +43,14 @@ class ssneb:
         self.weight = weight 
         self.parallel = parallel 
 
+        #check the orientation of the cell, make sure a is along x, b is on xoy plane
+        for p in [p1,p2]:
+            cr = p.get_cell()
+            if cr[0][1]**2+cr[0][2]**2+cr[1][2]**2 > 1e-3: 
+                print "check the orientation of the cell, make sure a is along x, b is on xoy plane"
+                sys.exit()
+                
+        print p2.get_cell()
         #set the path by linear interpolation between end points
         n = self.numImages - 1
         self.path = [p1]
