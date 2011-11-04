@@ -294,6 +294,10 @@ class PDF:
             f.write("%8.4f %.6f\n" % (center[i], hist[i]))
         f.close()
 
+        f = paropen('dw.dat','w')
+        f.write('%e\n' % numpy.var(self.bond_lengths))
+        f.close()
+
 def main(options, filename):
     log("Options:")
     for option, value in options.__dict__.iteritems():
