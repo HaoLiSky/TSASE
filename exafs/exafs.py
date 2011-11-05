@@ -114,9 +114,8 @@ def load_chi_dat(filename):
 
 def run_feff(atoms, absorber, feff_options={}, tmp_dir=None):
     tmp_dir_path = tempfile.mkdtemp(prefix="tmp_feff_", dir=tmp_dir)
-    feff_options["PRINT"] = "0 0 0 2"
     tsase.io.write_feff(os.path.join(tmp_dir_path, "feff.inp"), atoms, absorber, feff_options)
-    p = subprocess.Popen(["feff"], cwd=tmp_dir_path, stdout=subprocess.PIPE,
+    p = subprocess.Popen(["feff"], cwd=tmp_dir_path, stdout=open('/dev/null','w'),
                          stderr=subprocess.PIPE)
     retval = p.wait()
     if retval != 0:
@@ -127,7 +126,7 @@ def run_feff(atoms, absorber, feff_options={}, tmp_dir=None):
     if stderr == "hash error":
         atoms[absorber].set_position(atoms[absorber].get_position()+0.001)
         sys.stderr.write("%s\n"%stderr)
-        return run_feff(atoms, absorber, tmp_dir)
+        return run_feff(atoms, absorber, feff_options, tmp_dir)
     k, chi = load_chi_dat(os.path.join(tmp_dir_path, "chi.dat"))
     shutil.rmtree(tmp_dir_path)
     return k, chi

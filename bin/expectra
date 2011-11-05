@@ -284,7 +284,7 @@ class PDF:
     def write(self):
         log("writing pdf histogram to pdf.dat")
         bins = numpy.arange(options.pdf_start, options.pdf_end+options.bin_width, options.bin_width)
-        hist, bins = numpy.histogram(self.bond_lengths, bins=bins, new=True)
+        hist, bins = numpy.histogram(self.bond_lengths, bins=bins)
         center = (bins[:-1]+bins[1:])/2.0
         f = paropen('pdf.dat', 'w')
         hist = numpy.array(hist, dtype='float')
