@@ -3,7 +3,6 @@ import numpy
 import ase
 
 def read_bopfox(filename):
-    trajectory = []
     f = open(filename,'r')
     lines = f.readlines()
     f.close()
@@ -55,8 +54,7 @@ def read_bopfox(filename):
     else: 
         for i in range(len(a)):
             a.positions[i] *= scale
-    trajectory.append(a)
-    return trajectory
+    return a
 
 def write_bopfox(filename, a, w = 'w'):
     fout = open(filename, w)

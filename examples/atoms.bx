@@ -1,0 +1,22 @@
+
+/========================================================================
+/
+/   atoms.bx
+/
+/   input file BOPfox code: on-site parameters for all atoms
+/   masses from http://www.chem.qmul.ac.uk/iupac/AtWt
+/
+/========================================================================
+
+
+/-------------------------------------------------
+Version = v2
+/-------------------------------------------------
+
+Atom             = W
+Mass             = 183.84
+ValenceOrbitals  = 5
+ValenceElectrons = 4.08
+Ed               = 0.0
+
+

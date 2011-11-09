@@ -1,0 +1,67 @@
+
+/------------------------------------------------------------------------
+/ Versions
+/------------------------------------------------------------------------
+
+moments = 9 
+!nextmoments = 0 
+!dosgrid = 1000
+AtomsVersion  = v2          
+BondsVersion  = v2         
+RepVersion = v2
+Version = bop 
+screening  = false
+screeningVersion = v0
+restart = F
+
+!DEFINE TASK
+task = force
+
+
+forces = analytic
+numFdisp  = 2
+numfinc   = 0.0001
+
+facrcut    = 1.0 
+rskin      = 0.0
+rthickskin = 0.0
+ecut       = 0.0
+
+cutoffversion = cosine
+rCut     =  4.65  
+dcut     =  1.65
+cutoff2version = cosine
+r2Cut    =  6.00
+d2cut    =  0.00
+
+StrucFile = struc.bx
+
+!RELAX part
+rxsaveframes = 1
+rxfconv  = 0.01
+rxkernel = damped-newton
+rxmaxsteps = 200
+
+!Newton related parameters
+!dndamping   = 0.01 
+!dnrecmass  = 0.003
+
+terminator = averaged
+
+
+efermitol = 0.00000000001
+
+!!! new self-consistency scheme switched on !!!
+scfnewscheme = T
+scfmixer = broyden
+scfmixpara = 0.10        
+scftol = 0.001
+
+scfreusehii = F
+scfSteps = 100
+
+verbose = F
+printsc = F
+printefermi = F
+
+printtsse = T

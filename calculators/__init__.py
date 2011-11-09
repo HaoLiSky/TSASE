@@ -19,6 +19,8 @@ try:
 except:
     pass
 
+from bopfox import bopfox
+
 def pt():
     return morse()
     
