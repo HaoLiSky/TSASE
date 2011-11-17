@@ -137,6 +137,7 @@ class pssneb:
         img0 = (0, self.path[0], self.hosts[0])
         img1 = (n, self.path[n], self.hosts[1])
         self.path[0], self.path[n] = pool.map(calpot, [img0, img1])         
+        pool.close()
         self.path[0].cellt  = self.path[0].get_cell() * self.jacobian
         self.path[n].cellt  = self.path[n].get_cell() * self.jacobian
 
@@ -153,6 +154,7 @@ class pssneb:
         # writing input and do the calculation in images' directories respectly
         mid_images = zip(range(1,self.numImages-1), self.path[1:-1], self.hosts)
         self.path[1:-1] = pool.map(calpot, mid_images)         
+        pool.close()
 
         self.Umax  = self.path[0].u
         self.Umaxi = 0
