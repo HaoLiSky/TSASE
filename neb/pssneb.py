@@ -240,6 +240,7 @@ class pssneb:
                         snb1 = numpy.dot(self.path[i].icell, dh)*0.5 + numpy.dot(self.path[i + 1].icell, dh)*0.5
                         dh   = self.path[i].cellt - self.path[i - 1].cellt
                         snb2 = numpy.dot(self.path[i].icell, dh)*0.5 + numpy.dot(self.path[i - 1].icell, dh)*0.5
+                        snb  = snb1 * Umin + snb2 * Umax
                         self.path[i].n = numpy.vstack((sn,snb))
                     else:
                         dr_dir  = sPBC(self.path[i + 1].vdir - self.path[i].vdir)
