@@ -9,10 +9,7 @@ import tutil
 
 traj = tutil.pipein()
 
-try:
-    exec("pot = ase.calculators.%s()" % sys.argv[1])
-except:
-    exec("pot = tsase.calculators.%s()" % sys.argv[1])
+pot = tutil.getpot(sys.argv[1])
 
 for atoms in traj:
     atoms.set_calculator(pot)

@@ -1,0 +1,38 @@
+
+import numpy as np
+
+import tutil
+
+p = tutil.pipein()
+
+pot = tutil.getpot(sys.argv[1])
+
+A = float(sys.argv[2])
+
+original_cell = p.cell.copy()
+
+cells = [(frac, original_cell * frac) for frac in [A - 0.02, A - 0.01, A, A + 0.01, A + 0.02]]
+
+xs = []
+ys = []
+
+for cell in cells:
+    temp = p.copy()
+    temp.cell = cell[1]
+    temp.positions = np.dot(p.get_scaled_positions(), temp.cell)
+    temp.set_calculator(pot)
+    xs.append(cell[0])
+    ys.append(temp.get_potential_energy())
+
+for x, y in zip(xs, ys):
+    print x, y
+
+a,b,c = np.polyfit(xs, ys, 2)
+scale = -b/(2*a)
+
+print
+print scale
+
+print
+print p.cell * scale   
+
