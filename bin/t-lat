@@ -1,9 +1,11 @@
+#!/usr/bin/env python
 
+import sys
 import numpy as np
 
 import tutil
 
-p = tutil.pipein()
+p = tutil.pipein()[0]
 
 pot = tutil.getpot(sys.argv[1])
 
