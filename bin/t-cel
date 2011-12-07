@@ -1,0 +1,30 @@
+#!/usr/bin/env python
+
+import sys
+import numpy
+import tutil
+
+traj = tutil.pipein()
+
+if len(sys.argv) == 1:
+    for atoms in traj:
+        print atoms.cell
+elif len(sys.argv) == 4:
+    for i in range(len(traj)):
+        traj[i].cell = numpy.array([[float(sys.argv[1]), 0.0, 0.0],
+                                    [0.0, float(sys.argv[2]), 0.0], 
+                                    [0.0, 0.0, float(sys.argv[3])]]) 
+    tutil.pipeout(traj)
+elif len(sys.argv) == 10:
+    for i in range(len(traj)):
+        traj[i].cell = numpy.array([[float(sys.argv[1]),
+                                     float(sys.argv[2]),
+                                     float(sys.argv[3])],
+                                    [float(sys.argv[4]),
+                                     float(sys.argv[5]),
+                                     float(sys.argv[6])],
+                                    [float(sys.argv[7]),
+                                     float(sys.argv[8]),
+                                     float(sys.argv[9])]])
+        
+    tutil.pipeout(traj)

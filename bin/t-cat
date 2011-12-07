@@ -5,5 +5,8 @@ import ase
 import tutil
 
 p = ase.io.read(sys.argv[1],index=":")
+if type(p) is not list:
+    p = [p]    
+
 tutil.pipeout(p)
 

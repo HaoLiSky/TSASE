@@ -16,7 +16,11 @@ parser.add_argument("--ortho", action="store_true", default=False)
 parser.add_argument("--cubic", action="store_true", default=False)
 args = parser.parse_args()
 
-p = bulk(args.name, args.structure, args.a, args.c, args.covera, args.ortho, args.cubic)
+if args.structure == 'a15':
+    import tsase
+    p = tsase.structure.a15(args.name, args.a)
+else:
+    p = bulk(args.name, args.structure, args.a, args.c, args.covera, args.ortho, args.cubic)
 
 tutil.pipeout([p])
 
