@@ -30,7 +30,9 @@ banner = \
 """
 Python console for tsase-xyz
 ----------------------------
-The variable p in this console is the ase.atoms.Atoms object or list of them that is being displayed. The modules ase and tsase have already been imported.
+The variable p in this console is the ase.atoms.Atoms 
+object or list of them that is being displayed. The modules 
+ase and tsase have already been imported.
 """
 
 class xyz(gtk.Window):
@@ -111,7 +113,7 @@ class xyz(gtk.Window):
         self.frozenbutton.connect("clicked", lambda w: self.queue_draw())
         self.zoombutton.connect("value-changed", lambda w: self.queue_draw())
         self.radiusbutton.connect("value-changed", lambda w: self.queue_draw())
-        self.moviescale.connect("value-changed", lambda w: self.queue_draw())
+        self.moviescale.connect("value-changed", lambda w: self.gfx_render())
         self.menuFileOpen.connect("activate", self.event_menuFileOpen)
         self.menuFileOpenView.connect("activate", self.event_menuFileOpenView)
         self.menuFileSaveAs.connect("activate", self.event_menuFileSaveAs)
@@ -301,7 +303,6 @@ class xyz(gtk.Window):
                 if nextframe > len(self.trajectory) - 1:
                     nextframe = 0
                 self.moviescale.set_value(nextframe)
-                self.queue_draw()        
         return True
     
 
@@ -346,7 +347,7 @@ class xyz(gtk.Window):
             self.repeatx.set_value(view['repeat'][0])
             self.repeaty.set_value(view['repeat'][1])
             self.repeatz.set_value(view['repeat'][2])
-            self.gfx_render()
+            self.queue_draw()
         return True
 
     def event_menuFileSaveAs(self, *args):
@@ -693,7 +694,6 @@ class xyz(gtk.Window):
         if len(self.trajectory) > 1:
             self.moviebox.set_sensitive(True)
             self.moviescale.set_range(0, len(self.trajectory) - 1)
-            self.moviescale.connect("value-changed", lambda w: self.queue_draw())
         self.gfx_center_atoms()
         self.queue_draw()
 
