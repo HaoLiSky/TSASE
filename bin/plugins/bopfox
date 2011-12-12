@@ -1,0 +1,2 @@
+_bopfox = tsase.calculators.bopfox()
+traj().set_calculator(_bopfox)

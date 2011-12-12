@@ -1,0 +1,31 @@
+_temp = traj()
+
+_A = float(_plugin_args[0])
+
+_original_cell = _temp.cell.copy()
+
+_cells = [(_frac, _original_cell * _frac) for _frac in [_A - 0.02, _A - 0.01, _A, _A + 0.01, _A + 0.02]]
+
+_xs = []
+_ys = []
+
+for _cell in _cells:
+    _temp2 = _temp.copy()
+    _temp2.set_calculator(_temp.get_calculator())
+    _temp2.cell = _cell[1]
+    _temp2.positions = np.dot(_temp.get_scaled_positions(), _temp2.cell)
+    _xs.append(_cell[0])
+    _ys.append(_temp2.get_potential_energy())
+
+for _x, _y in zip(_xs, _ys):
+    print _x, _y
+
+_a,_b,_c = np.polyfit(_xs, _ys, 2)
+_scale = -_b/(2*_a)
+
+print
+print _scale
+
+print
+print _temp.cell * _scale   
+

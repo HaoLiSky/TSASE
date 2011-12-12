@@ -1,0 +1,4 @@
+from ase.optimize import MDMin as _MDMin
+_mdmin = _MDMin(_buffers[_current_buffer], dt = 0.05)
+_mdmin.run(fmax=0.01)
+_update_xyz()

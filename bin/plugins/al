@@ -1,0 +1,2 @@
+_al = tsase.calculators.al()
+traj().set_calculator(_al)

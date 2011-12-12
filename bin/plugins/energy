@@ -1,0 +1,1 @@
+print traj().get_potential_energy()

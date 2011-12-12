@@ -5,4 +5,7 @@ import exafs
 import neb
 import kdb
 import structure
-
+try:
+    from xyz import xyz
+except:
+    pass

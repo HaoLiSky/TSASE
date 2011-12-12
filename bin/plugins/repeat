@@ -1,0 +1,3 @@
+_repeat = [int(_p) for _p in _plugin_args]
+traj(traj().repeat(_repeat))
+_update_xyz()

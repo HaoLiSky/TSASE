@@ -1,0 +1,31 @@
+import numpy
+import numpy as np
+from ase import *
+import tsase
+
+from ase.structure import bulk as _bulk
+
+# Initialize the buffers
+_buffers = {'default': _bulk("W", "bcc", cubic=True).repeat((2,2,2))}
+_current_buffer = "default"
+
+# Try to start the visualizer.
+try:
+    _xyz = tsase.xyz()
+except:
+    print "Visualizer could not be initialized."
+
+# Some functions to be used by plugins.
+def _update_xyz():
+    _xyz.data_set(_buffers[_current_buffer])
+
+# Some functions to be used by the user.
+def traj(target = None):
+    if not target:
+        return _buffers[_current_buffer]
+    else:
+        _buffers[_current_buffer] = target
+
+_update_xyz()
+
+# Need a carriage return at the end for the line pushing to work.

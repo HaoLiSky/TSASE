@@ -1,0 +1,272 @@
+#!/usr/bin/env python
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+import code
+import readline
+import sys
+import os
+import time
+import traceback
+import pprint
+import glob
+import os.path
+import re
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+class Shell(code.InteractiveConsole):
+    
+    def __init__(self):
+        code.InteractiveConsole.__init__(self)
+        self.lastCommand = ""
+        self.errors = []
+        
+        lines = open(default_file, 'r').readlines()
+        for line in lines:
+            self.push(line.strip("\n"))
+        readline.parse_and_bind("tab: complete")
+        readline.set_completer_delims(' ')
+        readline.set_completer(self.tab_completer)
+        try:
+            readline.read_history_file(historyfile)
+        except:
+            pass
+
+    def raw_input(self, prompt = ""):
+        # Prompt and read a line from the user.
+        path = os.path.basename(os.getcwd())
+        cmd = raw_input(path + ' [' + str(self.locals["_current_buffer"]) + '] >>> ')
+        return self.parse_command(cmd)
+        
+    def parse_command(self, cmd):
+        # If the command is empty, return nothing.
+        if cmd == "":
+            return ""
+        
+        # Try to save the history.
+        try:
+            readline.write_history_file(historyfile)
+        except:
+            pass
+        
+       # If the user makes an alias, store it.
+        if cmd.startswith("alias"):
+            try:
+                if cmd.strip() == "alias":
+                    pp=pprint.PrettyPrinter()
+                    pp.pprint(aliases)
+                    return ""
+                alias = cmd.strip().split()[1]
+                value = ' '.join(cmd.strip().split()[2:])
+                add_alias(alias, value)
+            except:
+                print "Failed to create alias."
+            return ""
+
+        # If the user unaliases an alias, delete it.
+        if cmd.startswith("unalias "):
+            try:
+                cmd = cmd.strip().split()[1]
+                remove_alias(cmd)
+            except:
+                pass
+            return ""
+        
+        # Filter any aliases.
+        try:
+            if aliases.has_key(cmd.split()[0]):
+                alias = aliases[cmd.split()[0]]
+                for i in range(len(cmd.split()) - 1):
+                    token = "%" + str(i + 1)
+                    if alias.find(token) < 0:
+                        alias += " " + cmd.split()[i + 1]
+                    else:
+                        alias = alias.replace(token, cmd.split()[i + 1])
+                for i in range(100):
+                    alias = alias.replace("%" + str(i), "")
+                cmd = alias
+        except:
+            pass
+        
+        # Filter any plugins
+        plugins = get_plugins()
+        for plugin in plugins:
+            if cmd.startswith(plugin + " ") or cmd == plugin:
+                lines = open(os.path.join(plugin_dir, plugin), 'r').readlines()
+                self.push("_plugin_args = " + str(cmd.strip().split()[1:]))
+                self.push("try:")
+                for line in lines:
+                    self.push("    " + line.strip("\n"))
+                self.push("except:")
+                self.push("    import traceback as _traceback")
+                self.push("    print '\033[31m'")
+                self.push("    _traceback.print_exc()")
+                self.push("    print '\033[0m'")
+                return "" 
+
+        # Store this command as the lastCommand and return the filtered cmd.
+        self.lastCommand = cmd
+        return cmd
+    
+    def showtraceback(self):
+        # Retrieve the command string.
+        cmd = self.lastCommand
+        # If the command string has zero length, do nothing.
+        if len(cmd) == 0:
+            return
+        # If the command is cd, with a directory change, because 
+        # os.system('cd') won't do what the user expects.
+        if cmd.split()[0] == "cd":
+            try: 
+                if len(cmd.split()) == 1:
+                    os.chdir(os.path.expanduser('~'))
+                else:
+                    os.chdir(os.path.expanduser(cmd.split()[1]))
+            except:
+                print "cd: " + cmd.split()[1] + ": Not a directory."
+        # Otherwise, make the system call.
+        else:
+            if os.system(cmd):
+                # Print the python error string.
+                print "\033[31m" + traceback.format_exc().split("\n")[-2] + "\033[0m"
+
+
+    def showsyntaxerror(self, filename = None):
+        # Syntax errors and otherwise are treated the same.
+        self.showtraceback()
+
+    def tab_completer(self, text, state):
+        text = os.path.expanduser(text)
+        everything = glob.glob(text + "*")
+        results = []
+        for thing in everything:
+            if os.path.exists(thing + "/"):
+                results.append(thing + "/")
+            else:
+                results.append(thing)
+        results += [None]
+        return results[state]
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+def loadrc(filename):
+    try:
+        f = open(filename, 'r')
+        lines = f.readlines()
+        for line in lines:
+            if line.startswith("alias "):
+                try:
+                    alias = line.strip().split()[1]
+                    value = ' '.join(line.strip().split()[2:])
+                    aliases[alias] = value
+                except:
+                    pass
+            elif line.startswith("run "):
+                try:
+                    shell.push(line[3:].strip())
+                except:
+                    pass
+        f.close()
+        return True
+    except:
+        return False
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+def remove_alias(alias):
+    try:
+        del aliases[alias]
+        f = open(userrc, 'r')
+        lines = f.readlines()
+        f.close()
+        f = open(userrc, 'w')
+        for line in lines:
+            if line.split()[0] == "alias" and line.split()[1] != alias:
+                f.write(line)
+        f.close()
+    except:
+        pass
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+def add_alias(alias, value):
+    try:    
+        remove_alias(alias)
+        aliases[alias] = value
+        f = open(userrc, 'a')
+        f.write("alias " + alias + " " + value + "\n")
+        f.close()
+    except:
+        pass
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+def get_plugins():
+    everything = glob.glob(os.path.join(plugin_dir, "*"))
+    return [os.path.basename(e) for e in everything]
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+aliases = {}
+userrc = os.path.expanduser("~/.tsase.rc")
+historyfile = os.path.expanduser("~/.tsase.hist")
+plugin_dir = os.path.join(os.path.dirname(__file__), "plugins")
+default_file = os.path.join(os.path.dirname(__file__), "tsase.rc")
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+if __name__ == "__main__": 
+
+    # Create the shell.    
+    shell = Shell()
+    
+    # Load the user tsaserc.
+    try:
+        f = open(userrc, 'r')
+        f.close()
+    except:
+        print "\nCreating an empty configuration file: " + userrc
+        f = open(userrc, 'w')
+        f.close
+    loadrc(userrc)
+    
+    # Push the file loading, if there is any.
+    for arg in sys.argv[1:]:
+        shell.push("p = io.read('" + arg + "')\n")
+
+    # Start the shell.
+    shell.interact(banner = "")
+    shell.push("exit()\n")
+    # All done.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,18 @@
+import argparse as _argparse
+from ase.structure import bulk as _bulk
+
+_parser = _argparse.ArgumentParser()
+_null = _parser.add_argument("name")
+_null = _parser.add_argument("structure")
+_null = _parser.add_argument("-a", type=float, default=None)
+_null = _parser.add_argument("-c", type=float, default=None)
+_null = _parser.add_argument("--covera", type=float)
+_null = _parser.add_argument("--ortho", action="store_true", default=False)
+_null = _parser.add_argument("--cubic", action="store_true", default=False)
+_args = _parser.parse_args(_plugin_args)
+if _args.structure == 'a15':
+    _temp = tsase.structure.a15(_args.name, _args.a)
+else:
+    _temp = _bulk(_args.name, _args.structure, _args.a, _args.c, _args.covera, _args.ortho, _args.cubic)
+_buffers[_current_buffer] = _temp
+_update_xyz()

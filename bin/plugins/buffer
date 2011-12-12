@@ -1,0 +1,10 @@
+if len(_plugin_args) == 0:
+    for _buf in _buffers:
+        print _buf
+else:
+    _buf = _plugin_args[0]
+    if _buf not in _buffers:
+        _buffers[_buf] = _bulk("W", "bcc", cubic=True).repeat((2,2,2))
+        print "Created new buffer", _buf
+    _current_buffer = _buf
+    _update_xyz()

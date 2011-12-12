@@ -1,0 +1,3 @@
+if '_xyz' in dir():
+    if _xyz.get_realized():
+        _xyz.hide()
