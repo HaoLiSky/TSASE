@@ -1,6 +1,7 @@
+from threading import Thread as _Thread
 import numpy
 import numpy as np
-from ase import *
+import ase
 import tsase
 
 from ase.structure import bulk as _bulk
@@ -9,15 +10,26 @@ from ase.structure import bulk as _bulk
 _buffers = {'default': _bulk("W", "bcc", cubic=True).repeat((2,2,2))}
 _current_buffer = "default"
 
+def _xyz_update_thread_function():
+    import time
+    while True:
+        atoms = _xyz.get()
+        if atoms:
+            _buffers[_current_buffer] = atoms
+        time.sleep(1.0/10.0)
+
 # Try to start the visualizer.
 try:
-    _xyz = tsase.xyz()
+    _xyz = tsase.xyz_process()
+    _xyz_update_thread = _Thread(target = _xyz_update_thread_function)
+    _xyz_update_thread.daemon = True
+    _xyz_update_thread.start()
 except:
     print "Visualizer could not be initialized."
 
 # Some functions to be used by plugins.
 def _update_xyz():
-    _xyz.data_set(_buffers[_current_buffer])
+    _xyz.put(_buffers[_current_buffer])
 
 # Some functions to be used by the user.
 def traj(target = None):

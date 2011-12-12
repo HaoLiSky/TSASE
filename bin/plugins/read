@@ -1,7 +1,10 @@
-_fname = _plugin_args[0]
-_temp = io.read(_fname)
-if type(_temp) is not list:
-    _temp = [_temp]
-_buffers[_current_buffer] = _temp
-_update_xyz()
 
+def _read():
+    fname = _plugin_args[0]
+    temp = io.read(fname)
+    if type(temp) is list:
+        temp = temp[0]
+    _buffers[_current_buffer] = temp
+    _update_xyz()
+
+_read()

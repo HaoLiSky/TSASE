@@ -20,6 +20,7 @@ import tsase
 from tsase.data import *
 from console import Console
 
+from multiprocessing import Queue, Process
 
 class queueitem:
     def __init__(self, kind):
@@ -37,7 +38,9 @@ ase and tsase have already been imported.
 
 class xyz(gtk.Window):
 
-    def __init__(self):
+    def __init__(self, qout=None, qin=None):
+        self.qout = qout
+        self.qin = qin
         gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
         self.acquire_widgets()
         self.initialize_console()
@@ -154,6 +157,7 @@ class xyz(gtk.Window):
         self.pixmap = None
         self.repeat = (1, 1, 1)
         self.lastTime = time.time()
+        self.lastAtoms = None
         self.screenatoms = []
         self.grabbedatom = None
         self.colors = []
@@ -276,6 +280,8 @@ class xyz(gtk.Window):
                                                     
 
     def get_frame_atoms(self):
+        if self.trajectory is None:
+            return None
         drawpoint = self.trajectory[0]
         if len(self.trajectory) > 1:
             drawpoint = self.trajectory[int(self.moviescale.get_value())]
@@ -295,6 +301,25 @@ class xyz(gtk.Window):
                         
             
     def event_timeout(self):
+        if self.qin is not None:
+            while not self.qin.empty():
+                atoms = self.qin.get(False)
+                self.data_set(atoms)
+                self.lastAtoms = self.get_frame_atoms().copy()
+        if self.qout is not None:
+            needSend = False
+            atoms = self.get_frame_atoms()
+            if atoms is None:
+                pass
+            elif self.lastAtoms is None and atoms is not None:
+                needSend = True
+            elif atoms.positions.shape != self.lastAtoms.positions.shape:
+                needSend = True
+            elif (atoms.positions != self.lastAtoms.positions).any():
+                needSend = True
+            if needSend:
+                self.qout.put(atoms)
+                self.lastAtoms = atoms.copy()
         if self.trajectory is None:
             return True
         if self.playing and len(self.trajectory) > 1:
@@ -746,6 +771,27 @@ class xyz(gtk.Window):
                 ase.io.write(filename, self.get_frame_atoms())
         self.set_title(os.path.abspath(filename))
         
+#
+# XYZ PROCESS ------------------------------------------------------------------------------------------
+#
+
+class xyz_process():
+    def __init__(self):
+        self.qin = Queue()
+        self.qout = Queue()
+        self.process = Process(target=self.target)
+        self.process.daemon = True
+        self.process.start()
+    def target(self):
+        _xyz = xyz(self.qin, self.qout)
+        gtk.main()
+    def put(self, atoms):
+        self.qout.put(atoms, False)
+    def get(self):
+        atoms = None
+        while not self.qin.empty():
+            atoms = self.qin.get(False)
+        return atoms
 
 #
 # MAIN ------------------------------------------------------------------------------------------
