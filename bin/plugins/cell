@@ -1,0 +1,21 @@
+
+_p = traj()
+
+if len(_plugin_args) == 0:
+    print _p.cell
+elif len(_plugin_args) == 3:
+    _p.cell = numpy.array([[float(_plugin_args[0]), 0.0, 0.0],
+                           [0.0, float(_plugin_args[1]), 0.0], 
+                           [0.0, 0.0, float(_plugin_args[2])]]) 
+    _update_xyz()
+elif len() == 9:
+    _p.cell = numpy.array([[float(_plugin_args[0]),
+                            float(_plugin_args[1]),
+                            float(_plugin_args[2])],
+                           [float(_plugin_args[3]),
+                            float(_plugin_args[4]),
+                            float(_plugin_args[5])],
+                           [float(_plugin_args[6]),
+                            float(_plugin_args[7]),
+                            float(_plugin_args[8])]])
+    _update_xyz()
