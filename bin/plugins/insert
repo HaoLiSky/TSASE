@@ -1,0 +1,9 @@
+
+
+def _insert():
+    buf = _plugin_args[0]
+    atoms = _buffers[buf]
+    for atom in atoms:
+        _buffers[_current_buffer].append(atom)
+
+_insert()

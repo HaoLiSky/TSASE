@@ -1,0 +1,10 @@
+def _force():
+    F = _buffers[_current_buffer].get_forces()
+    fnorm = numpy.linalg.norm(F)
+    fmax = max((numpy.linalg.norm(f) for f in F))
+    print
+    print "Total force magnitude:", fnorm
+    print "       Max atom force:", fmax
+    print
+
+_force()

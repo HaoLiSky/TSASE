@@ -6,7 +6,6 @@ def _translate():
     y = float(_plugin_args[1])
     z = float(_plugin_args[2])
     temp.positions += numpy.array([x,y,z])
-    _update_xyz()
 
 _translate()
 

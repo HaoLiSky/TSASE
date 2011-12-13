@@ -1,0 +1,13 @@
+
+def _fitcell():
+    atoms = _buffers[_current_buffer]
+    x = max(atoms.positions[:,0]) - min(atoms.positions[:,0]) 
+    y = max(atoms.positions[:,1]) - min(atoms.positions[:,1])
+    z = max(atoms.positions[:,2]) - min(atoms.positions[:,2])
+    atoms.cell = numpy.array([[x + 1, 0, 0],
+                              [0, y + 1, 0],
+                              [0, 0, z + 1]])
+
+_fitcell()
+
+

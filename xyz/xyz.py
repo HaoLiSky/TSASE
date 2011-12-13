@@ -94,8 +94,8 @@ class xyz(gtk.Window):
         self.boxbutton.connect("clicked", lambda w: self.queue_draw())
         self.axisbutton.connect("clicked", lambda w: self.queue_draw())
         self.frozenbutton.connect("clicked", lambda w: self.queue_draw())
-        self.zoombutton.connect("value-changed", lambda w: self.queue_draw())
-        self.radiusbutton.connect("value-changed", lambda w: self.queue_draw())
+        self.zoombutton.connect("value-changed", lambda w: self.gfx_render())
+        self.radiusbutton.connect("value-changed", lambda w: self.gfx_render())
         self.moviescale.connect("value-changed", lambda w: self.gfx_render())
         self.menuFileOpen.connect("activate", self.event_menuFileOpen)
         self.menuFileOpenView.connect("activate", self.event_menuFileOpenView)
@@ -245,16 +245,13 @@ class xyz(gtk.Window):
         if self.gui_key_on("r"): 
             if event.direction == gdk.SCROLL_UP:
                 self.radiusbutton.set_value(self.radiusbutton.get_value() * 1.1)
-                self.queue_draw()
             elif event.direction == gdk.SCROLL_DOWN:
                 self.radiusbutton.set_value(self.radiusbutton.get_value() * 0.9)
-                self.queue_draw()
         else:
             if event.direction == gdk.SCROLL_UP:
                 self.zoombutton.set_value(self.zoombutton.get_value() * 1.1)
             elif event.direction == gdk.SCROLL_DOWN:
                 self.zoombutton.set_value(self.zoombutton.get_value() * 0.9)
-            self.queue_draw()
         return True
                                                     
 
