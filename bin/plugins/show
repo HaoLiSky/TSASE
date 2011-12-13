@@ -1,6 +1,0 @@
-if '_xyz' not in dir():
-    _xyz = tsase.xyz()
-if not _xyz.get_realized():
-    _xyz = tsase.xyz()
-_xyz.show()
-_update_xyz()

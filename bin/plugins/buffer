@@ -7,4 +7,3 @@ else:
         _buffers[_buf] = _bulk("W", "bcc", cubic=True).repeat((2,2,2))
         print "Created new buffer", _buf
     _current_buffer = _buf
-    _update_xyz()

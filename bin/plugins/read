@@ -1,10 +1,9 @@
 
 def _read():
     fname = _plugin_args[0]
-    temp = io.read(fname)
+    temp = ase.io.read(fname)
     if type(temp) is list:
         temp = temp[0]
     _buffers[_current_buffer] = temp
-    _update_xyz()
 
 _read()

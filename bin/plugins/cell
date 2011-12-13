@@ -7,7 +7,6 @@ elif len(_plugin_args) == 3:
     _p.cell = numpy.array([[float(_plugin_args[0]), 0.0, 0.0],
                            [0.0, float(_plugin_args[1]), 0.0], 
                            [0.0, 0.0, float(_plugin_args[2])]]) 
-    _update_xyz()
 elif len() == 9:
     _p.cell = numpy.array([[float(_plugin_args[0]),
                             float(_plugin_args[1]),
@@ -18,4 +17,3 @@ elif len() == 9:
                            [float(_plugin_args[6]),
                             float(_plugin_args[7]),
                             float(_plugin_args[8])]])
-    _update_xyz()

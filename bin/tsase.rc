@@ -3,6 +3,7 @@ import numpy
 import numpy as np
 import ase
 import tsase
+import tsase.xyz.process
 
 from ase.structure import bulk as _bulk
 
@@ -12,24 +13,37 @@ _current_buffer = "default"
 
 def _xyz_update_thread_function():
     import time
+    lastAtoms = None
     while True:
         atoms = _xyz.get()
         if atoms:
             _buffers[_current_buffer] = atoms
+            lastAtoms = atoms.copy()
+        needSend = False
+        atoms = _buffers[_current_buffer]
+        if atoms is None:
+            pass
+        elif lastAtoms is None and atoms is not None:
+            needSend = True
+        elif atoms.positions.shape != lastAtoms.positions.shape:
+            needSend = True
+        elif (atoms.positions != lastAtoms.positions).any():
+            needSend = True
+        elif (atoms.cell != lastAtoms.cell).any():
+            needSend = True
+        if needSend:
+            _xyz.put(atoms)
+            lastAtoms = atoms.copy()
         time.sleep(1.0/10.0)
 
 # Try to start the visualizer.
 try:
-    _xyz = tsase.xyz_process()
+    _xyz = tsase.xyz.process.xyz_process()
     _xyz_update_thread = _Thread(target = _xyz_update_thread_function)
     _xyz_update_thread.daemon = True
     _xyz_update_thread.start()
 except:
     print "Visualizer could not be initialized."
-
-# Some functions to be used by plugins.
-def _update_xyz():
-    _xyz.put(_buffers[_current_buffer])
 
 # Some functions to be used by the user.
 def traj(target = None):
@@ -37,7 +51,5 @@ def traj(target = None):
         return _buffers[_current_buffer]
     else:
         _buffers[_current_buffer] = target
-
-_update_xyz()
 
 # Need a carriage return at the end for the line pushing to work.

@@ -15,4 +15,3 @@ if _args.structure == 'a15':
 else:
     _temp = _bulk(_args.name, _args.structure, _args.a, _args.c, _args.covera, _args.ortho, _args.cubic)
 _buffers[_current_buffer] = _temp
-_update_xyz()
