@@ -3,7 +3,7 @@
 import os
 import sys
 import gtk
-from tsase.xyz import xyz
+from tsase.xyz.xyz import xyz
 
 if __name__ == "__main__":
     pid = os.fork()

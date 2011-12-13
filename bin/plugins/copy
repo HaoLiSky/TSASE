@@ -1,0 +1,11 @@
+
+def _copy():
+    global _current_buffer 
+    newbuf = _plugin_args[0]
+    if newbuf not in _buffers:
+        _buffers[newbuf] = traj().copy()
+        print "Created new buffer", newbuf
+    _current_buffer = newbuf
+    _update_xyz()
+
+_copy()
