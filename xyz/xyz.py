@@ -163,8 +163,6 @@ class xyz(gtk.Window):
         self.keys[key] = True
         if key == "space" and self.trajectory is not None and len(self.trajectory) > 1:
             self.event_toggle_play()
-        if key == 'c' and (event.state & gdk.CONTROL_MASK):
-            sys.exit()
 
     def event_key_released(self, widget, event):
         key = gdk.keyval_name(event.keyval)
