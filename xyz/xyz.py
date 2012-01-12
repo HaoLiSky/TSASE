@@ -16,6 +16,7 @@ import cairo
 import numpy as np
 import ase
 from ase.io import vasp
+from ase.calculators.neighborlist import NeighborList
 import tsase
 from tsase.data import *
 
@@ -55,6 +56,7 @@ class xyz(gtk.Window):
         self.playbutton            = gladetree.get_widget("playbutton")
         self.playimage             = gladetree.get_widget("playimage")
         self.boxbutton             = gladetree.get_widget("boxbutton")
+        self.bondsbutton           = gladetree.get_widget("bondsbutton")
         self.axisbutton            = gladetree.get_widget("axisbutton")
         self.resetbutton           = gladetree.get_widget("resetbutton")
         self.zoombutton            = gladetree.get_widget("zoombutton")
@@ -92,6 +94,7 @@ class xyz(gtk.Window):
         self.playbutton.connect("clicked", self.event_toggle_play)
         self.resetbutton.connect("clicked", lambda w: self.gfx_reset_transform())
         self.boxbutton.connect("clicked", lambda w: self.queue_draw())
+        self.bondsbutton.connect("clicked", lambda w: self.queue_draw())
         self.axisbutton.connect("clicked", lambda w: self.queue_draw())
         self.frozenbutton.connect("clicked", lambda w: self.queue_draw())
         self.zoombutton.connect("value-changed", lambda w: self.gfx_render())
@@ -142,6 +145,7 @@ class xyz(gtk.Window):
         self.colors = []
         self.render_cairo = False
         self.pwd = os.getcwd()
+
 
     def gui_key_on(self, key):
         return key in self.keys
@@ -411,6 +415,8 @@ class xyz(gtk.Window):
         self.gfx_clear()
         self.queue = []
         self.gfx_queue_atoms()
+        if self.bondsbutton.get_active():
+            self.gfx_queue_bonds()
         if self.boxbutton.get_active():
             self.gfx_queue_box()
         self.gfx_transform_queue()
@@ -447,11 +453,31 @@ class xyz(gtk.Window):
         line.depth = (r1 + r2) / 2.0
         line.width = width
         self.queue.append(line)
+
+    def gfx_queue_bonds(self):
+        fa = self.get_frame_atoms()
+        ra = fa.repeat((int(self.repeatx.get_value()), 
+                        int(self.repeaty.get_value()), 
+                        int(self.repeatz.get_value())))
+        if not 'nlist' in fa.__dict__:
+            cutoffs = [1.5 * elements[i.symbol]['radius'] for i in ra]
+            fa.nlist = NeighborList(cutoffs, skin=0, self_interaction=False)
+        if len(fa.nlist.cutoffs) != len(ra):
+            cutoffs = [1.5 * elements[i.symbol]['radius'] for i in ra]
+            fa.nlist = NeighborList(cutoffs, skin=0, self_interaction=False)
+        fa.nlist.update(ra)
+        for a in range(len(ra)):
+            indices, offsets = fa.nlist.get_neighbors(a)
+            for i in indices:
+                self.gfx_queue_line(ra.positions[a], ra.positions[i], [0, 0, 0])
         
     def gfx_queue_atoms(self):
-        ra = self.get_frame_atoms().repeat((int(self.repeatx.get_value()), 
-                                            int(self.repeaty.get_value()), 
-                                            int(self.repeatz.get_value())))
+        try:
+            ra = self.get_frame_atoms().repeat((int(self.repeatx.get_value()), 
+                                                int(self.repeaty.get_value()), 
+                                                int(self.repeatz.get_value())))
+        except:
+            ra = self.get_frame_atoms()
         r = ra.get_positions()
         symbols = ra.get_chemical_symbols()
         for i in range(len(r)):
@@ -495,9 +521,12 @@ class xyz(gtk.Window):
     def gfx_center_atoms(self):
         if self.trajectory is None:
             return
-        ra = self.trajectory[0].repeat((int(self.repeatx.get_value()), 
-                                        int(self.repeaty.get_value()), 
-                                        int(self.repeatz.get_value())))
+        try:
+            ra = self.trajectory[0].repeat((int(self.repeatx.get_value()), 
+                                            int(self.repeaty.get_value()), 
+                                            int(self.repeatz.get_value())))
+        except:
+            ra = self.trajectory[0]
         r = ra.get_positions()
         minx = min(r[:, 0])                         
         miny = min(r[:, 1])                         
