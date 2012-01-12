@@ -468,8 +468,9 @@ class xyz(gtk.Window):
         fa.nlist.update(ra)
         for a in range(len(ra)):
             indices, offsets = fa.nlist.get_neighbors(a)
-            for i in indices:
-                self.gfx_queue_line(ra.positions[a], ra.positions[i], [0, 0, 0])
+            for i, o in zip(indices, offsets):
+                r = ra.positions[i] + np.dot(o, ra.get_cell())
+                self.gfx_queue_line(ra.positions[a], r, [0, 0, 0])
         
     def gfx_queue_atoms(self):
         try:
