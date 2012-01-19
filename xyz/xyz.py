@@ -203,7 +203,7 @@ class xyz(gtk.Window):
         atomid = self.get_mouse_atom()
         if atomid is not None:     
             atom = self.get_frame_atoms()[atomid]
-            r = atom.get_position()
+            r = atom.position
             self.statusbar.set_text("Atom %d, %s (%.3fx %.3fy %.3fz)" % 
                                      (atomid, atom.symbol, r[0], r[1], r[2]))
         else:
