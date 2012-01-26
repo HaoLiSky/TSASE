@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import sys
 import os
 import numpy
@@ -136,7 +137,35 @@ class DevNull:
     def flush(self): pass
     def close(self): pass
 
-def exafs(atoms, txt="-", feff_options={}, tmp_dir=None, comm=None):
+def pbc(r, box, ibox = None):
+    """
+    Applies periodic boundary conditions.
+    Parameters:
+        r:      the vector the boundary conditions are applied to
+        box:    the box that defines the boundary conditions
+        ibox:   the inverse of the box. This will be calcluated if not provided.
+    """
+    if ibox == None:    
+        ibox = numpy.linalg.inv(box)
+    vdir = numpy.dot(r, ibox)
+    vdir = (vdir % 1.0 + 1.5) % 1.0 - 0.5
+    return numpy.dot(vdir, box)
+
+def absorber_sphere(atoms, absorber, radius):
+    box = atoms.get_cell()
+    ibox = numpy.linalg.inv(box)
+    pos = atoms.get_positions()
+    elements = atoms.get_chemical_symbols()
+    atoms_sphere = [ase.Atom(elements[absorber], (0.,0.,0.))]
+    for i in xrange(len(atoms)):
+        if i == absorber: continue
+        r = pbc(pos[i] - pos[absorber], box, ibox) 
+        d = numpy.linalg.norm(r)
+        if d <= radius:
+            atoms_sphere.append(ase.Atom(elements[i], r))
+    return ase.Atoms(atoms_sphere)
+
+def exafs(atoms, txt="-", feff_options={}, tmp_dir=None, comm=None, pbc=False):
     from mpi4py import MPI
     if not comm:
         comm = MPI.COMM_WORLD
@@ -168,7 +197,11 @@ def exafs(atoms, txt="-", feff_options={}, tmp_dir=None, comm=None):
     for i in range(len(atoms)):
         if i%size != rank:
             continue
-        k, chi = run_feff(atoms, i, feff_options, tmp_dir)
+        if pbc and 'RMAX' in feff_options:
+            atoms_sphere = absorber_sphere(atoms, i, float(feff_options['RMAX']))
+            k, chi = run_feff(atoms_sphere, 0, feff_options, tmp_dir)
+        else:
+            k, chi = run_feff(atoms, i, feff_options, tmp_dir)
         chi_total[atoms[i].symbol].append(chi)
 
     #in case more ranks than atoms
@@ -188,10 +221,9 @@ def exafs(atoms, txt="-", feff_options={}, tmp_dir=None, comm=None):
     return k, chi_total
 
 if __name__ == "__main__":
+    atoms = tsase.io.read_con('reactant.con')
+    k, chi = exafs(atoms, feff_options={'HOLE':'4 1.0', 'RMAX':'3.3'}, pbc=True)
     from mpi4py import MPI
-    rank = MPI.COMM_WORLD.Get_rank()
-    atoms = tsase.io.read_con(sys.argv[1])
-    k, chi_total = exafs(atoms)
-
-    if rank == 0:
-        print k, chi_total
+    if MPI.COMM_WORLD.rank == 0:
+        for i in xrange(len(k)):
+            print k[i], chi['Au'][i]
