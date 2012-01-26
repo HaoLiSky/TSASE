@@ -489,9 +489,12 @@ class xyz(gtk.Window):
             atom.id = i % len(self.get_frame_atoms())
             atom.depth = 0
             atom.constrained = False
-            if len(ra.constraints) > 0:
-                if i in ra.constraints[0].index:
-                    atom.constrained = True
+            try:
+                if len(ra.constraints) > 0:
+                    if i in ra.constraints[0].index:
+                        atom.constrained = True
+            except:
+                pass
             self.queue.append(atom)
 
     def gfx_queue_box(self):
