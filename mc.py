@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import numpy
 from ase import Atoms
-from qsc import QSC
 from tsase.io import read_con
 from ase import units
 
