@@ -18,6 +18,4 @@ def graphene(a=1.42, vacuum=8.0):
     p.center()
     return p
 
-p = graphene()
-ase.write("g.traj", p)
 
