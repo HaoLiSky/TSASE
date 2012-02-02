@@ -1,4 +1,4 @@
-
+import commands
 import os
 import tempfile
 import shutil
@@ -70,7 +70,7 @@ class bopfox:
         os.system("cp %s %s %s %s" % (self.atomsbx, self.bondsbx, self.infoxbx, bfdir)) 
         os.chdir(bfdir)
         self._write_fox(self.atoms)
-        os.system(self.bopfox)
+        commands.getoutput(self.bopfox)
         self.f, self.u = self._read_fu(len(self.atoms))
         os.chdir(curdir)
         shutil.rmtree(bfdir)

@@ -133,7 +133,7 @@ def _relax():
         F = F_new
 
         # check convergence.
-        if max([np.linalg.norm(f) for f in F]) < 0.01:
+        if max([np.linalg.norm(f) for f in F]) < 0.001:
             done = True
             break
 
