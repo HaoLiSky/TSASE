@@ -11,7 +11,7 @@ from ase.structure import bulk as _bulk
 _buffers = {'default': _bulk("W", "bcc", cubic=True).repeat((2,2,2))}
 _current_buffer = "default"
 
-def _xyz_update_thread_function():
+def _xyz_update_thread_function(_xyz):
     import time
     lastAtoms = None
     while True:
@@ -36,14 +36,15 @@ def _xyz_update_thread_function():
             lastAtoms = atoms.copy()
         time.sleep(1.0/10.0)
 
-# Try to start the visualizer.
-try:
-    _xyz = tsase.xyz.process.xyz_process()
-    _xyz_update_thread = _Thread(target = _xyz_update_thread_function)
-    _xyz_update_thread.daemon = True
-    _xyz_update_thread.start()
-except:
-    print "Visualizer could not be initialized."
+def show():
+    # Try to start the visualizer.
+    try:
+        _xyz = tsase.xyz.process.xyz_process()
+        _xyz_update_thread = _Thread(target = _xyz_update_thread_function, args=(_xyz,))
+        _xyz_update_thread.daemon = True
+        _xyz_update_thread.start()
+    except:
+        print "Visualizer could not be initialized."
 
 # Some functions to be used by the user.
 def traj(target = None):
@@ -53,3 +54,6 @@ def traj(target = None):
         _buffers[_current_buffer] = target
 
 # Need a carriage return at the end for the line pushing to work.
+
+show()
+
