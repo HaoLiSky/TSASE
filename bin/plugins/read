@@ -1,5 +1,5 @@
 
-def _read():
+def _tsase_func():
     fname = _plugin_args[0]
     try:
         temp = tsase.io.read_con(fname)
@@ -7,6 +7,6 @@ def _read():
         temp = ase.io.read(fname)
     if type(temp) is list:
         temp = temp[0]
-    _buffers[_current_buffer] = temp
+    traj(temp)
 
-_read()
+_tsase_func()

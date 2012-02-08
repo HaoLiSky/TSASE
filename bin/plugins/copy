@@ -1,8 +1,8 @@
 
-def _copy():
+def _tsase_func():
     global _current_buffer 
     newbuf = _plugin_args[0]
     _buffers[newbuf] = traj().copy()
     print "Copied %s to %s." % (_current_buffer, newbuf)
 
-_copy()
+_tsase_func()

@@ -15,13 +15,13 @@ def _tsase_func():
     if args.structure == 'a15':
         temp = tsase.structure.a15(args.name, args.a)
     else:
-        temp = _bulk(args.name, 
-                      args.structure, 
-                      args.a, 
-                      args.c, 
-                      args.covera, 
-                      args.ortho, 
-                      args.cubic)
+        temp = bulk(args.name, 
+                    args.structure, 
+                    args.a, 
+                    args.c, 
+                    args.covera, 
+                    args.ortho, 
+                    args.cubic)
     _buffers[_current_buffer] = temp
     
 _tsase_func()

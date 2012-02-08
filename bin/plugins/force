@@ -1,4 +1,4 @@
-def _force():
+def _tsase_func():
     F = _buffers[_current_buffer].get_forces()
     fnorm = numpy.linalg.norm(F)
     fmax = max((numpy.linalg.norm(f) for f in F))
@@ -7,4 +7,4 @@ def _force():
     print "       Max atom force:", fmax
     print
 
-_force()
+_tsase_func()

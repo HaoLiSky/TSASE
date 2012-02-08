@@ -1,5 +1,5 @@
 
-def _fitcell():
+def _tsase_func():
     atoms = _buffers[_current_buffer]
     x = max(atoms.positions[:,0]) - min(atoms.positions[:,0]) 
     y = max(atoms.positions[:,1]) - min(atoms.positions[:,1])
@@ -8,6 +8,6 @@ def _fitcell():
                               [0, y + 1, 0],
                               [0, 0, z + 1]])
 
-_fitcell()
+_tsase_func()
 
 
