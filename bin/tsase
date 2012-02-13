@@ -94,23 +94,18 @@ class Shell(code.InteractiveConsole):
             if cmd.startswith(plugin + " ") or cmd == plugin:
                 lines = open(os.path.join(plugin_dir, plugin), 'r').readlines()
                 self.push("_plugin_args = " + str(cmd.strip().split()[1:]))
-                self.push("try:")
                 for line in lines:
-                    self.push("    " + line.strip("\n"))
-                self.push("except:")
-                self.push("    import traceback as _traceback")
-                self.push("    print '\033[31m'")
-                self.push("    _traceback.print_exc()")
-                self.push("    print '\033[0m'")
+                    self.push(line.strip("\n"))
+                    self.lastCommand = line.strip("\n")
                 return "" 
 
         # Store this command as the lastCommand and return the filtered cmd.
         self.lastCommand = cmd
         return cmd
-    
+        
     def showtraceback(self):
         # Retrieve the command string.
-        cmd = self.lastCommand
+        cmd = self.lastCommand.strip()
         # If the command string has zero length, do nothing.
         if len(cmd) == 0:
             return

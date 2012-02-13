@@ -13,15 +13,15 @@ class FixBlockAxes:
 
     def __init__(self, index):
         self.index = index
-        
+
     def adjust_positions(self, oldpositions, newpositions):
         step = newpositions[self.index] - oldpositions[self.index]
         step = step.sum(0)/len(step)
         newpositions[self.index] = oldpositions[self.index] + np.array([step])
-        
+
     def adjust_forces(self, positions, forces):
-        forces[self.index] = forces[self.index].sum(0)/len(self.index)
-        
+        forces[self.index] = forces[self.index]*0 + forces[self.index].sum(0)/len(self.index)
+
     def copy(self):
         return FixBlockAxes(self.index)
         
