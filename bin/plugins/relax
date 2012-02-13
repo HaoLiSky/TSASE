@@ -1,8 +1,7 @@
 
 
-def _relax():
+def _tsase_func():
     
-    import argparse
     parser = argparse.ArgumentParser()
     null = parser.add_argument("--atoms", action="store_true", default=False)
     null = parser.add_argument("--boxortho", action="store_true", default=False)
@@ -165,7 +164,7 @@ def _relax():
         if iterations > 100:
             done = True
 
-_relax()
+_tsase_func()
 
 
 

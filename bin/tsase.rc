@@ -4,6 +4,7 @@ import numpy as np
 import ase
 import tsase
 import tsase.xyz.process
+import argparse
 
 from ase.structure import bulk as _bulk
 
@@ -53,7 +54,7 @@ def traj(target = None):
     else:
         _buffers[_current_buffer] = target
 
-# Need a carriage return at the end for the line pushing to work.
-
 show()
+
+# Need a carriage return at the end for the line pushing to work.
 

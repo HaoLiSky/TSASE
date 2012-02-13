@@ -1,31 +1,35 @@
-_temp = traj()
 
-_A = float(_plugin_args[0])
+def _tsase_func():
+    temp = traj()
 
-_original_cell = _temp.cell.copy()
+    A = float(_plugin_args[0])
 
-_cells = [(_frac, _original_cell * _frac) for _frac in [_A - 0.02, _A - 0.01, _A, _A + 0.01, _A + 0.02]]
+    original_cell = temp.cell.copy()
 
-_xs = []
-_ys = []
+    cells = [(frac, original_cell * frac) for frac in [A - 0.02, A - 0.01, A, A + 0.01, A + 0.02]]
 
-for _cell in _cells:
-    _temp2 = _temp.copy()
-    _temp2.set_calculator(_temp.get_calculator())
-    _temp2.cell = _cell[1]
-    _temp2.positions = np.dot(_temp.get_scaled_positions(), _temp2.cell)
-    _xs.append(_cell[0])
-    _ys.append(_temp2.get_potential_energy())
+    xs = []
+    ys = []
 
-for _x, _y in zip(_xs, _ys):
-    print _x, _y
+    for cell in cells:
+        temp2 = temp.copy()
+        temp2.set_calculator(temp.get_calculator())
+        temp2.cell = cell[1]
+        temp2.positions = np.dot(temp.get_scaled_positions(), temp2.cell)
+        xs.append(cell[0])
+        ys.append(temp2.get_potential_energy())
 
-_a,_b,_c = np.polyfit(_xs, _ys, 2)
-_scale = -_b/(2*_a)
+    for x, y in zip(xs, ys):
+        print x, y
 
-print
-print _scale
+    a, b, c = np.polyfit(xs, ys, 2)
+    scale = -b / (2 * a)
 
-print
-print _temp.cell * _scale   
+    print
+    print scale
+
+    print
+    print temp.cell * scale   
+
+_tsase_func()
 

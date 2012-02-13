@@ -1,6 +1,5 @@
 
 def _tsase_func():
-    import argparse as argparse
     from ase.structure import bulk
 
     parser = argparse.ArgumentParser()

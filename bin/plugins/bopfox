@@ -1,2 +1,6 @@
-_bopfox = tsase.calculators.bopfox()
-traj().set_calculator(_bopfox)
+
+def _tsase_func()
+    _bopfox = tsase.calculators.bopfox()
+    traj().set_calculator(_bopfox)
+    
+_tsase_func()

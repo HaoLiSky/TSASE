@@ -1,2 +1,6 @@
-_al = tsase.calculators.al()
-traj().set_calculator(_al)
+
+def _tsase_func():
+    _al = tsase.calculators.al()
+    traj().set_calculator(_al)
+
+_tsase_func()
