@@ -1,7 +1,5 @@
-
 def _tsase_func():
-    from ase.structure import bulk
-
+    import ase.structure
     parser = argparse.ArgumentParser()
     null = parser.add_argument("name")
     null = parser.add_argument("structure")
@@ -14,15 +12,8 @@ def _tsase_func():
     if args.structure == 'a15':
         temp = tsase.structure.a15(args.name, args.a)
     else:
-        temp = bulk(args.name, 
-                    args.structure, 
-                    args.a, 
-                    args.c, 
-                    args.covera, 
-                    args.ortho, 
-                    args.cubic)
-    _buffers[_current_buffer] = temp
+        temp = ase.structure.bulk(args.name, args.structure, args.a, args.c, args.covera, args.ortho, args.cubic)
+    traj(temp)
     
 _tsase_func()
-
 

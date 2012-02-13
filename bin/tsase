@@ -95,8 +95,8 @@ class Shell(code.InteractiveConsole):
                 lines = open(os.path.join(plugin_dir, plugin), 'r').readlines()
                 self.push("_plugin_args = " + str(cmd.strip().split()[1:]))
                 for line in lines:
-                    self.push(line.strip("\n"))
-                    self.lastCommand = line.strip("\n")
+                    self.push(line.rstrip())
+                    self.lastCommand = line.rstrip()
                 return "" 
 
         # Store this command as the lastCommand and return the filtered cmd.

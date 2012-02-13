@@ -5,8 +5,12 @@ import ase
 import tsase
 import tsase.xyz.process
 import argparse
+import sys
 
 from ase.structure import bulk as _bulk
+
+sys.tsase_exit = sys.exit
+sys.exit = ''
 
 # Initialize the buffers
 _buffers = {'default': _bulk("W", "bcc", cubic=True).repeat((2,2,2))}
