@@ -1,12 +1,7 @@
 
-def _tsase_func():
-    fname = _plugin_args[0]
-    try:
-        temp = tsase.io.read_con(fname)
-    except:
-        temp = ase.io.read(fname)
-    if type(temp) is list:
-        temp = temp[0]
-    traj(temp)
+fname = _plugin_args[0]
+try:
+    _set_ca(tsase.io.read_con(fname))
+except:
+    _set_ca(ase.io.read(fname))
 
-_tsase_func()

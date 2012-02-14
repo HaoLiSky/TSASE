@@ -1,170 +1,166 @@
 
 
-def _tsase_func():
-    
-    parser = argparse.ArgumentParser()
-    null = parser.add_argument("--atoms", action="store_true", default=False)
-    null = parser.add_argument("--boxortho", action="store_true", default=False)
-    null = parser.add_argument("--boxfull", action="store_true", default=False)
-    args = parser.parse_args(_plugin_args)
+parser = argparse.ArgumentParser()
+null = parser.add_argument("--atoms", action="store_true", default=False)
+null = parser.add_argument("--boxortho", action="store_true", default=False)
+null = parser.add_argument("--boxfull", action="store_true", default=False)
+args = parser.parse_args(_plugin_args)
 
-    if not args.atoms and not args.boxortho and not args.boxfull:
-        args.atoms = True
-    if args.atoms and not args.boxortho and not args.boxfull:
-        print "Relaxing atoms..."
-    elif args.atoms and args.boxortho and not args.boxfull:
-        print "Relaxing box (ortho) with atoms..."
-    elif args.boxortho and not args.atoms and not args.boxfull:
-        print "Relaxing box (ortho)..."
-    elif args.atoms and args.boxfull and not args.boxortho:
-        print "Relaxing box (full) with atoms..."
-    elif args.boxfull and not args.atoms and not args.boxortho:
-        print "Relaxing box (full)..."
+if not args.atoms and not args.boxortho and not args.boxfull:
+    args.atoms = True
+if args.atoms and not args.boxortho and not args.boxfull:
+    print "Relaxing atoms..."
+elif args.atoms and args.boxortho and not args.boxfull:
+    print "Relaxing box (ortho) with atoms..."
+elif args.boxortho and not args.atoms and not args.boxfull:
+    print "Relaxing box (ortho)..."
+elif args.atoms and args.boxfull and not args.boxortho:
+    print "Relaxing box (full) with atoms..."
+elif args.boxfull and not args.atoms and not args.boxortho:
+    print "Relaxing box (full)..."
+else:
+    print "Can't relax box ortho and full simultaneously."
+    return
+
+p = _get_ca()
+p.set_velocities(p.get_positions() * 0.0)
+
+N_min = 5
+f_inc = 1.1
+f_dec = 0.5
+alpha_start = 0.1
+alpha = alpha_start
+f_alpha = 0.99
+box_dr = 0.01
+
+iterations = 0
+done = False
+dt = 0.1
+dt_max = 1.0
+max_step_size = 0.1
+steps_since_negative_P = 0
+
+box_velocities = np.zeros((3,3))
+
+def get_positions():
+    positions = np.array([]).reshape((0,3))
+    if args.atoms:
+        positions = np.append(positions, p.get_positions(), 0)
+    if args.boxortho:
+        positions = np.append(positions, [[p.cell[0][0], p.cell[1][1], p.cell[2][2]]], 0)
+    elif args.boxfull:
+        positions = np.append(positions, p.cell, 0)
+    return positions
+
+def set_positions(positions):
+    if args.atoms:
+        p.set_positions(positions[:len(p)])
+    if args.boxortho:
+        p.set_cell((positions[-1][0], positions[-1][1], positions[-1][2]))
+    if args.boxfull:
+        print "Full box relaxtion support not yet implemented."
+        raise NotImplementedError
+        
+def get_velocities():
+    velocities = np.array([]).reshape((0,3))
+    if args.atoms:
+        velocities = np.append(velocities, p.get_velocities(), 0)
+    if args.boxortho:
+       velocities = np.append(velocities, [[box_velocities[0][0], box_velocities[1][1], box_velocities[2][2]]], 0)
+    elif args.boxfull:
+       velocities = np.append(velocities, box_velocities, 0)
+    return velocities
+
+def set_velocities(velocities):
+    if args.atoms:
+        p.set_velocities(velocities[:len(p)])
+    if args.boxortho:
+        box_velocities[0][0] = velocities[-1][0]
+        box_velocities[1][1] = velocities[-1][1]
+        box_velocities[2][2] = velocities[-1][2]
+    elif args.boxfull:
+        print "Full box relaxtion support not yet implemented."
+        raise NotImplementedError
+
+def get_forces():
+    forces = np.array([]).reshape((0,3))
+    if args.atoms:
+        forces = np.append(forces, p.get_forces(), 0)
+    if args.boxortho:
+        temp = p.copy()
+        temp.set_calculator(p.get_calculator())
+        e0 = p.get_potential_energy()
+        temp.cell[0][0] += box_dr
+        ex = temp.get_potential_energy()
+        temp.cell[0][0] -= box_dr
+        temp.cell[1][1] += box_dr
+        ey = temp.get_potential_energy()
+        temp.cell[1][1] -= box_dr
+        temp.cell[2][2] += box_dr
+        ez = temp.get_potential_energy()
+        fx = (e0 - ex) / box_dr
+        fy = (e0 - ey) / box_dr
+        fz = (e0 - ez) / box_dr
+        forces = np.append(forces, [[fx, fy, fz]], 0)
+    elif args.boxfull:
+        print "Full box relaxtion support not yet implemented."
+        raise NotImplementedError
+    return forces
+
+while not done:
+
+    # Integrate MD with velocity verlet.
+    x = get_positions()
+    v = get_velocities()
+    F = get_forces()
+    step = (dt * v) + (0.5 * F * dt**2.0)
+    step_max_norm = max((np.linalg.norm(s) for s in step))
+    if step_max_norm > max_step_size:
+        scale = max_step_size / step_max_norm
+        for i in range(len(step)):
+            step[i] *= scale
+    step_max_norm = max((np.linalg.norm(s) for s in step))
+    set_positions(x + step)
+    F_new = get_forces()    
+    set_velocities(v + (0.5 * dt) * (F + F_new))
+
+    # Update variables
+    x = get_positions()
+    v = get_velocities()
+    F = F_new
+
+    # check convergence.
+    if max([np.linalg.norm(f) for f in F]) < 0.001:
+        done = True
+        break
+
+    # Perform FIRE algorithm.
+    P = np.dot(F.flatten(), v.flatten())
+    
+    v = (1.0 - alpha) * v + alpha * (F/np.linalg.norm(F)) * np.linalg.norm(v)
+    
+    if P > 0 and steps_since_negative_P > N_min:
+        dt = min(dt * f_inc, dt_max)
+        alpha = alpha * f_alpha
+
+    if P <= 0:
+        dt = dt * f_dec
+        v = v * 0.0
+        alpha = alpha_start
+    
+    set_velocities(v)    
+    
+    if P > 0:
+        steps_since_negative_P += 1
     else:
-        print "Can't relax box ortho and full simultaneously."
-        return
+        steps_since_negative_P = 0
 
-    p = _buffers[_current_buffer]
-    p.set_velocities(p.get_positions() * 0.0)
+    print "F: %5.3f  U: %f  Step:%f  a: %f  dT: %f  P:%f" % (max([np.linalg.norm(f) for f in F]), p.get_potential_energy(), step_max_norm, alpha, dt, P) 
 
-    N_min = 5
-    f_inc = 1.1
-    f_dec = 0.5
-    alpha_start = 0.1
-    alpha = alpha_start
-    f_alpha = 0.99
-    box_dr = 0.01
+    iterations += 1
 
-    iterations = 0
-    done = False
-    dt = 0.1
-    dt_max = 1.0
-    max_step_size = 0.1
-    steps_since_negative_P = 0
-
-    box_velocities = np.zeros((3,3))
-
-    def get_positions():
-        positions = np.array([]).reshape((0,3))
-        if args.atoms:
-            positions = np.append(positions, p.get_positions(), 0)
-        if args.boxortho:
-            positions = np.append(positions, [[p.cell[0][0], p.cell[1][1], p.cell[2][2]]], 0)
-        elif args.boxfull:
-            positions = np.append(positions, p.cell, 0)
-        return positions
-    
-    def set_positions(positions):
-        if args.atoms:
-            p.set_positions(positions[:len(p)])
-        if args.boxortho:
-            p.set_cell((positions[-1][0], positions[-1][1], positions[-1][2]))
-        if args.boxfull:
-            print "Full box relaxtion support not yet implemented."
-            raise NotImplementedError
-            
-    def get_velocities():
-        velocities = np.array([]).reshape((0,3))
-        if args.atoms:
-            velocities = np.append(velocities, p.get_velocities(), 0)
-        if args.boxortho:
-           velocities = np.append(velocities, [[box_velocities[0][0], box_velocities[1][1], box_velocities[2][2]]], 0)
-        elif args.boxfull:
-           velocities = np.append(velocities, box_velocities, 0)
-        return velocities
-
-    def set_velocities(velocities):
-        if args.atoms:
-            p.set_velocities(velocities[:len(p)])
-        if args.boxortho:
-            box_velocities[0][0] = velocities[-1][0]
-            box_velocities[1][1] = velocities[-1][1]
-            box_velocities[2][2] = velocities[-1][2]
-        elif args.boxfull:
-            print "Full box relaxtion support not yet implemented."
-            raise NotImplementedError
-    
-    def get_forces():
-        forces = np.array([]).reshape((0,3))
-        if args.atoms:
-            forces = np.append(forces, p.get_forces(), 0)
-        if args.boxortho:
-            temp = p.copy()
-            temp.set_calculator(p.get_calculator())
-            e0 = p.get_potential_energy()
-            temp.cell[0][0] += box_dr
-            ex = temp.get_potential_energy()
-            temp.cell[0][0] -= box_dr
-            temp.cell[1][1] += box_dr
-            ey = temp.get_potential_energy()
-            temp.cell[1][1] -= box_dr
-            temp.cell[2][2] += box_dr
-            ez = temp.get_potential_energy()
-            fx = (e0 - ex) / box_dr
-            fy = (e0 - ey) / box_dr
-            fz = (e0 - ez) / box_dr
-            forces = np.append(forces, [[fx, fy, fz]], 0)
-        elif args.boxfull:
-            print "Full box relaxtion support not yet implemented."
-            raise NotImplementedError
-        return forces
-
-    while not done:
-
-        # Integrate MD with velocity verlet.
-        x = get_positions()
-        v = get_velocities()
-        F = get_forces()
-        step = (dt * v) + (0.5 * F * dt**2.0)
-        step_max_norm = max((np.linalg.norm(s) for s in step))
-        if step_max_norm > max_step_size:
-            scale = max_step_size / step_max_norm
-            for i in range(len(step)):
-                step[i] *= scale
-        step_max_norm = max((np.linalg.norm(s) for s in step))
-        set_positions(x + step)
-        F_new = get_forces()    
-        set_velocities(v + (0.5 * dt) * (F + F_new))
-
-        # Update variables
-        x = get_positions()
-        v = get_velocities()
-        F = F_new
-
-        # check convergence.
-        if max([np.linalg.norm(f) for f in F]) < 0.001:
-            done = True
-            break
-
-        # Perform FIRE algorithm.
-        P = np.dot(F.flatten(), v.flatten())
-        
-        v = (1.0 - alpha) * v + alpha * (F/np.linalg.norm(F)) * np.linalg.norm(v)
-        
-        if P > 0 and steps_since_negative_P > N_min:
-            dt = min(dt * f_inc, dt_max)
-            alpha = alpha * f_alpha
-
-        if P <= 0:
-            dt = dt * f_dec
-            v = v * 0.0
-            alpha = alpha_start
-        
-        set_velocities(v)    
-        
-        if P > 0:
-            steps_since_negative_P += 1
-        else:
-            steps_since_negative_P = 0
-
-        print "F: %5.3f  U: %f  Step:%f  a: %f  dT: %f  P:%f" % (max([np.linalg.norm(f) for f in F]), p.get_potential_energy(), step_max_norm, alpha, dt, P) 
-
-        iterations += 1
-
-        if iterations > 100:
-            done = True
-
-_tsase_func()
+    if iterations > 100:
+        done = True
 
 
 

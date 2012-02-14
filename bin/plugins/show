@@ -1,0 +1,7 @@
+
+if len(_plugin_args) == 0:
+    temp = _tsase_viewer(_tsase_ca)
+else:
+    temp = _tsase_viewer(_plugin_args[0])
+    
+

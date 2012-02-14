@@ -21,9 +21,7 @@ class Shell(code.InteractiveConsole):
         self.lastCommand = ""
         self.errors = []
         
-        lines = open(default_file, 'r').readlines()
-        for line in lines:
-            self.push(line.strip("\n"))
+        self.push_file(default_file)
         readline.parse_and_bind("tab: complete")
         readline.set_completer_delims(' ')
         readline.set_completer(self.tab_completer)
@@ -31,11 +29,17 @@ class Shell(code.InteractiveConsole):
             readline.read_history_file(historyfile)
         except:
             pass
+            
+    def push_file(self, filename, prepend = ""):
+        lines = open(filename, 'r').readlines()
+        for i in range(len(lines)):
+            self.push(prepend + lines[i].rstrip())
+        self.push("")
 
     def raw_input(self, prompt = ""):
         # Prompt and read a line from the user.
-        path = os.path.basename(os.getcwd())
-        cmd = raw_input(path + ' [' + str(self.locals["_current_buffer"]) + '] >>> ')
+        path = os.getcwd()
+        cmd = raw_input(path + ' [' + str(self.locals["_tsase_ca"]) + '] >>> ')
         return self.parse_command(cmd)
         
     def parse_command(self, cmd):
@@ -92,11 +96,11 @@ class Shell(code.InteractiveConsole):
         plugins = get_plugins()
         for plugin in plugins:
             if cmd.startswith(plugin + " ") or cmd == plugin:
-                lines = open(os.path.join(plugin_dir, plugin), 'r').readlines()
-                self.push("_plugin_args = " + str(cmd.strip().split()[1:]))
-                for line in lines:
-                    self.push(line.rstrip())
-                    self.lastCommand = line.rstrip()
+                self.push("def _tsase_func():")
+                self.push("    _plugin_args = " + str(cmd.strip().split()[1:]))
+                self.push_file(os.path.join(plugin_dir, plugin), prepend="    ")
+                self.push("_tsase_func()")
+                self.push("del _tsase_func")
                 return "" 
 
         # Store this command as the lastCommand and return the filtered cmd.
@@ -225,10 +229,6 @@ if __name__ == "__main__":
         f.close
     loadrc(userrc)
     
-    # Push the file loading, if there is any.
-    for arg in sys.argv[1:]:
-        shell.push("p = io.read('" + arg + "')\n")
-
     # Start the shell.
     shell.interact(banner = "")
     shell.push("exit()\n")

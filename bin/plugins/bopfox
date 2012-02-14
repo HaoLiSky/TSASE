@@ -1,7 +1,4 @@
 
-def _tsase_func():
-    bf = tsase.calculators.bopfox()
-    traj().set_calculator(bf)
+bopfox = tsase.calculators.bopfox()
+_get_ca().set_calculator(bopfox)
 
-_tsase_func()
-    

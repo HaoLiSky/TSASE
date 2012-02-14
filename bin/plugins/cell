@@ -1,22 +1,20 @@
 
-def _tsase_func():
-    p = traj()
-    if len(_plugin_args) == 0:
-        print p.cell
-    elif len(_plugin_args) == 4:
-        p.set_cell([[float(_plugin_args[0]), 0.0, 0.0],
-                    [0.0, float(_plugin_args[1]), 0.0], 
-                    [0.0, 0.0, float(_plugin_args[2])]],
-                    scale_atoms=_plugin_args[3] in ['t', 'true', '1', 'T', 'True']) 
-    elif len(_plugin_args) == 10:
-        p.cell = numpy.array([[float(_plugin_args[0]),
-                               float(_plugin_args[1]),
-                               float(_plugin_args[2])],
-                              [float(_plugin_args[3]),
-                               float(_plugin_args[4]),
-                               float(_plugin_args[5])],
-                              [float(_plugin_args[6]),
-                               float(_plugin_args[7]),
-                               float(_plugin_args[8])]])
-                               
-_tsase_func()
+p = _get_ca()
+if len(_plugin_args) == 0:
+    print p.cell
+elif len(_plugin_args) == 4:
+    p.set_cell([[float(_plugin_args[0]), 0.0, 0.0],
+                [0.0, float(_plugin_args[1]), 0.0], 
+                [0.0, 0.0, float(_plugin_args[2])]],
+                scale_atoms=_plugin_args[3] in ['t', 'true', '1', 'T', 'True']) 
+elif len(_plugin_args) == 10:
+    p.cell = numpy.array([[float(_plugin_args[0]),
+                           float(_plugin_args[1]),
+                           float(_plugin_args[2])],
+                          [float(_plugin_args[3]),
+                           float(_plugin_args[4]),
+                           float(_plugin_args[5])],
+                          [float(_plugin_args[6]),
+                           float(_plugin_args[7]),
+                           float(_plugin_args[8])]])
+

@@ -1,0 +1,6 @@
+
+global _tsase_ca
+if _plugin_args[0] not in globals():
+    globals()[_plugin_args[0]] = None
+_tsase_ca = _plugin_args[0]
+

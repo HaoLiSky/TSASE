@@ -28,10 +28,11 @@ class queueitem:
 
 class xyz(gtk.Window):
 
-    def __init__(self, qout=None, qin=None):
+    def __init__(self, qout=None, qin=None, title='xyz'):
         self.qout = qout
         self.qin = qin
         gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
+        self.set_title(title)
         self.acquire_widgets()
         self.connect_events()
         self.add(self.gladewindow)

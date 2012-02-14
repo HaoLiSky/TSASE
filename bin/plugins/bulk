@@ -1,19 +1,18 @@
-def _tsase_func():
-    import ase.structure
-    parser = argparse.ArgumentParser()
-    null = parser.add_argument("name")
-    null = parser.add_argument("structure")
-    null = parser.add_argument("-a", type=float, default=None)
-    null = parser.add_argument("-c", type=float, default=None)
-    null = parser.add_argument("--covera", type=float)
-    null = parser.add_argument("--ortho", action="store_true", default=False)
-    null = parser.add_argument("--cubic", action="store_true", default=False)
-    args = parser.parse_args(_plugin_args)
-    if args.structure == 'a15':
-        temp = tsase.structure.a15(args.name, args.a)
-    else:
-        temp = ase.structure.bulk(args.name, args.structure, args.a, args.c, args.covera, args.ortho, args.cubic)
-    traj(temp)
-    
-_tsase_func()
+import ase.structure
+parser = argparse.ArgumentParser()
+null = parser.add_argument("name")
+null = parser.add_argument("structure")
+null = parser.add_argument("-a", type=float, default=None)
+null = parser.add_argument("-c", type=float, default=None)
+null = parser.add_argument("--covera", type=float)
+null = parser.add_argument("--ortho", action="store_true", default=False)
+null = parser.add_argument("--cubic", action="store_true", default=False)
+args = parser.parse_args(_plugin_args)
+if args.structure == 'a15':
+    temp = tsase.structure.a15(args.name, args.a)
+else:
+    temp = ase.structure.bulk(args.name, args.structure, args.a, args.c, 
+                              args.covera, args.ortho, args.cubic)
+_set_ca(temp)
+
 

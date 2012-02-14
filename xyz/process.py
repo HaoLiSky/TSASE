@@ -2,7 +2,8 @@
 from multiprocessing import Queue, Process
 
 class xyz_process():
-    def __init__(self):
+    def __init__(self, title="xyz"):
+        self.title = title
         self.qin = Queue()
         self.qout = Queue()
         self.process = Process(target=self.target)
@@ -10,7 +11,7 @@ class xyz_process():
         self.process.start()
     def target(self):
         from xyz import xyz, gtk
-        _xyz = xyz(self.qin, self.qout)
+        _xyz = xyz(self.qin, self.qout, title=self.title)
         gtk.main()
     def put(self, atoms):
         self.qout.put(atoms, False)

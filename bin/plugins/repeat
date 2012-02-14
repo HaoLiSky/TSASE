@@ -1,1 +1,3 @@
-traj(traj().repeat([int(_p) for _p in _plugin_args]))
+
+_set_ca(_get_ca().repeat([int(_p) for _p in _plugin_args]))
+
