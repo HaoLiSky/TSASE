@@ -40,16 +40,16 @@ dt_max = 1.0
 max_step_size = 0.1
 steps_since_negative_P = 0
 
-box_velocities = np.zeros((3,3))
+box_velocities = numpy.zeros((3,3))
 
 def get_positions():
-    positions = np.array([]).reshape((0,3))
+    positions = numpy.array([]).reshape((0,3))
     if args.atoms:
-        positions = np.append(positions, p.get_positions(), 0)
+        positions = numpy.append(positions, p.get_positions(), 0)
     if args.boxortho:
-        positions = np.append(positions, [[p.cell[0][0], p.cell[1][1], p.cell[2][2]]], 0)
+        positions = numpy.append(positions, [[p.cell[0][0], p.cell[1][1], p.cell[2][2]]], 0)
     elif args.boxfull:
-        positions = np.append(positions, p.cell, 0)
+        positions = numpy.append(positions, p.cell, 0)
     return positions
 
 def set_positions(positions):
@@ -62,13 +62,13 @@ def set_positions(positions):
         raise NotImplementedError
         
 def get_velocities():
-    velocities = np.array([]).reshape((0,3))
+    velocities = numpy.array([]).reshape((0,3))
     if args.atoms:
-        velocities = np.append(velocities, p.get_velocities(), 0)
+        velocities = numpy.append(velocities, p.get_velocities(), 0)
     if args.boxortho:
-       velocities = np.append(velocities, [[box_velocities[0][0], box_velocities[1][1], box_velocities[2][2]]], 0)
+       velocities = numpy.append(velocities, [[box_velocities[0][0], box_velocities[1][1], box_velocities[2][2]]], 0)
     elif args.boxfull:
-       velocities = np.append(velocities, box_velocities, 0)
+       velocities = numpy.append(velocities, box_velocities, 0)
     return velocities
 
 def set_velocities(velocities):
@@ -83,9 +83,9 @@ def set_velocities(velocities):
         raise NotImplementedError
 
 def get_forces():
-    forces = np.array([]).reshape((0,3))
+    forces = numpy.array([]).reshape((0,3))
     if args.atoms:
-        forces = np.append(forces, p.get_forces(), 0)
+        forces = numpy.append(forces, p.get_forces(), 0)
     if args.boxortho:
         temp = p.copy()
         temp.set_calculator(p.get_calculator())
@@ -101,7 +101,7 @@ def get_forces():
         fx = (e0 - ex) / box_dr
         fy = (e0 - ey) / box_dr
         fz = (e0 - ez) / box_dr
-        forces = np.append(forces, [[fx, fy, fz]], 0)
+        forces = numpy.append(forces, [[fx, fy, fz]], 0)
     elif args.boxfull:
         print "Full box relaxtion support not yet implemented."
         raise NotImplementedError
@@ -114,12 +114,12 @@ while not done:
     v = get_velocities()
     F = get_forces()
     step = (dt * v) + (0.5 * F * dt**2.0)
-    step_max_norm = max((np.linalg.norm(s) for s in step))
+    step_max_norm = max((numpy.linalg.norm(s) for s in step))
     if step_max_norm > max_step_size:
         scale = max_step_size / step_max_norm
         for i in range(len(step)):
             step[i] *= scale
-    step_max_norm = max((np.linalg.norm(s) for s in step))
+    step_max_norm = max((numpy.linalg.norm(s) for s in step))
     set_positions(x + step)
     F_new = get_forces()    
     set_velocities(v + (0.5 * dt) * (F + F_new))
@@ -130,14 +130,14 @@ while not done:
     F = F_new
 
     # check convergence.
-    if max([np.linalg.norm(f) for f in F]) < 0.001:
+    if max([numpy.linalg.norm(f) for f in F]) < 0.001:
         done = True
         break
 
     # Perform FIRE algorithm.
-    P = np.dot(F.flatten(), v.flatten())
+    P = numpy.dot(F.flatten(), v.flatten())
     
-    v = (1.0 - alpha) * v + alpha * (F/np.linalg.norm(F)) * np.linalg.norm(v)
+    v = (1.0 - alpha) * v + alpha * (F/numpy.linalg.norm(F)) * numpy.linalg.norm(v)
     
     if P > 0 and steps_since_negative_P > N_min:
         dt = min(dt * f_inc, dt_max)
@@ -155,7 +155,7 @@ while not done:
     else:
         steps_since_negative_P = 0
 
-    print "F: %5.3f  U: %f  Step:%f  a: %f  dT: %f  P:%f" % (max([np.linalg.norm(f) for f in F]), p.get_potential_energy(), step_max_norm, alpha, dt, P) 
+    print "F: %5.3f  U: %f  Step:%f  a: %f  dT: %f  P:%f" % (max([numpy.linalg.norm(f) for f in F]), p.get_potential_energy(), step_max_norm, alpha, dt, P) 
 
     iterations += 1
 

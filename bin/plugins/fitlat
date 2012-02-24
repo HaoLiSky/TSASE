@@ -14,14 +14,14 @@ for cell in cells:
     temp2 = temp.copy()
     temp2.set_calculator(temp.get_calculator())
     temp2.cell = cell[1]
-    temp2.positions = np.dot(temp.get_scaled_positions(), temp2.cell)
+    temp2.positions = numpy.dot(temp.get_scaled_positions(), temp2.cell)
     xs.append(cell[0])
     ys.append(temp2.get_potential_energy())
 
 for x, y in zip(xs, ys):
     print x, y
 
-a, b, c = np.polyfit(xs, ys, 2)
+a, b, c = numpy.polyfit(xs, ys, 2)
 scale = -b / (2 * a)
 
 print
