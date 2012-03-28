@@ -4,6 +4,8 @@ except:
     pass
 try:
     from morse import morse
+    def pt():
+        return morse()
 except:
     pass
 try:
@@ -18,10 +20,14 @@ try:
     import lammps_ext
 except:
     pass
+try:
+    from lisi import lisi
+except:
+    pass
+try:
+    from bopfox import bopfox
+except:
+    pass
 
-from bopfox import bopfox
 
-def pt():
-    return morse()
-    
 
