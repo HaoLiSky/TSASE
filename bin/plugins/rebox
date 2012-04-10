@@ -1,0 +1,14 @@
+
+def _tsase_func():
+    atoms = _get_ca()
+    sp = atoms.get_scaled_positions()
+    for i in range(len(atoms)):
+        for j in range(3):
+            while sp[i][j] > 1.0:
+                sp[i][j] -= 1.0
+            while sp[i][j] < 0.0:
+                sp[i][j] += 1.0
+    atoms.set_scaled_positions(sp)
+
+_tsase_func()
+
