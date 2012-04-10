@@ -25,6 +25,10 @@ try:
 except:
     pass
 try:
+    from si import si
+except:
+    pass
+try:
     from bopfox import bopfox
 except:
     pass
