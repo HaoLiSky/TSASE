@@ -32,6 +32,14 @@ try:
     from bopfox import bopfox
 except:
     pass
-
+try:
+	from voter97 import voter97
+except:
+	pass
+try:
+	from ZDP_5Gauss import ZDP_5Gauss
+except:
+	pass
+	
 
 
