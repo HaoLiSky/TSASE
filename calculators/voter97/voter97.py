@@ -24,7 +24,7 @@ class voter97():
 		self.f = forces
 		self.u = cos(kx) * a + self.d2/2* (ky ** 2) + self.d3*cos(kx/self.d4)
         
-	def get_potential_energy(self, atoms=None, force_consistent=False):
+	def get_potential_energy(self, atoms, force_consistent=False):
 		if self.calculation_required(atoms, "energy"):
 			self.atoms = atoms.copy()
 			self.calculate()
