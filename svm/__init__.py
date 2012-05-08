@@ -1,9 +1,9 @@
 try:
-    from svm import *
+    from dynamics import *
 except:
     pass
 try:
-    from SVMtsase import *
+    from utilities import *
 except:
     pass
 

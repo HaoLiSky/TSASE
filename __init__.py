@@ -7,5 +7,5 @@ import kdb
 import structure
 import constraints
 import md
-import SVM
+import svm
 #import mc
