@@ -7,7 +7,7 @@ except:
 	import scikits.learn
 
 class SVM_dynamics():
-	def __init__(self,calc,selSVM,k):
+	def __init__(self,calc,selSVM,k,addgradient=True):
 		
 		self.atoms = None
 		self.calc = calc
@@ -15,6 +15,7 @@ class SVM_dynamics():
 		self.u = None
 		self.f = None
 		self.k = k
+		self.addgradient = addgradient
 	
 	def set_k(self,k):
 		self.k = k
@@ -22,18 +23,31 @@ class SVM_dynamics():
 	def get_k(self):
 		return self.k
 
+	def include_SVM_gradient(self,addgradient):
+		self.addgradient = addgradient
+	
+	def gradient_included(self):
+		return self.addgradient
+	
+	def decision(self,atoms):
+		self.atoms = atoms.copy()
+		datapoint = numpy.asarray([self.atoms.get_positions().ravel()])
+		decisionf = self.selSVM.decision_function(datapoint)[0,0]
+		return decisionf
+
 	def calculate(self):
 		self.calc.get_forces(self.atoms)
 		self.f = self.calc.f.copy()
-		datapoint = numpy.asarray([self.atoms.get_positions().ravel()])
-		grad = self.svm_rbf_deriv(self.selSVM, datapoint) 
-		gradnorm = numpy.sqrt(numpy.vdot(grad,grad))
-		try:
-			grad /= gradnorm # the gradient is now normalized
-			prediction = self.selSVM.decision_function(datapoint)[0,0] / gradnorm
-		except:
-			prediction = 0.
-		self.f += -1 * self.k * prediction * numpy.reshape(grad,numpy.shape(self.atoms.get_positions()))
+		if self.addgradient:
+			datapoint = numpy.asarray([self.atoms.get_positions().ravel()])
+			grad = self.svm_rbf_deriv(self.selSVM, datapoint) 
+			gradnorm = numpy.sqrt(numpy.vdot(grad,grad))
+			try:
+				grad /= gradnorm # the gradient is now normalized
+				prediction = self.selSVM.decision_function(datapoint)[0,0] / gradnorm
+			except:
+				prediction = 0.
+			self.f += -1 * self.k * prediction * numpy.reshape(grad,numpy.shape(self.atoms.get_positions()))
 		
 	def svm_rbf_deriv(self,clf,Points): # Don't forget this returns the positive of the gradient!
 		import numpy as np
