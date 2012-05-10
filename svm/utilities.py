@@ -1,6 +1,6 @@
 import numpy, ase
 
-def writeXYZatoms(atoms,filename, w='w',comment='Produced in TSASE'):
+def writexyzatoms(atoms,filename, w='w',comment='Produced in TSASE'):
 	xyz = open(filename,w)
 	positions = atoms.get_positions()
 	symbols = atoms.get_chemical_symbols()
@@ -12,19 +12,7 @@ def writeXYZatoms(atoms,filename, w='w',comment='Produced in TSASE'):
 		xyz.write(xyzposition)
 	xyz.close()
 	
-def writeXYZatoms_energy(atoms,filename, w='w'):
-	xyz = open(filename,w)
-	positions = atoms.get_positions()
-	symbols = atoms.get_chemical_symbols()
-	energy = atoms.get_potential_energy()
-	xyz.write(str(len(positions)) + " \n")
-	xyz.write(str(energy) + " \n")
-	for i in range(len(positions)):
-		xyzposition = symbols[i] + " " + str(positions[i,0]) + " " + str(position[i,1]) + " " + str(position[i,2]) + " \n" 
-		xyz.write(xyzposition)
-	xyz.close()
-	
-def readXYZatoms(filename):
+def readxyzatoms(filename):
 	xyz = open(filename, 'r') 
 	numatoms = int(xyz.readline())
 	dataY = [float(xyz.readline().split()[0])]
@@ -36,7 +24,7 @@ def readXYZatoms(filename):
 		vals[1] = float(vals[1])
 		vals[2] = float(vals[2])
 		datapoints.append(vals)
-	dataX = [numpy.asarray(datapoints)]
+	dataX = [numpy.asarray(datapoints).ravel()]
 	line = xyz.readline().split() # check for EOF
 	while (line != []): # this will read until EOF 	
 		dataY.append(float(xyz.readline().split()[0]))
@@ -48,13 +36,13 @@ def readXYZatoms(filename):
 			vals[1] = float(vals[1])
 			vals[2] = float(vals[2])
 			datapoints.append(vals)
-		dataX.append(numpy.asarray(datapoints))
+		dataX.append(numpy.asarray(datapoints).ravel())
 		line = xyz.readline().split() # check for EOF
 	dataXa = numpy.array(dataX)
 	dataYa = numpy.array(dataY)
 	return dataXa, dataYa
 	
-def Learn(parameters,datapoints,datalabels,datapointstest,datalabelstest,kval=2): # Returns selSVM
+def learn(parameters,datapoints,datalabels,datapointstest,datalabelstest,kval=2): # Returns selSVM
 	selSVM = selectModel(parameters,datapoints,datalabels,kval)
 	outValue = selSVM.decision_function(datapointstest) # don't forget that outValue is for the test set!
 	out = selSVM.predict(datapointstest)
@@ -65,7 +53,7 @@ def Learn(parameters,datapoints,datalabels,datapointstest,datalabelstest,kval=2)
 	print me.classification_report(datalabelstest,out)
 	return selSVM
 
-def selectModel(parameters,xtrain,ytrain,kval):
+def selectmodel(parameters,xtrain,ytrain,kval):
 	try:
 		from sklearn import svm
 		from sklearn.grid_search import GridSearchCV 
@@ -89,3 +77,17 @@ def selectModel(parameters,xtrain,ytrain,kval):
 	pprint(clf.grid_scores_)
 	print
 	return bestSVM
+
+def randomize_datapoints(datapoints,datalabels):
+	length = len(datapoints)
+	aslist = datapoints.tolist()
+	aslistlabel = datalabels.tolist()
+	for i in range(length * 4):
+		rando = numpy.random.randint(length)
+		point = aslist.pop(rando)
+		label = aslistlabel.pop(rando)
+		aslist.append(point)
+		aslistlabel.append(label)
+	newdata = numpy.asarray(aslist)
+	newlabels = numpy.asarray(aslistlabel)
+	return newdata, newlabels

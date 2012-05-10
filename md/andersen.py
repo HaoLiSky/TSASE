@@ -5,7 +5,7 @@ import numpy as np
 from ase.md.md import MolecularDynamics
 from ase.parallel import world
 
-class NVTandersen(MolecularDynamics):
+class nvtandersen(MolecularDynamics):
 
 	def __init__(self,atoms,timestep,temperature,alpha = 0.8,tcol=0.35,fixcm = True,
 				trajectory=None,logfile=None,loginterval=1, communicator=world):

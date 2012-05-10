@@ -6,8 +6,8 @@ try:
 except:
 	import scikits.learn
 
-class SVM_dynamics():
-	def __init__(self,calc,selSVM,k,addgradient=True):
+class svm_dynamics():
+	def __init__(self,calc,selSVM,k=1.0,addgradient=True):
 		
 		self.atoms = None
 		self.calc = calc
@@ -42,10 +42,10 @@ class SVM_dynamics():
 			datapoint = numpy.asarray([self.atoms.get_positions().ravel()])
 			grad = self.svm_rbf_deriv(self.selSVM, datapoint) 
 			gradnorm = numpy.sqrt(numpy.vdot(grad,grad))
-			try:
+			if (gradnorm >= 1e-10):
 				grad /= gradnorm # the gradient is now normalized
 				prediction = self.selSVM.decision_function(datapoint)[0,0] / gradnorm
-			except:
+			else:
 				prediction = 0.
 			self.f += -1 * self.k * prediction * numpy.reshape(grad,numpy.shape(self.atoms.get_positions()))
 		
