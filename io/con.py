@@ -62,6 +62,7 @@ def read_con(filename):
                 num_atoms += num_each_type[i]
             a = ase.Atoms()
             a.cell = boxtemp
+            a.set_pbc((True, True, True))
             constrained = []
             cindex = 0
             for i in range(num_types):
