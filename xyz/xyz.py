@@ -136,6 +136,7 @@ class xyz(gtk.Window):
         self.keys = {}
         self.black_gc = self.area.get_style().black_gc
         self.white_gc = self.area.get_style().white_gc
+        self.color_memo = {}
         self.background_gc = self.gfx_get_color_gc(self.background[0], self.background[1], self.background[2])
         self.pixmap = None
         self.repeat = (1, 1, 1)
@@ -146,6 +147,7 @@ class xyz(gtk.Window):
         self.colors = []
         self.render_cairo = False
         self.pwd = os.getcwd()
+        self.bond_width = 4
 
 
     def gui_key_on(self, key):
@@ -250,6 +252,12 @@ class xyz(gtk.Window):
                 self.radiusbutton.set_value(self.radiusbutton.get_value() * 1.1)
             elif event.direction == gdk.SCROLL_DOWN:
                 self.radiusbutton.set_value(self.radiusbutton.get_value() * 0.9)
+        elif self.gui_key_on("b"): 
+            if event.direction == gdk.SCROLL_UP:
+                self.bond_width = min(self.bond_width + 1, 32)
+            elif event.direction == gdk.SCROLL_DOWN:
+                self.bond_width = max(self.bond_width - 1, 1)
+            self.gfx_render()
         else:
             if event.direction == gdk.SCROLL_UP:
                 self.zoombutton.set_value(self.zoombutton.get_value() * 1.1)
@@ -429,10 +437,12 @@ class xyz(gtk.Window):
         self.last_draw = time.time()
 
     def gfx_get_color_gc(self, r, g, b):
-        rgb = (int(r * 65535), int(g * 65535), int(b * 65535))
-        gc = self.area.window.new_gc()
-        gc.set_rgb_fg_color(gdk.Color(rgb[0], rgb[1], rgb[2]))
-        return gc
+        if (r,g,b) not in self.color_memo:
+            rgb = (int(r * 65535), int(g * 65535), int(b * 65535))
+            gc = self.area.window.new_gc()
+            gc.set_rgb_fg_color(gdk.Color(rgb[0], rgb[1], rgb[2]))
+            self.color_memo[(r,g,b)] = gc
+        return self.color_memo[(r,g,b)]    
         
     def gfx_setup_colors(self):
         for i in range(num_elements):
@@ -462,16 +472,23 @@ class xyz(gtk.Window):
                         int(self.repeatz.get_value())))
         if not 'nlist' in fa.__dict__:
             cutoffs = [1.5 * elements[i.symbol]['radius'] for i in ra]
-            fa.nlist = NeighborList(cutoffs, skin=0, self_interaction=False)
+            fa.nlist = NeighborList(cutoffs, skin=0, self_interaction=False, bothways=True)
         if len(fa.nlist.cutoffs) != len(ra):
             cutoffs = [1.5 * elements[i.symbol]['radius'] for i in ra]
-            fa.nlist = NeighborList(cutoffs, skin=0, self_interaction=False)
+            fa.nlist = NeighborList(cutoffs, skin=0, self_interaction=False, bothways=True)
         fa.nlist.update(ra)
         for a in range(len(ra)):
+            element = elements[ra[a].symbol]
             indices, offsets = fa.nlist.get_neighbors(a)
             for i, o in zip(indices, offsets):
                 r = ra.positions[i] + np.dot(o, ra.get_cell())
-                self.gfx_queue_line(ra.positions[a], r, [0, 0, 0])
+                v = r - ra.positions[a]
+                vm = np.linalg.norm(v)
+                vunit = v/vm
+                rad = 0.5 * element['radius'] * self.radiusbutton.get_value()
+                p1 = ra.positions[a] + vunit * rad
+                p2 = ra.positions[a] + v * 0.5
+                self.gfx_queue_line(p1, p2, [c*0.85 for c in element['color']], width=self.bond_width)
         
     def gfx_queue_atoms(self):
         try:
@@ -632,7 +649,7 @@ class xyz(gtk.Window):
                 q.r1[1] = -q.r1[1] * s2 + h2
                 q.r2[0] = q.r2[0] * s2 + w2
                 q.r2[1] = -q.r2[1] * s2 + h2
-                self.gfx_draw_line(q.r1[0], q.r1[1], q.r2[0], q.r2[1])
+                self.gfx_draw_line(q.r1[0], q.r1[1], q.r2[0], q.r2[1], q.width, q.color)
 
 
     def gfx_rot_x(self, theta):
@@ -679,15 +696,18 @@ class xyz(gtk.Window):
             self.pixmap.draw_arc(self.colors[element], True, x - r, y - r, r * 2, r * 2, 0, 64 * 360)
             self.pixmap.draw_arc(self.black_gc, False, x - r, y - r, r * 2, r * 2, 0, 64 * 360)
 
-    def gfx_draw_line(self, x1, y1, x2, y2):
+    def gfx_draw_line(self, x1, y1, x2, y2, width=1, color=[0,0,0]):
         if self.render_cairo:
-            self.cairo_context.set_source_rgb(0, 0, 0)
+            self.cairo_context.set_source_rgb(color[0], color[1], color[2])
             self.cairo_context.move_to(x1, y1)
             self.cairo_context.line_to(x2, y2)
-            self.cairo_context.set_line_width(0.5)
+            self.cairo_context.set_line_width(width)
             self.cairo_context.stroke()
         else:
-            self.pixmap.draw_line(self.black_gc, int(x1), int(y1), int(x2), int(y2))        
+            gc = self.gfx_get_color_gc(color[0], color[1], color[2])
+            gc.set_line_attributes(width, gtk.gdk.LINE_SOLID, gtk.gdk.CAP_ROUND, gtk.gdk.JOIN_MITER)
+            self.pixmap.draw_line(gc, int(x1), int(y1), int(x2), int(y2))        
+            gc.set_line_attributes(1, gtk.gdk.LINE_SOLID, gtk.gdk.CAP_ROUND, gtk.gdk.JOIN_MITER)
 
 #
 # DATA ------------------------------------------------------------------------------------------
