@@ -7,7 +7,7 @@ import os,sys
 from copy import deepcopy
 from math import sqrt, atan, pi
 from util import vmag, vunit, vproj, vdot, sPBC
-from ase import atoms
+from ase import atoms, units
 
 class ssneb:
     """
@@ -16,7 +16,7 @@ class ssneb:
 
     def __init__(self, p1, p2, numImages = 7, k = 5.0, tangent = "new",       \
                  dneb = False, dnebOrg = False, method = 'normal',            \
-                 onlyci = False, weight = 1, parallel = False):
+                 onlyci = False, weight = 1, parallel = False, express = numpy.zeros((3,3))):
         """
         The neb constructor.
         Parameters:
@@ -34,14 +34,20 @@ class ssneb:
         """
         
         self.numImages = numImages
-        self.k = k * numImages
-        self.tangent = tangent
-        self.dneb = dneb
-        self.dnebOrg = dnebOrg
-        self.method = method
-        self.onlyci = onlyci
-        self.weight = weight 
-        self.parallel = parallel 
+        self.k         = k * numImages
+        self.tangent   = tangent
+        self.dneb      = dneb
+        self.dnebOrg   = dnebOrg
+        self.method    = method
+        self.onlyci    = onlyci
+        self.weight    = weight 
+        self.parallel  = parallel 
+        self.express   = express * units.GPa
+        if express[0][1]**2+express[0][2]**2+express[1][2]**2 > 1e-3:
+           express[0][1] = 0
+           express[0][2] = 0
+           express[1][2] = 0
+           print "warning: xy, xz, yz components of the external pressure will be set to zero"
 
         #check the orientation of the cell, make sure a is along x, b is on xoy plane
         for p in [p1,p2]:
@@ -50,7 +56,6 @@ class ssneb:
                 print "check the orientation of the cell, make sure a is along x, b is on xoy plane"
                 sys.exit()
                 
-        print p2.get_cell()
         #set the path by linear interpolation between end points
         n = self.numImages - 1
         self.path = [p1]
@@ -108,6 +113,18 @@ class ssneb:
             self.path[i].st[2][1] = stt[3] * vol
             self.path[i].st[2][0] = stt[4] * vol
             self.path[i].st[1][0] = stt[5] * vol
+            print "stress before modified:imgage ",i 
+            print self.path[i].st
+            self.path[i].st      -= self.express * (-1)*vol
+            print "stress after modified:imgage ",i 
+            print self.path[i].st
+
+            #calculate the pv term in enthalpy E+PV, setting image 0 as reference
+            dcell  = self.path[i].get_cell() - self.path[0].get_cell()
+            strain = numpy.dot(self.path[0].icell, dcell)
+            pv     = numpy.vdot(self.express, strain) * self.path[0].get_volume()
+            print "i,pv:",i,pv
+            self.path[i].u += pv
 
     def forces(self):
         """
@@ -145,6 +162,15 @@ class ssneb:
             self.path[i].st[0][1] = 0.0
             self.path[i].st[0][2] = 0.0
             self.path[i].st[1][2] = 0.0
+            self.path[i].st      -= self.express * vol*(-1)
+             
+            #calculate the pv term in enthalpy E+PV, setting image 0 as reference
+            dcell  = self.path[i].get_cell() - self.path[0].get_cell()
+            strain = numpy.dot(self.path[0].icell, dcell)
+            pv     = numpy.vdot(self.express, strain) * self.path[0].get_volume()
+            print "i,pv:",i,pv
+            self.path[i].u += pv
+
             if self.path[i].u > self.Umax:
                 self.Umax  = self.path[i].u
                 self.Umaxi = i
@@ -276,6 +302,9 @@ class ssneb:
                 Rp1  = numpy.vstack((Rp1,Rp1b))
 
                 self.path[i].fsN = (vmag(Rp1) - vmag(Rm1)) * self.k * self.path[i].n
+                ######4 print
+                print '*********************'
+                print i, vmag(Rp1),vmag(Rm1)
                 #---------------01/26/11 to speedup by weakening spring force's convergence-----------
                 #if vmag(self.path[i].fsN) < 0.01:
                     #self.path[i].fsN = 0.0
