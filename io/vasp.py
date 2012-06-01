@@ -22,7 +22,7 @@ def read_xdatcar(fileName):
         for N, e in zip(natoms, elements):
             for k in range(N):
                 split = lines[8 + i * (sum(natoms) + 1) + j].split()
-                a[j].position = numpy.array([float(l) for l in split[0:3]])
+                a[j].position = [float(l) for l in split[0:3]]
                 j += 1
         a.positions = numpy.dot(a.positions, cell)
         trajectory.append(a)
