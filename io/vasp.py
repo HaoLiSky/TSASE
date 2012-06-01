@@ -22,8 +22,8 @@ def read_xdatcar(fileName):
                 x = float(lines[8 + i * (sum(natoms) + 1) + j].split()[0])
                 y = float(lines[8 + i * (sum(natoms) + 1) + j].split()[1])
                 z = float(lines[8 + i * (sum(natoms) + 1) + j].split()[2])
-                x, y, z = cell.dot(numpy.array([x,y,z]))
-                a.append(ase.Atom(e, (x, y, z), mass = 1.0))
+                pos = numpy.dot(numpy.array([x,y,z]), cell)
+                a.append(ase.Atom(e, pos, mass = 1.0))
                 j += 1
         trajectory.append(a)
     return trajectory
