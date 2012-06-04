@@ -68,6 +68,7 @@ def read_con(filename):
             a.set_chemical_symbols(symbols)
             a.set_positions(positions)
             a.set_masses(masses)
+            a.set_constraint(ase.constraints.FixAtoms(frozen))
         except:
             if len(trajectory) == 1:
                 return trajectory[0]
