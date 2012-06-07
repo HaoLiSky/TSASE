@@ -7,12 +7,13 @@ import ctypes
 
 class LAMMPSLib:
 
-	def __init__(self, parameters=[],atom_types=None, log_file = "none"):
+	def __init__(self, parameters=[],atom_types=None, log_file = None):
 		"""
 		parameters is a sequence of strings that are full LAMMPS commands
 		to setup things like pair_style, pair_coeff, etc.
 
-		atom_types is a dictionary of "atomic_symbol":lammps_atom_type pairs
+		atom_types is a dictionary of "atomic_symbol":lammps_atom_type pairs.
+		Default assigns lammps atom types in alphabetic order by atomic symbol
 		
 		log_file is a string of the path to the desired LAMMPS log file
 		"""
@@ -142,9 +143,11 @@ class LAMMPSLib:
 			self.lmp.close()
 			self.lmp = None
 			self.coord_transform = None
-
 		#create new lammps object
-		cmd_args = ["-echo", "log","-log",self.log_file,"-screen","none"]
+		if self.log_file == None
+			cmd_args = ["-echo", "log","-log","none","-screen","none"]
+		else:
+			cmd_args = ["-echo", "log","-log",self.log_file,"-screen","none"]
 		self.lmp = lammps(cmd_args)
 
 		###Initializing commands
@@ -194,17 +197,9 @@ class LAMMPSLib:
 		for cmd in self.parameters:
 			self.lmp.command(cmd)
 
+
 		#Define force&energy variables for extraction
 		self.lmp.command("variable fx atom fx")
 		self.lmp.command("variable fy atom fy")
 		self.lmp.command("variable fz atom fz")
 		self.lmp.command("variable pe equal pe")
-
-
-
-
-
-
-
-
-
