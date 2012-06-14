@@ -42,14 +42,13 @@ class mushybox(Atoms):
         rcell  = self.atomsx.get_cell()
         rcell += np.dot(rcell,r[-3:])/self.jacobian
         self.atomsx.set_cell(rcell,scale_atoms=True)
-        print "set_positions"
     
     def __len__(self):
         return self.natom+3
 
-    def get_forces(self):
-        #f    = self.atomsx.get_forces(apply_constraint)
-        f    = self.atomsx.get_forces()
+    def get_forces(self,apply_constraint=True):
+        f    = self.atomsx.get_forces(apply_constraint)
+        #f    = self.atomsx.get_forces()
         stt  = self.atomsx.get_stress()
         vol  = self.atomsx.get_volume()*(-1)
         st   = np.zeros((3,3))
@@ -62,7 +61,7 @@ class mushybox(Atoms):
         st[2][0] = stt[4] * vol
         st[1][0] = stt[5] * vol
         st  -= self.express * (-1)*vol
-        print "get_forces"
+        print "original stress (no projecton applied):"
         print st
         Fc   = np.vstack((f, st/self.jacobian))
         return Fc
@@ -73,7 +72,8 @@ class mushybox(Atoms):
     def copy(self):
         """Return a copy."""
         import copy
-        atoms = self.__class__(self.atomsx, self.express)
+        atomsy = self.atomsx.copy()
+        atoms = self.__class__(atomsy, self.express)
 
         atoms.arrays = {}
         for name, a in self.arrays.items():
