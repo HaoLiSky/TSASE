@@ -12,13 +12,14 @@ import os
 import sys
 import numpy as np
 
-class mushybox:
+class mushybox(Atoms):
     def __init__(self, atomsx, express=np.zeros((3,3))):
         """box relaxation
         atomsx: an Atoms object
         express: external pressure, a 3*3 lower triangular matrix in the unit of GPa
                  define positive values as compressing
         """
+        Atoms.__init__(self,atomsx)
         self.atomsx = atomsx 
         self.express= express * units.GPa
         if express[0][1]**2+express[0][2]**2+express[1][2]**2 > 1e-5:
@@ -53,6 +54,7 @@ class mushybox:
         vol  = self.atomsx.get_volume()*(-1)
         st   = np.zeros((3,3))
         #following the order of get_stress in vasp.py
+        #(the order of stress in ase are the same for all calculators)
         st[0][0] = stt[0] * vol  
         st[1][1] = stt[1] * vol
         st[2][2] = stt[2] * vol
@@ -68,4 +70,15 @@ class mushybox:
     def get_potential_energy(self):
         return self.atomsx.get_potential_energy()
 
+    def copy(self):
+        """Return a copy."""
+        import copy
+        atoms = self.__class__(self.atomsx, self.express)
+
+        atoms.arrays = {}
+        for name, a in self.arrays.items():
+            atoms.arrays[name] = a.copy()
+        #atoms.constraints = copy.deepcopy(self.constraints)
+        #atoms.adsorbate_info = copy.deepcopy(self.adsorbate_info)
+        return atoms
 
