@@ -309,6 +309,30 @@ def insert(reactant, saddle, product, mode, kdbdir="./kdb", nf=0.2, dc=0.3, mac=
     print "good"
 
 
+def server_insert(args, options):
+    import httplib, urllib
+    params = {}
+    params['reactant'] = ''.join(open(args[0], 'r').readlines())
+    params['saddle']   = ''.join(open(args[1], 'r').readlines())
+    params['product']  = ''.join(open(args[2], 'r').readlines())
+    params['mode']     = ''.join(open(args[3], 'r').readlines())
+    params['nf']  = options.nf
+    params['dc']  = options.dc
+    params['mac'] = options.mac
+    params['b1']  = options.b1
+    params['b2']  = options.b2
+    params['p1']  = options.p1
+    params['p2']  = options.p2
+    params  = urllib.urlencode(params)
+    headers = {'Content-type': 'application/x-www-form-urlencoded', 'Accept': 'text/plain'}
+    conn = httplib.HTTPConnection(host=options.host, port=options.port)
+    conn.request('POST', '/insert', params, headers)
+    response = conn.getresponse()
+    print response.status, response.reason
+    data = response.read()
+    print data    
+
+
 if __name__ == "__main__":
 
     # Parse command line options.
@@ -337,6 +361,10 @@ if __name__ == "__main__":
     parser.add_option("--prefactor2", dest = "p2", action="store", type="float", 
                       help = "prefactor for product to saddle",
                       default = -1.0)
+    parser.add_option("--host", dest = "host", help = "the hostname of a kdbserver",
+                      default = "")
+    parser.add_option("--port", dest = "port", action="store", type="int", 
+                      help = "the port of a kdbserver", default = 8080)
     options, args = parser.parse_args()
 
     # Make sure we get the reactant, saddle, product, and mode files.
@@ -349,9 +377,13 @@ if __name__ == "__main__":
     saddle = read_con(args[1])
     product = read_con(args[2])
     mode = load_mode(args[3])
-
-    insert(reactant, saddle, product, mode, options.kdbdir, options.nf, options.dc, options.mac, options.b1, options.b2, options.p1, options.p2)
-
+    
+    if options.host != "":
+        server_insert(args, options)
+    else:
+        insert(reactant, saddle, product, mode, options.kdbdir, 
+               options.nf, options.dc, options.mac, options.b1, 
+               options.b2, options.p1, options.p2)
 
     
         

@@ -447,6 +447,30 @@ def query(reactant, kdbdir, outputdir = "./kdbmatches", nf=0.2, dc=0.3, nodupes 
         print "%10d" % entryMatches
 
 
+def server_query(args, options):
+    import httplib, urllib, json
+    params = {}
+    params['reactant'] = ''.join(open(args[0], 'r').readlines())
+    params['nf']  = options.nf
+    params['dc']  = options.dc
+    params  = urllib.urlencode(params)
+    headers = {'Content-type': 'application/x-www-form-urlencoded', 'Accept': 'text/plain'}
+    conn = httplib.HTTPConnection(host=options.host, port=options.port)
+    conn.request('POST', '/query', params, headers)
+    response = conn.getresponse()
+    print response.status, response.reason
+    data = json.loads(response.read())
+    print data['stdout']
+    if os.path.isdir('kdbmatches'):
+        shutil.rmtree('kdbmatches')
+    os.mkdir('kdbmatches')
+    for filename in data['files']:
+        f = open(os.path.join('kdbmatches', filename), 'w')
+        f.write(data['files'][filename])
+        f.close()
+    
+
+
 if __name__ == "__main__":
 
     # Parse command line options.
@@ -462,9 +486,13 @@ if __name__ == "__main__":
                       default = NEIGHBOR_FUDGE)
     parser.add_option("--nodupes", dest = "nodupes", action="store_true",
                       help = "detect and remove duplicate suggestions (can be expensive)")
+    parser.add_option("--host", dest = "host", help = "the hostname of a kdbserver",
+                      default = "")
+    parser.add_option("--port", dest = "port", action="store", type="int", 
+                      help = "the port of a kdbserver", default = 8080)
     options, args = parser.parse_args()
 
-    # Make sure we get the reactant, saddle, product, and mode file names.
+    # Make sure we get the reactant file name.
     if len(args) < 1:
         parser.print_help()
         sys.exit()
@@ -472,7 +500,10 @@ if __name__ == "__main__":
     # Load the reactant con file.
     reactant = read_con(args[0])
     
-    query(reactant, options.kdbdir, "./kdbmatches", options.dc, options.nf, options.nodupes)
+    if options.host != "":
+        server_query(args, options)
+    else:
+        query(reactant, options.kdbdir, "./kdbmatches", options.dc, options.nf, options.nodupes)
 
             
 
