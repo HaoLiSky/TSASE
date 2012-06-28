@@ -40,6 +40,8 @@ try:
 	from ZDP_5Gauss import ZDP_5Gauss
 except:
 	pass
+
+from socorro import Socorro
 	
 
 from push import push

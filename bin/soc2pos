@@ -1,0 +1,16 @@
+#!/usr/bin/env python
+from sys import argv
+import tsase
+import ase.io
+
+poscar = True
+if argv[1].startswith('POSCAR'):
+    atoms = ase.io.read(argv[1])
+else:
+    atoms = tsase.io.read_socorro(argv[1])
+    poscar = False
+
+if poscar:
+    tsase.io.write_socorro('crystal', atoms)
+else:
+    ase.io.write('POSCAR', atoms)
