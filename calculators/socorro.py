@@ -5,11 +5,12 @@ from tsase.io import write_socorro
 from ase import units
 
 class Socorro:
-    def __init__(self):
+    def __init__(self, cmd=None):
         self.forces = None
         self.energy = None
         self.force_calls = 0
         self.atoms = None
+        self.cmd = cmd
 
     def set_atoms(self, atoms):
         pass
@@ -44,8 +45,18 @@ class Socorro:
     def calculate_forces(self, atoms):
         write_socorro('crystal', atoms)
 
-        cmd = os.environ['SOCORRO_COMMAND']
-        os.system('%s > %s' % (cmd, 'stdout'))
+        if self.cmd:
+            cmd = self.cmd
+        else:
+            cmd = os.environ['SOCORRO_COMMAND']
+        exit_code = os.system('%s > %s' % (cmd, 'stdout'))
+
+        if exit_code > 0:
+            if os.path.isfile('errorf'):
+                f = open('errorf')
+                print f.read(),
+                f.close()
+            raise Exception('Problem running Socorro')
 
         self.force_calls += 1
         energy, forces = parse_diary('diaryf')
