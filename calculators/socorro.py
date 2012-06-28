@@ -2,6 +2,7 @@
 import numpy
 import os
 from tsase.io import write_socorro
+from ase import units
 
 class Socorro:
     def __init__(self):
@@ -58,11 +59,12 @@ def parse_diary(filename):
     force_section = False
     force_section_count = 0
     forces = []
+
     for line in f:
         line = line.strip()
         fields = line.split()
         if line.startswith('cell energy'):
-            energy = float(fields[3])
+            energy = float(fields[3]) * units.Rydberg
         if line.startswith('Atomic forces:'): 
             force_section = True
 
@@ -75,4 +77,5 @@ def parse_diary(filename):
             forces.append([ float(fields[1]), float(fields[2]), float(fields[3]) ])
 
     forces = numpy.array(forces)
+    forces *= units.Rydberg / units.Bohr
     return energy, forces
