@@ -1,0 +1,65 @@
+<html>
+
+    <head>
+    
+        <script src="/atomsrv/xyz.js" type="text/javascript"></script>    
+
+        <style type="text/css">
+            body {
+                margin: 0;
+                padding: 0;
+            }
+        
+            #filepanel {
+                position: fixed;
+                top: 0px;
+                left: 0px;
+                width: 20%;
+                height: 100%;
+                overflow-y: auto;
+                overflow-x: auto;
+                border-right: 1px solid black;
+            }
+            
+            #atomspanel {
+                position: fixed;
+                top: 0px;
+                right: 0px;
+                width: 80%;
+                height: 100%;
+            }
+
+        </style>
+
+        <script>
+            var atomsPanel;
+            function onLoad()
+            {   
+                %if atoms != None:
+                    atomsPanel = new xyz("atomspanel");
+                    atomsPanel.setAtoms({{atoms}});
+                    atomsPanel.draw();
+                %end
+            }
+        </script>
+
+    
+    </head>
+    
+    <body onload='onLoad()'>
+    
+        <div id='filepanel'>
+            <div style='margin: 8px'>
+                %for p in pathlist:
+                    {{p}}<br>
+                %end
+            </div>
+        </div>
+        
+        <canvas id='atomspanel'></canvas>
+    
+    </body>
+
+
+
+</html>
