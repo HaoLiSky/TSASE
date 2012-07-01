@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import sys
 import json
 import glob
 import bottle as b
@@ -84,4 +85,4 @@ def index(path):
     return tpl.render(pathlist=pathlist, atoms=atoms)
             
 
-b.run(host='localhost', port=8080, reloader=True)
+b.run(host=sys.argv[1], port=int(sys.argv[2]))
