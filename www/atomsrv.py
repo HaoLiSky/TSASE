@@ -17,13 +17,13 @@ def get_pathlist(path):
     if os.path.isfile(path):
         path = os.path.dirname(path)
     pathlist = []
-    pathlist.insert(0, '<b><a href="%s">%s</a></b>' % (os.path.dirname(path), '..'))
+    pathlist.insert(0, '<b><a href="%s" class="directory">%s</a></b>' % (os.path.dirname(path), '..'))
     ls = glob.glob(os.path.join(path, '*'))    
     for l in ls:
         if os.path.isdir(l):
-            pathlist.insert(1, '<a href="%s">%s</a>' % (l, os.path.basename(l)))
+            pathlist.insert(1, '<a href="%s" class="directory">%s</a>' % (l, os.path.basename(l)))
         else:
-            pathlist.append('<a href="%s">%s</a>' % (l, os.path.basename(l)))
+            pathlist.append('<a href="%s" class="file">%s</a>' % (l, os.path.basename(l)))
     return pathlist
     
 def atoms_to_jsatoms(atoms):
