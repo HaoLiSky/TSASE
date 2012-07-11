@@ -43,7 +43,7 @@ def readxyzatoms(filename):
 	return dataXa, dataYa
 	
 def learn(parameters,datapoints,datalabels,datapointstest,datalabelstest,kval=2): # Returns selSVM
-	selSVM = selectModel(parameters,datapoints,datalabels,kval)
+	selSVM = selectmodel(parameters,datapoints,datalabels,kval)
 	outValue = selSVM.decision_function(datapointstest) # don't forget that outValue is for the test set!
 	out = selSVM.predict(datapointstest)
 	try:
