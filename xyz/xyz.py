@@ -5,7 +5,7 @@ import sys
 import math
 import time
 from multiprocessing import Queue, Process
-
+ 
 import gtk
 import gtk.glade
 import gtk.gdk as gdk
