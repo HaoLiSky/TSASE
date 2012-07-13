@@ -1,3 +1,5 @@
+import numpy
+numpy.seterr(all='raise')
 import calculators
 import io
 import data
