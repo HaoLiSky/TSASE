@@ -725,42 +725,19 @@ class xyz(gtk.Window):
         self.gfx_center_atoms()
         self.queue_draw()
 
+
     def data_read(self, filename):
         data = None
         try:
-            data = tsase.io.read_xdatcar(filename)
-            if len(data) < 1:
-                raise
+            data = tsase.io.read(filename)
         except:
-            try:
-                f = open(filename, 'r')
-                data = []
-                while True:
-                    try:
-                        data.append(vasp.read_vasp(f))
-                    except:
-                        f.close()
-                        break
-                if len(data) < 1:
-                    raise
-            except:
-                try:
-                    data = ase.io.read(filename + "@:")
-                except:
-                    try:
-                        data = tsase.io.read_con(filename)
-                        if len(data) < 1:
-                            raise
-                    except:
-                        try:
-                            data = tsase.io.read_bopfox(filename)
-                            if len(data) < 1:
-                                raise
-                        except:
-                            print "Failed to load", filename
-                            return
+            print "Failed to load", filename
+            return
+        if type(data) is not list:
+            data = [data]
         self.data_set(data)
         self.set_title(os.path.abspath(filename))
+
 
     def data_write(self, filename):
         if filename.endswith(".con"):

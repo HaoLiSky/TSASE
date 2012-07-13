@@ -72,6 +72,8 @@ def read_con(filename):
         except:
             if len(trajectory) == 1:
                 return trajectory[0]
+            if len(trajectory) == 0:
+                raise IOError, "Could not read con file."
             return trajectory
         trajectory.append(a)        
             
