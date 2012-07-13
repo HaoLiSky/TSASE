@@ -23,6 +23,10 @@ def read(filename):
     except:
         pass
     try:
+        return ase.io.read(filename+"@:", format='vasp')
+    except:
+        pass
+    try:
         return ase.io.read(filename+"@:")
     except:
         pass
