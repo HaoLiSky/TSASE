@@ -1,0 +1,84 @@
+#!/usr/bin/env python
+from ase.io import read, write
+from ase import Atoms
+from math import pi, sin, cos
+from numpy.random import random
+from ase.visualize import view
+from numpy.linalg import norm
+import sys
+
+def random_water(center=None):
+    if center == None:
+        center = (0.,0.,0.)
+    d = 0.96
+    angle = 105.0*pi/180.
+    pos = [ (0, 0, 0),
+            (d, 0, 0),
+            (cos(angle), sin(angle), 0) ]
+    water = Atoms('OHH', positions=pos)
+    phi = 2*pi*random()
+    theta = pi*random()
+    psi = pi*random()
+    water.rotate_euler('COM', phi, theta, psi)
+    water.translate(center)
+    return water
+
+def clips(atoms, bounding_box):
+    for atom in atoms:
+        clips_box = False
+        for i in range(3): 
+            if atom.position[i] < bounding_box[i][0]: break
+            if atom.position[i] > bounding_box[i][1]: break
+        else:
+            clips_box = True
+        if clips_box:
+            break
+    return clips_box
+
+def overlap(particle, water):
+    for atom_i in particle:
+        if atom_i.symbol not in ('H', 'O'): continue
+        for atom_j in water:
+            d = norm(atom_i.position-atom_j.position)
+            if d < 0.5: return True
+    return False
+
+def add_water(particle, bounding_box):
+    while True:
+        pos = random(3)*particle.get_cell().diagonal()
+        water = random_water(pos)
+        if not clips(water, bounding_box):
+            if not overlap(particle, water):
+                break
+    particle += water
+
+def solvate(particle, thickness, padding, molecules):
+    vacuum = thickness
+    padding = 1.0
+    particle.center(vacuum)
+    pos = particle.get_positions()
+    bounding_box = ((min(pos[:,0])-padding, max(pos[:,0])+padding),
+                    (min(pos[:,1])-padding, max(pos[:,1])+padding),
+                    (min(pos[:,2])-padding, max(pos[:,2])+padding))
+
+    print 'Adding %i H2O molecules' % molecules
+    sys.stdout.write('Progress: ')
+    for i in range(molecules):
+        add_water(particle, bounding_box)
+        sys.stdout.write('%i '%(i+1))
+        sys.stdout.flush()
+    print
+
+    return particle
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('structure', help='file with structure to solvate')
+    parser.add_argument('thickness', type=float, help='thickness of solvent layer')
+    parser.add_argument('padding', type=float, help='padding on structure bounding box')
+    parser.add_argument('molecules', type=int, help='number of solvent molecules')
+    args = parser.parse_args()
+    particle = read(args.structure)
+    solvated_particle = solvate(particle, args.thickness, args.padding, args.molecules)
+    write('POSCAR_%iH2O'%args.molecules, solvated_particle, 'vasp')
