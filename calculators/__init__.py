@@ -29,6 +29,10 @@ try:
 except:
     pass
 try:
+    from w import w
+except:
+    pass
+try:
     from bopfox import bopfox
 except:
     pass
