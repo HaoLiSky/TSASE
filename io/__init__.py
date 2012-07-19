@@ -7,7 +7,13 @@ from vasp import read_xdatcar
 from socorro import read_socorro, write_socorro
 
 
-def read_vasps(filename):
+def read_vasp_multiframe(filename):
+    try:
+        xdat = read_xdatcar(filename)
+        if type(xdat) == list and len(xdat) > 1:
+            return xdat
+    except:
+        pass
     f = open(filename, 'r')
     data = []
     while True:
@@ -32,16 +38,12 @@ def read(filename):
         return read_bopfox(filename)
     except:
         pass
-    try: 
-        return read_xdatcar(filename)
+    try:
+        return read_vasp_multiframe(filename)
     except:
         pass
     try:
         return read_socorro(filename)
-    except:
-        pass
-    try:
-        return read_vasps(filename)
     except:
         pass
     try:
