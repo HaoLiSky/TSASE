@@ -30,6 +30,7 @@ class ASE_MPI4PY:
         a[:] = self.comm.bcast(a, rank)
 
 import ase
+import ase.parallel
 ase.parallel.world = ASE_MPI4PY()
 ase.parallel.rank = ase.parallel.world.rank
 ase.parallel.size = ase.parallel.world.size
@@ -275,8 +276,12 @@ class PDF:
         self.updates += 1
         pos = atoms.get_positions()
         for i in range(0, len(atoms)):
+            if atoms[i].symbol not in options.elements:
+                continue
             for j in range(0, len(atoms)):
                 if i==j: continue
+                if atoms[j].symbol not in options.elements:
+                    continue
                 d = atoms.get_distance(i,j)
                 if d <= self.r_max and d >= self.r_min:
                     self.bond_lengths.append(d)
@@ -289,7 +294,13 @@ class PDF:
         f = paropen('pdf.dat', 'w')
         hist = numpy.array(hist, dtype='float')
         hist /= self.updates
-        hist /= len(self.atoms)
+        if len(options.elements) > 0:
+            for z in options.elements:
+                n += self.atoms.get_chemical_symbols().count(z)
+            hist /= float(n)
+        else:
+            hist /= len(self.atoms)
+
         for i in xrange(len(hist)):
             f.write("%8.4f %.6f\n" % (center[i], hist[i]))
         f.close()
@@ -304,7 +315,10 @@ def main(options, filename):
         log("    %s: %r" % (option, value))
     start_time = time.time()
     if options.read_trajectory:
-        traj = PickleTrajectory(filename)
+        if filename.startswith('XDATCAR'):
+            traj = tsase.io.read_xdatcar(filename)
+        else:
+            traj = PickleTrajectory(filename)
         snapshots = TrajectorySnapshots(traj, options)
     else:
         if filename[-3:] == "con" and '.' in filename:
@@ -323,9 +337,11 @@ def main(options, filename):
 
     for i, atoms in enumerate(snapshots):
         feff_options = {'RMAX':str(options.rmax),
-                        'HOLE':'%i 1.0'%options.hole,
+                        'HOLE':'%i %.4f'%(options.hole, options.S02),
+                        'CORRECTIONS':'%.3f %.3f'%(options.real_shift, options.imag_shift),
                         'NLEG':'4'}
-        k, chi = tsase.exafs.exafs(atoms, feff_options=feff_options,txt=None)
+        k, chi = tsase.exafs.exafs(atoms, feff_options=feff_options, txt=None,
+                                   elements=options.elements)
         average_chi.append(k, chi)
 
         if options.pdf:
@@ -433,9 +449,22 @@ if __name__ == "__main__":
                       type="float", default=6.0,
                       help= "The maximum effective distance for a single path"\
                             " [default: %default]")
+    feff_group.add_option("--S02", dest="S02", type="float", default=1.0,
+                          help="amplitude reduction factor")
+    feff_group.add_option("--real-shift", dest="real_shift", type="float", default=0.0,
+                          help="real energy shift in eV")
+    feff_group.add_option("--imag-shift", dest="imag_shift", type="float", default=0.0,
+                          help="imaginary energy shift in eV")
+    feff_group.add_option("-z", "--elements", dest="elements", default="",
+                          help="Only consider scatting off of these elements.")
+                          
     parser.add_option_group(feff_group)
 
     options, args = parser.parse_args()
+    if len(options.elements) == 0:
+        options.elements = []
+    else:
+        options.elements = options.elements.split(',')
 
     if len(args) != 1:
         parser.print_help(sys.stderr)

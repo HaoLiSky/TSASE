@@ -1,0 +1,117 @@
+#!/usr/bin/env python
+import numpy
+import os
+import glob
+import tsase
+
+def outcar_forces(filename):
+    f = open(filename)
+    force_section = False
+    all_forces = []
+    for line in f:
+        if 'HIPREC TOTAL-FORCE' in line:
+            force_section = True
+            continue 
+
+        if line.startswith('DYMAT'):
+            if force_section:
+                all_forces.append(forces)
+            force_section = False
+
+        if force_section:
+            if '-------' in line:
+                forces = []
+                continue
+            fields = line.split()
+            forces.append( [ float(field) for field in fields ] )
+
+    return numpy.array(all_forces)
+
+def outcar_masses(filename):
+    f = open(filename)
+    natoms_type = []
+    for line in f:
+        if 'ions per type' in line:
+            for field in line.split()[4:]:
+                natoms_type.append(int(field))
+    f.seek(0)
+    masses = numpy.zeros(sum(natoms_type))
+    mass_start = 0
+    ntype = 0
+    for line in f:
+        if 'POMASS' in line and 'ZVAL' in line:
+            mass = float(line.split()[2].rstrip(';'))
+            masses[mass_start:mass_start+natoms_type[ntype]] = mass
+            mass_start += natoms_type[ntype]
+            ntype += 1
+    return masses
+
+def write_jmol(filename, atoms, eigs, evs):
+    f_xyz = open(filename,'w')
+    for i in xrange(len(evs)):
+        mode = evs[:,i]
+        mode.shape = (len(mode)/3,3)
+
+        f_xyz.write("%i\n"%len(atoms))
+        f_xyz.write("%f\n"%eigs[i])
+        for j,atom in enumerate(atoms):
+            f_xyz.write("%s %f %f %f %f %f %f\n" % (atom.symbol, atom.position[0], atom.position[1], atom.position[2], mode[j,0], mode[j,1], mode[j,2]))
+    f_xyz.close()
+
+def dymmatrix():
+    #either load the OUTCAR is this directory or load all the OUTCARs
+    #in the subdirectories
+    if os.path.isfile('OUTCAR'):
+        outcars = ['OUTCAR']
+    else:
+        outcars = glob.glob('??/OUTCAR')
+        outcars.sort()
+
+    #read in the displacements
+    print 'Reading DISPLACECAR'
+    displacements = numpy.loadtxt('DISPLACECAR').flatten()
+    
+    print 'Number of displacements: %i' % len(displacements)
+
+    print 'Reading masses from %s' % outcars[0]
+    masses = outcar_masses(outcars[0])
+
+    all_forces = []
+    reference_force = None
+    for i, outcar in enumerate(outcars):
+        print 'Reading forces from %s' % outcar
+        f = outcar_forces(outcar)
+        if i == 0:
+           reference_force = f[0] 
+        all_forces.extend(f[1:])
+
+    print 'Building dynamical matrix'
+    dymmat = numpy.zeros((len(displacements),len(displacements))) 
+    hessian = numpy.zeros_like(dymmat)
+    for i in range(len(displacements)):
+        dymmat[i] = -(all_forces[i].flatten() - reference_force.flatten())
+        dymmat[i] /= displacements[i]
+        hessian[i] = dymmat[i]
+        for j in range(len(displacements)):
+                dymmat[i,j] /= numpy.sqrt(masses[i/3]*masses[j/3])
+    dymmat = (dymmat + dymmat.transpose()) / 2.0
+    hessian = (hessian + hessian.transpose()) / 2.0
+
+    print 'Diagonalizing matrix'
+    omegas, ev = numpy.linalg.eigh(dymmat)
+    numpy.savetxt('omegas_squared.dat', omegas, fmt='%.12f')
+    force_constants, ev = numpy.linalg.eigh(hessian)
+    numpy.savetxt('force_constants.dat', force_constants, fmt='%.12f')
+
+    numpy.savetxt('modes.dat', ev, fmt='%.12f')
+
+    effective_masses = force_constants/omegas
+    numpy.savetxt('effective_masses.dat', effective_masses, fmt='%.12f')
+
+    print 'Writing modes to jmol formatted xyz: modes.xyz'
+    atoms = tsase.io.read('POSCAR')
+    write_jmol('modes.xyz', atoms, omegas, ev)
+
+if __name__ == '__main__':
+    dymmatrix()
+
