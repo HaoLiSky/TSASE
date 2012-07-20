@@ -2,7 +2,7 @@
 import numpy
 import os
 import glob
-import tsase
+import ase.io
 
 def outcar_forces(filename):
     f = open(filename)
@@ -109,8 +109,8 @@ def dymmatrix():
     numpy.savetxt('effective_masses.dat', effective_masses, fmt='%.12f')
 
     print 'Writing modes to jmol formatted xyz: modes.xyz'
-    atoms = tsase.io.read('POSCAR')
-    write_jmol('modes.xyz', atoms, omegas, ev)
+    atoms = ase.io.read('POSCAR')
+    write_jmol('modes.xyz', atoms, force_constants, ev)
 
 if __name__ == '__main__':
     dymmatrix()
