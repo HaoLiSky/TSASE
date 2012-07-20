@@ -165,7 +165,8 @@ def absorber_sphere(atoms, absorber, radius):
             atoms_sphere.append(ase.Atom(elements[i], r))
     return ase.Atoms(atoms_sphere)
 
-def exafs(atoms, txt="-", feff_options={}, tmp_dir=None, comm=None, pbc=False):
+def exafs(atoms, txt="-", feff_options={}, tmp_dir=None, comm=None, pbc=False,
+          elements=[]):
     from mpi4py import MPI
     if not comm:
         comm = MPI.COMM_WORLD
@@ -185,10 +186,12 @@ def exafs(atoms, txt="-", feff_options={}, tmp_dir=None, comm=None, pbc=False):
     outfile.write("\nCalculating EXAFS Spectra\n")
     outfile.write("Number of Atoms: %i\n" % len(atoms))
     outfile.write("Number of MPI Ranks: %i\n" % size)
-    outfile.flush()
 
     chi_total = {}
-    atomic_symbols = set( [ a.symbol for a in atoms ] )
+    if len(elements) == 0:
+        atomic_symbols = set( [ a.symbol for a in atoms ] )
+    else:
+        atomic_symbols = elements
     for symbol in atomic_symbols:
         chi_total[symbol] = []
 
@@ -197,12 +200,15 @@ def exafs(atoms, txt="-", feff_options={}, tmp_dir=None, comm=None, pbc=False):
     for i in range(len(atoms)):
         if i%size != rank:
             continue
+        if len(elements) > 0 and atoms[i].symbol not in elements:
+            continue
         if pbc and 'RMAX' in feff_options:
             atoms_sphere = absorber_sphere(atoms, i, float(feff_options['RMAX']))
             k, chi = run_feff(atoms_sphere, 0, feff_options, tmp_dir)
         else:
             k, chi = run_feff(atoms, i, feff_options, tmp_dir)
         chi_total[atoms[i].symbol].append(chi)
+        outfile.write("%i/%i\n"%(i+1,len(atoms)))
 
     #in case more ranks than atoms
     k = comm.bcast(k)
