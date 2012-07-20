@@ -47,6 +47,10 @@ def read(filename):
     except:
         pass
     try:
+        return read_feff(filename)
+    except:
+        pass
+    try:
         return ase.io.read(filename+"@:")
     except:
         pass

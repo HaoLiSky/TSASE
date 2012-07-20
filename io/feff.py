@@ -43,6 +43,7 @@ def read_feff(filename):
             tag = pot
             atoms.append(ase.Atom(symbol=atomic_number ,position=(x,y,z),
                                   tag=tag))
+    if len(atoms) == 0: raise Exception
     return atoms
 
 
@@ -52,7 +53,7 @@ def write_feff(filename, atoms, absorber, feff_options={}):
     for key, value in feff_options.iteritems():
         f.write("%s %s\n" % (key, value))
     f.write("\nPOTENTIALS\n")
-    absorber_z = atoms[absorber].get_atomic_number()
+    absorber_z = atoms[absorber].number
     f.write("%i %i\n" % (0, absorber_z))
 
     unique_z = list(set(atoms.get_atomic_numbers()))
@@ -71,5 +72,5 @@ def write_feff(filename, atoms, absorber, feff_options={}):
         if i == absorber:
             pot = 0
         else:
-            pot = pot_map[atom.get_atomic_number()]
+            pot = pot_map[atom.number]
         f.write("%f %f %f %i\n" % (atom.x, atom.y, atom.z, pot))
