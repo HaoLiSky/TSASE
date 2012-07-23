@@ -6,45 +6,40 @@ import ase.io
 
 def outcar_forces(filename):
     f = open(filename)
-    force_section = False
     all_forces = []
-    for line in f:
-        if 'HIPREC TOTAL-FORCE' in line:
-            force_section = True
-            continue 
 
-        if line.startswith('DYMAT'):
-            if force_section:
-                all_forces.append(forces)
-            force_section = False
+    while True:
+        line = f.readline()
+        if len(line) == 0: break #EOF
 
-        if force_section:
-            if '-------' in line:
-                forces = []
-                continue
+        if 'NIONS' in line:
             fields = line.split()
-            forces.append( [ float(field) for field in fields ] )
+            nions = int(fields[11])
+
+        if 'HIPREC TOTAL-FORCE' in line:
+            f.readline() #skip line
+            forces = numpy.fromfile(f, count=3*nions, sep=' ')
+            forces.reshape( (nions, 3) )
+            all_forces.append(forces)
 
     return numpy.array(all_forces)
 
 def outcar_masses(filename):
     f = open(filename)
-    natoms_type = []
-    for line in f:
-        if 'ions per type' in line:
-            for field in line.split()[4:]:
-                natoms_type.append(int(field))
-    f.seek(0)
-    masses = numpy.zeros(sum(natoms_type))
-    mass_start = 0
-    ntype = 0
+
+    type_mass = []
+    masses = []
     for line in f:
         if 'POMASS' in line and 'ZVAL' in line:
             mass = float(line.split()[2].rstrip(';'))
-            masses[mass_start:mass_start+natoms_type[ntype]] = mass
-            mass_start += natoms_type[ntype]
-            ntype += 1
-    return masses
+            type_mass.append(mass)
+
+        if 'ions per type' in line:
+            for i,field in enumerate(line.split()[4:]):
+                ntype = int(field)
+                masses += [ type_mass[i] for j in range(ntype) ]
+
+    return numpy.array(masses)
 
 def write_jmol(filename, atoms, eigs, evs):
     f_xyz = open(filename,'w')
