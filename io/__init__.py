@@ -1,5 +1,4 @@
 import ase.io
-from ase.io import vasp as asevasp
 from con import read_con, write_con
 from feff import read_feff, write_feff
 from bopfox import read_bopfox, write_bopfox
@@ -18,7 +17,7 @@ def read_vasp_multiframe(filename):
     data = []
     while True:
         try:
-            data.append(asevasp.read_vasp(f))
+            data.append(ase.io.read(f, format='vasp'))
         except:
             f.close()
             break
@@ -48,6 +47,10 @@ def read(filename):
         pass
     try:
         return read_feff(filename)
+    except:
+        pass
+    try:
+        return ase.io.read(filename, format='xyz')
     except:
         pass
     try:
