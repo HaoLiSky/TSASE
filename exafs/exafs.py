@@ -11,13 +11,17 @@ import shutil
 import itertools
 import atexit
 
-__all__ = [ "load_chi_dat", "run_feff", "exafs" ]
+__all__ = [ "load_chi_dat", "load_feff_dat", "run_feff", "exafs" ]
 
 def load_feff_dat(filename):
-    k = []
-    amplitude = []
-    phase = []
-    mean_free_path = []
+    xk = []
+    cdelta = []
+    afeff = []
+    phfeff = []
+    redfac = []
+    xlam = []
+    rep = []
+
     atoms = ase.Atoms()
     atoms.set_pbc((False,False,False))
 
@@ -43,7 +47,7 @@ def load_feff_dat(filename):
         if path_section:
             if "---------------" in line:
                 continue
-            r_eff = float(fields[2])
+            reff = float(fields[2])
             path_section = False
 
         if atoms_section:
@@ -57,22 +61,32 @@ def load_feff_dat(filename):
 
         if data_section:
             fields = [ float(f) for f in fields ]
-            k.append(fields[0])
-            amplitude.append(fields[2])
-            phase.append(fields[3])
-            mean_free_path.append(fields[5])
+            xk.append(fields[0])
+            cdelta.append(fields[1])
+            afeff.append(fields[2])
+            phfeff.append(fields[3])
+            redfac.append(fields[4])
+            xlam.append(fields[5])
+            rep.append(fields[6])
 
-    k = numpy.array(k)
-    amplitude = numpy.array(amplitude)
-    phase = numpy.array(phase)
-    mean_free_path = numpy.array(mean_free_path)
+    xk = numpy.array(xk)
+    cdelta = numpy.array(cdelta)
+    afeff = numpy.array(afeff)
+    phfeff = numpy.array(phfeff)
+    redfac = numpy.array(redfac)
+    xlam = numpy.array(xlam)
+    rep = numpy.array(rep)
+
     return { 
              "atoms":atoms,
-             "r_eff":r_eff,
-             "k":k,
-             "amplitude":amplitude,
-             "phase":phase,
-             "mean_free_path":mean_free_path,
+             "reff":reff,
+             "xk":xk,
+             "cdelta":cdelta,
+             "afeff":afeff,
+             "phfeff":phfeff,
+             "redfac":redfac,
+             "xlam":xlam,
+             "rep":rep,
            }
 
 def load_files_dat(filename):
@@ -113,7 +127,7 @@ def load_chi_dat(filename):
             chi.append(float(fields[1]))
     return numpy.array(k), numpy.array(chi)
 
-def run_feff(atoms, absorber, feff_options={}, tmp_dir=None):
+def run_feff(atoms, absorber, feff_options={}, tmp_dir=None, get_path=False):
     tmp_dir_path = tempfile.mkdtemp(prefix="tmp_feff_", dir=tmp_dir)
     tsase.io.write_feff(os.path.join(tmp_dir_path, "feff.inp"), atoms, absorber, feff_options)
     p = subprocess.Popen(["feff"], cwd=tmp_dir_path, stdout=open('/dev/null','w'),
@@ -129,8 +143,14 @@ def run_feff(atoms, absorber, feff_options={}, tmp_dir=None):
         sys.stderr.write("%s\n"%stderr)
         return run_feff(atoms, absorber, feff_options, tmp_dir)
     k, chi = load_chi_dat(os.path.join(tmp_dir_path, "chi.dat"))
+    if get_path:
+        path = load_feff_dat(os.path.join(tmp_dir_path, "feff0001.dat"))
     shutil.rmtree(tmp_dir_path)
-    return k, chi
+
+    if get_path:
+        return k, chi, path
+    else:
+        return k, chi
 
 class DevNull:
     def write(self, string): pass
