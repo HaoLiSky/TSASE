@@ -447,30 +447,6 @@ def query(reactant, kdbdir, outputdir = "./kdbmatches", nf=0.2, dc=0.3, nodupes 
         print "%10d" % entryMatches
 
 
-def server_query(args, options):
-    import httplib, urllib, json
-    params = {}
-    params['reactant'] = ''.join(open(args[0], 'r').readlines())
-    params['nf']  = options.nf
-    params['dc']  = options.dc
-    params  = urllib.urlencode(params)
-    headers = {'Content-type': 'application/x-www-form-urlencoded', 'Accept': 'text/plain'}
-    conn = httplib.HTTPConnection(host=options.host, port=options.port)
-    conn.request('POST', '/query', params, headers)
-    response = conn.getresponse()
-    print response.status, response.reason
-    data = json.loads(response.read())
-    print data['stdout']
-    if os.path.isdir('kdbmatches'):
-        shutil.rmtree('kdbmatches')
-    os.mkdir('kdbmatches')
-    for filename in data['files']:
-        f = open(os.path.join('kdbmatches', filename), 'w')
-        f.write(data['files'][filename])
-        f.close()
-    
-
-
 if __name__ == "__main__":
 
     # Parse command line options.
