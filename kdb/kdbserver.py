@@ -29,16 +29,12 @@ def insert():
     nf = float(b.request.forms.get('nf'))
     dc = float(b.request.forms.get('dc'))
     mac = float(b.request.forms.get('mac'))
-    b1 = float(b.request.forms.get('b1'))
-    b2 = float(b.request.forms.get('b2'))
-    p1 = float(b.request.forms.get('p1'))
-    p2 = float(b.request.forms.get('p2'))
-    output = commands.getoutput('%s %s %s %s %s --nf=%f --dc=%f --mac=%f --barrier1=%f --barrier2=%f --prefactor1=%f --prefactor2=%f --kdbdir=%s' % (INSERT_PATH,
+    output = commands.getoutput('%s %s %s %s %s --nf=%f --dc=%f --mac=%f --kdbdir=%s' % (INSERT_PATH,
                       os.path.join(tmpdir, 'reactant.con'),
                       os.path.join(tmpdir, 'saddle.con'),
                       os.path.join(tmpdir, 'product.con'),
                       os.path.join(tmpdir, 'mode.dat'),
-                      nf, dc, mac, b1, b2, p1, p2, KDB_PATH)) 
+                      nf, dc, mac, KDB_PATH)) 
     return output
     
 @b.post('/query')

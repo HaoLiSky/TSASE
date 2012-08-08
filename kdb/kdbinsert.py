@@ -174,7 +174,7 @@ def getProcessNeighbors(mobileAtoms, r, s, p, nf):
                 neighborAtoms.append(i)
     return neighborAtoms
 
-def insert(reactant, saddle, product, mode, kdbdir="./kdb", nf=0.2, dc=0.3, mac=0.7, barrier1=0.0, barrier2=0.0, prefactor1=0.0, prefactor2=0.0):
+def insert(reactant, saddle, product, mode, kdbdir="./kdb", nf=0.2, dc=0.3, mac=0.7):
     global NEIGHBOR_FUDGE, DISTANCE_CUTOFF, MOBILE_ATOM_CUTOFF
     NEIGHBOR_FUDGE = nf
     DISTANCE_CUTOFF = dc
@@ -278,12 +278,6 @@ def insert(reactant, saddle, product, mode, kdbdir="./kdb", nf=0.2, dc=0.3, mac=
         f.write(str(number))
         f.close()
         
-    # Save the barriers and prefactors.
-    if barrier1 > 0.0: numberfile(os.path.join(processPath, "barrier1"), barrier1)
-    if barrier2 > 0.0: numberfile(os.path.join(processPath, "barrier2"), barrier2)
-    if prefactor1 > 0.0: numberfile(os.path.join(processPath, "prefactor1"), prefactor1)
-    if prefactor2 > 0.0: numberfile(os.path.join(processPath, "prefactor2"), prefactor2)
-    
     # Save the list of mobile atoms.
     f = open(os.path.join(processPath, "mobile"), 'w')
     for atom in mobileAtoms:
@@ -325,18 +319,6 @@ if __name__ == "__main__":
     parser.add_option("-m", "--mac", dest = "mac", action="store", type="float", 
                       help = "mobile atom cutoff parameter",
                       default = MOBILE_ATOM_CUTOFF)
-    parser.add_option("--barrier1", dest = "b1", action="store", type="float", 
-                      help = "barrier energy for reactant to saddle",
-                      default = -1.0)
-    parser.add_option("--barrier2", dest = "b2", action="store", type="float", 
-                      help = "barrier energy for product to saddle",
-                      default = -1.0)
-    parser.add_option("--prefactor1", dest = "p1", action="store", type="float", 
-                      help = "prefactor for reactant to saddle",
-                      default = -1.0)
-    parser.add_option("--prefactor2", dest = "p2", action="store", type="float", 
-                      help = "prefactor for product to saddle",
-                      default = -1.0)
     options, args = parser.parse_args()
 
     # Make sure we get the reactant, saddle, product, and mode files.
@@ -351,8 +333,7 @@ if __name__ == "__main__":
     mode = load_mode(args[3])
     
     insert(reactant, saddle, product, mode, options.kdbdir, 
-           options.nf, options.dc, options.mac, options.b1, 
-           options.b2, options.p1, options.p2)
+           options.nf, options.dc, options.mac)
 
     
         

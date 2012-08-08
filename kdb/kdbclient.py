@@ -17,10 +17,6 @@ def server_insert(args, options):
     params['nf']  = options.nf
     params['dc']  = options.dc
     params['mac'] = options.mac
-    params['b1']  = options.b1
-    params['b2']  = options.b2
-    params['p1']  = options.p1
-    params['p2']  = options.p2
     params  = urllib.urlencode(params)
     headers = {'Content-type': 'application/x-www-form-urlencoded', 'Accept': 'text/plain'}
     conn = httplib.HTTPConnection(host=options.host, port=options.port)
@@ -69,18 +65,6 @@ if __name__ == "__main__":
     parser.add_option("-m", "--mac", dest = "mac", action="store", type="float", 
                       help = "mobile atom cutoff parameter",
                       default = 0.7)
-    parser.add_option("--barrier1", dest = "b1", action="store", type="float", 
-                      help = "barrier energy for reactant to saddle",
-                      default = -1.0)
-    parser.add_option("--barrier2", dest = "b2", action="store", type="float", 
-                      help = "barrier energy for product to saddle",
-                      default = -1.0)
-    parser.add_option("--prefactor1", dest = "p1", action="store", type="float", 
-                      help = "prefactor for reactant to saddle",
-                      default = -1.0)
-    parser.add_option("--prefactor2", dest = "p2", action="store", type="float", 
-                      help = "prefactor for product to saddle",
-                      default = -1.0)
     parser.add_option("--host", dest = "host", help = "the hostname of a kdbserver",
                       default = "localhost")
     parser.add_option("--port", dest = "port", action="store", type="int", 

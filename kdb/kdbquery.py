@@ -83,8 +83,6 @@ def getKDBentries(kdbdir, reactant):
                      "mode": os.path.join(procDir, "mode"),
                      "mobile": os.path.join(procDir, "mobile"),
                      "product": os.path.join(procDir, "min2.xyz"),
-                     "barrier": os.path.join(procDir, "barrier1"), 
-                     "prefactor": os.path.join(procDir, "prefactor1"), 
                      "mirror": False}
             entries.append(entry)
             entry = {"minimum": os.path.join(procDir, "min1.xyz"), 
@@ -92,8 +90,6 @@ def getKDBentries(kdbdir, reactant):
                      "mode": os.path.join(procDir, "mode"),
                      "mobile": os.path.join(procDir, "mobile"),
                      "product": os.path.join(procDir, "min2.xyz"),
-                     "barrier": os.path.join(procDir, "barrier1"), 
-                     "prefactor": os.path.join(procDir, "prefactor1"), 
                      "mirror": True}
             entries.append(entry)
             entry = {"minimum": os.path.join(procDir, "min2.xyz"), 
@@ -101,8 +97,6 @@ def getKDBentries(kdbdir, reactant):
                      "mode": os.path.join(procDir, "mode"),
                      "mobile": os.path.join(procDir, "mobile"),
                      "product": os.path.join(procDir, "min1.xyz"),
-                     "barrier": os.path.join(procDir, "barrier2"), 
-                     "prefactor": os.path.join(procDir, "prefactor2"), 
                      "mirror": False}
             entries.append(entry)
             entry = {"minimum": os.path.join(procDir, "min2.xyz"), 
@@ -110,8 +104,6 @@ def getKDBentries(kdbdir, reactant):
                      "mode": os.path.join(procDir, "mode"),
                      "mobile": os.path.join(procDir, "mobile"),
                      "product": os.path.join(procDir, "min1.xyz"),
-                     "barrier": os.path.join(procDir, "barrier2"), 
-                     "prefactor": os.path.join(procDir, "prefactor2"), 
                      "mirror": True}
             entries.append(entry)
     return entries
@@ -434,8 +426,6 @@ def query(reactant, kdbdir, outputdir = "./kdbmatches", nf=0.2, dc=0.3, nodupes 
             write_con(outputdir + "/SADDLE_%d" % numMatches, suggestion)
             write_con(outputdir + "/PRODUCT_%d" % numMatches, sugproduct)
             save_mode(outputdir + "/MODE_%d" % numMatches, modeTemp)
-            if os.path.isfile(entry["barrier"]): shutil.copyfile(entry["barrier"], outputdir + "/BARRIER_%d" % numMatches)
-            if os.path.isfile(entry["prefactor"]): shutil.copyfile(entry["prefactor"], outputdir + "/PREFACTOR_%d" % numMatches)
             os.system("touch %s/.done_%d" % (outputdir, numMatches))                        
             
             #save debug xyz suggestion file.
