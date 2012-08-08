@@ -462,10 +462,6 @@ if __name__ == "__main__":
                       default = NEIGHBOR_FUDGE)
     parser.add_option("--nodupes", dest = "nodupes", action="store_true",
                       help = "detect and remove duplicate suggestions (can be expensive)")
-    parser.add_option("--host", dest = "host", help = "the hostname of a kdbserver",
-                      default = "")
-    parser.add_option("--port", dest = "port", action="store", type="int", 
-                      help = "the port of a kdbserver", default = 8080)
     options, args = parser.parse_args()
 
     # Make sure we get the reactant file name.
@@ -476,10 +472,7 @@ if __name__ == "__main__":
     # Load the reactant con file.
     reactant = read_con(args[0])
     
-    if options.host != "":
-        server_query(args, options)
-    else:
-        query(reactant, options.kdbdir, "./kdbmatches", options.dc, options.nf, options.nodupes)
+    query(reactant, options.kdbdir, "./kdbmatches", options.dc, options.nf, options.nodupes)
 
             
 
