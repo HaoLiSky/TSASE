@@ -7,6 +7,7 @@ import glob
 
 from optparse import OptionParser
 
+import tsase
 from tsase.io import read_con
 
 import ase
@@ -281,18 +282,7 @@ def insert(reactant, saddle, product, mode, kdbdir="./kdb", nf=0.2, dc=0.3, mac=
     f.close()
     
     # Save a movie of the local process.
-    steps = 8
-    movie = [reactant.copy()]
-    for i in range(1, steps):
-        temp = reactant.copy()
-        temp.positions = reactant.positions + (saddle.positions - reactant.positions) * (i / float(steps))
-        movie.append(temp)
-    movie.append(saddle.copy())
-    for i in range(1, steps):
-        temp = reactant.copy()
-        temp.positions = saddle.positions + (product.positions - saddle.positions) * (i / float(steps))
-        movie.append(temp)
-    movie.append(product.copy())
+    movie = tsase.interpolate([reactant, saddle, product], 8)
     write_xyz(os.path.join(processPath, "movie.xyz"), movie)
         
     # Indicate that the process was inserted successfully.
