@@ -14,7 +14,7 @@ from ase.io.xyz import read_xyz, write_xyz
 
 from kdb import *
 
-def coordination_numbers(p, cutoff):
+def coordination_numbers(p, nf):
     nl = []
     for a in range(len(p)):
         nl.append([])
@@ -22,14 +22,14 @@ def coordination_numbers(p, cutoff):
             if b != a:
                 dist = numpy.linalg.norm(p.get_positions()[a] - p.get_positions()[b])        
                 if dist < (elements[p.get_chemical_symbols()[a]]["radius"] + 
-                           elements[p.get_chemical_symbols()[b]]["radius"]) * (1.0 + NEIGHBOR_FUDGE):
+                           elements[p.get_chemical_symbols()[b]]["radius"]) * (1.0 + nf):
                     nl[a].append(b)
     return [len(l) for l in nl]
 
-def getMappings(a, b, mappings = None):
+def getMappings(a, b, nf, dc, mappings = None):
     """ A recursive depth-first search for a complete set of mappings from atoms
         in configuration a to atoms in configuration b. Do not use the mappings
-        argument, this is only used internally for recursion. 
+        argument, this is only used internally for recursion.
         
         Returns None if no mapping was found, or a dictionary mapping atom 
         indices a to atom indices b.
@@ -41,7 +41,7 @@ def getMappings(a, b, mappings = None):
     # mappings.
     if mappings == None:
         # Find the least common coordination number in b.
-        bCoordinations = coordination_numbers(b, 3.3)
+        bCoordinations = coordination_numbers(b, nf)
         bCoordinationsCounts = {}
         for coordination in bCoordinations:
             if coordination in bCoordinationsCounts:
@@ -54,7 +54,7 @@ def getMappings(a, b, mappings = None):
                 bLeastCommonCoordination = coordination
         # Find one atom in a with the least common coordination number in b. 
         # If it does not exist, return None.
-        aCoordinations = coordination_numbers(a, 3.3)
+        aCoordinations = coordination_numbers(a, nf)
         try:
             aAtom = aCoordinations.index(bLeastCommonCoordination)
         except ValueError:
@@ -66,7 +66,7 @@ def getMappings(a, b, mappings = None):
                 # Make sure the element types are the same.
                 if a.get_chemical_symbols()[aAtom] != b.get_chemical_symbols()[i]:
                     continue
-                mappings = getMappings(a, b, {aAtom:i})
+                mappings = getMappings(a, b, nf, dc, {aAtom:i})
                 # If the result is not none, then we found a successful mapping.
                 if mappings is not None:
                     return mappings
@@ -98,7 +98,7 @@ def getMappings(a, b, mappings = None):
                         break
                     # Break if distance check fails  
                     bDist = atomAtomDistance(b, bAtom, mappings[aAtom])
-                    if abs(distances[aAtom] - bDist) > DISTANCE_CUTOFF:
+                    if abs(distances[aAtom] - bDist) > dc:
                         break
                 else:
                     # All distances were good, so create a new mapping.
@@ -108,7 +108,7 @@ def getMappings(a, b, mappings = None):
                     if len(newMappings) == len(a):
                         return newMappings
                     # Otherwise, recurse.
-                    newMappings = getMappings(a, b, newMappings)
+                    newMappings = getMappings(a, b, nf, dc, newMappings)
                     # Pass any successful mapping up the recursion chain. 
                     if newMappings is not None:
                         return newMappings     
@@ -136,8 +136,8 @@ def stripUnselectedAtoms(atoms, selected):
     dest.set_constraint(ase.constraints.FixAtoms(constraints))
     return dest, mapping
     
+    
 def getProcessMobileAtoms(r, s, p, mac):
-    #XXX: Need to use mac
     """ Returns a list of atom indices that move more than mac 
     between reactant and saddle, saddle and product, or 
     reactant and product. If no atoms move more than mac, returns
@@ -147,16 +147,16 @@ def getProcessMobileAtoms(r, s, p, mac):
     product2saddle = per_atom_norm(s.positions - p.positions, s.get_cell())
     reactant2product = per_atom_norm(p.positions - r.positions, s.get_cell())
     for i in range(len(s)):
-        if max(reactant2saddle[i], product2saddle[i], reactant2product[i]) > MOBILE_ATOM_CUTOFF:
+        if max(reactant2saddle[i], product2saddle[i], reactant2product[i]) > mac:
             mobileAtoms.append(i)
     if len(mobileAtoms) == 0:
         mobileAtoms.append(list(reactant2product).index(max(reactant2product)))
     return mobileAtoms
 
+
 def getProcessNeighbors(mobileAtoms, r, s, p, nf):
-    #XXX: need to use nf
     """ Given a list mobile atoms, a reactant, saddle, and product, 
-    returns a list of neighboring atoms according to the NEIGHBOR_FUDGE
+    returns a list of neighboring atoms according to the nf (NEIGHBOR_FUDGE)
     paramter."""
     neighborAtoms = []
     for atom in mobileAtoms:
@@ -165,7 +165,7 @@ def getProcessNeighbors(mobileAtoms, r, s, p, nf):
             if i in mobileAtoms or i in neighborAtoms:
                 continue
             r2 = elements[s.get_chemical_symbols()[i]]["radius"]
-            maxDist = (r1 + r2) * (1.0 + NEIGHBOR_FUDGE)
+            maxDist = (r1 + r2) * (1.0 + nf)
             if atomAtomPbcDistance(r, atom, i) < maxDist:
                 neighborAtoms.append(i)
             elif atomAtomPbcDistance(s, atom, i) < maxDist:
@@ -174,15 +174,12 @@ def getProcessNeighbors(mobileAtoms, r, s, p, nf):
                 neighborAtoms.append(i)
     return neighborAtoms
 
-def insert(reactant, saddle, product, mode, kdbdir="./kdb", nf=0.2, dc=0.3, mac=0.7):
-    global NEIGHBOR_FUDGE, DISTANCE_CUTOFF, MOBILE_ATOM_CUTOFF
-    NEIGHBOR_FUDGE = nf
-    DISTANCE_CUTOFF = dc
-    MOBILE_ATOM_CUTOFF = mac
 
-    mobileAtoms = getProcessMobileAtoms(reactant, saddle, product, MOBILE_ATOM_CUTOFF)
+def insert(reactant, saddle, product, mode, kdbdir="./kdb", nf=0.2, dc=0.3, mac=0.7):
+
+    mobileAtoms = getProcessMobileAtoms(reactant, saddle, product, mac)
         
-    selectedAtoms = mobileAtoms + getProcessNeighbors(mobileAtoms, reactant, product, saddle, NEIGHBOR_FUDGE)
+    selectedAtoms = mobileAtoms + getProcessNeighbors(mobileAtoms, reactant, product, saddle, nf)
     
     # Quit if not enough selected atoms.
     if len(selectedAtoms) < 2:
@@ -213,7 +210,7 @@ def insert(reactant, saddle, product, mode, kdbdir="./kdb", nf=0.2, dc=0.3, mac=
             v = pbc(temp.positions[i] - temp.positions[a], temp.get_cell())
             d = numpy.linalg.norm(v)
             if d < (elements[temp.get_chemical_symbols()[a]]["radius"] + 
-                    elements[temp.get_chemical_symbols()[i]]["radius"]) * (1.0 + NEIGHBOR_FUDGE):
+                    elements[temp.get_chemical_symbols()[i]]["radius"]) * (1.0 + nf):
                 temp[i].position = temp[a].position + v
                 working.append(i)
                 undone.remove(i)
@@ -223,7 +220,6 @@ def insert(reactant, saddle, product, mode, kdbdir="./kdb", nf=0.2, dc=0.3, mac=
     saddle.positions = reactant.positions + v1s
     product.positions = reactant.positions + v12
     
-
     # Find saddle center of coordinates.
     coc = numpy.zeros((1,3))
     for i in range(len(saddle)):
@@ -256,7 +252,7 @@ def insert(reactant, saddle, product, mode, kdbdir="./kdb", nf=0.2, dc=0.3, mac=
         dbSaddle = read_xyz(os.path.join(procdir, "saddle.xyz"))
         if len(saddle) != len(dbSaddle):
             continue
-        if getMappings(saddle, dbSaddle) is not None:
+        if getMappings(saddle, dbSaddle, nf, dc) is not None:
             print "duplicate of", procdir
             return      
 

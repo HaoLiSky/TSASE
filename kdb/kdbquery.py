@@ -17,9 +17,8 @@ from ase.io.xyz import read_xyz, write_xyz
 
 PBC_MAPPING_CHECK = False
 REBOX_SUGGESTIONS = False
-REMOVE_DUPLICATES = False
 
-def isDistance(pbcvector, target, box):
+def isDistance(pbcvector, target, box, dc):
     for x in [-1, 0, 1]:
         for y in [-1, 0, 1]:
             for z in [-1, 0, 1]:
@@ -27,7 +26,7 @@ def isDistance(pbcvector, target, box):
                 temp += x * box[0]
                 temp += y * box[1]
                 temp += z * box[2]
-                if abs(numpy.linalg.norm(temp) - target) < DISTANCE_CUTOFF:
+                if abs(numpy.linalg.norm(temp) - target) < dc:
                     return True
     return False
     
@@ -42,7 +41,7 @@ def centroid(a, which=None):
     return c
 
 
-def clump(c, atoms):
+def clump(c, atoms, nf):
     # Remove PBC's.
     temp = c.copy()
     undone = atoms[:]
@@ -55,7 +54,7 @@ def clump(c, atoms):
         for i in undone[:]:
             v = pbc(temp.positions[i] - temp.positions[a], temp.cell)
             d = numpy.linalg.norm(v)
-            if d < (elements[temp.get_chemical_symbols()[a]]["radius"] + elements[temp.get_chemical_symbols()[i]]["radius"]) * (1.0 + NEIGHBOR_FUDGE):
+            if d < (elements[temp.get_chemical_symbols()[a]]["radius"] + elements[temp.get_chemical_symbols()[i]]["radius"]) * (1.0 + nf):
                 temp.positions[i] = temp.positions[a] + v
                 working.append(i)
                 undone.remove(i)
@@ -110,10 +109,6 @@ def getKDBentries(kdbdir, reactant):
 
 
 def query(reactant, kdbdir, outputdir = "./kdbmatches", nf=0.2, dc=0.3, nodupes = False):
-    global DISTANCE_CUTOFF, NEIGHBOR_FUDGE, REMOVE_DUPLICATES
-    DISTANCE_CUTOFF = dc
-    NEIGHBOR_FUDGE = nf
-    REMOVE_DUPLICATES = nodupes
 
     # Get the ibox to speed up pbcs.
     ibox = numpy.linalg.inv(reactant.cell)
@@ -147,7 +142,7 @@ def query(reactant, kdbdir, outputdir = "./kdbmatches", nf=0.2, dc=0.3, nodupes 
                 continue
             r2 = elements[reactant.get_chemical_symbols()[j]]["radius"]
             d = numpy.linalg.norm(pbc(reactant.positions[i] - reactant.positions[j], reactant.cell, ibox))
-            if d > (r1 + r2) * (1 + NEIGHBOR_FUDGE):
+            if d > (r1 + r2) * (1 + nf):
                 continue
             if reactant.get_chemical_symbols()[j] not in reactantNeighbors[i]:
                 reactantNeighbors[i][reactant.get_chemical_symbols()[j]] = 0
@@ -206,7 +201,7 @@ def query(reactant, kdbdir, outputdir = "./kdbmatches", nf=0.2, dc=0.3, nodupes 
                     continue
                 r2 = elements[kdbmin.get_chemical_symbols()[j]]["radius"]
                 d = numpy.linalg.norm(kdbmin.positions[i] - kdbmin.positions[j])
-                if d > (r1 + r2) * (1 + NEIGHBOR_FUDGE):
+                if d > (r1 + r2) * (1 + nf):
                     continue
                 if kdbmin.get_chemical_symbols()[j] not in kdbNeighbors[i]:
                     kdbNeighbors[i][kdbmin.get_chemical_symbols()[j]] = 0
@@ -255,16 +250,16 @@ def query(reactant, kdbdir, outputdir = "./kdbmatches", nf=0.2, dc=0.3, nodupes 
                         continue
                     # Loop over the atoms in mapping and see if the distance
                     # between reactantAtom and mapping.values() atoms is the same
-                    # within DISTANCE_CUTOFF of the distance between kdbAtom
+                    # within dc (DISTANCE_CUTOFF) of the distance between kdbAtom
                     # and mapping.keys() atoms.
                     for DA in mapping.keys():
                         RA = mapping[DA]
                         pbcVector = atomAtomPbcVector(reactant, RA, reactantAtom)
                         if PBC_MAPPING_CHECK:
-                            if not isDistance(pbcVector, kdbDistances[DA], reactant.cell):
+                            if not isDistance(pbcVector, kdbDistances[DA], reactant.cell, dc):
                                 break
                         else:
-                            if abs(kdbDistances[DA] - atomAtomPbcDistance(reactant, RA, reactantAtom)) > DISTANCE_CUTOFF:
+                            if abs(kdbDistances[DA] - atomAtomPbcDistance(reactant, RA, reactantAtom)) > dc:
                                 break
                     else:
                         newMapping = mapping.copy()
@@ -279,7 +274,7 @@ def query(reactant, kdbdir, outputdir = "./kdbmatches", nf=0.2, dc=0.3, nodupes 
         # kdb configuration with the query configuration.
         for mapping in mappings:
         
-            reactantrot = clump(reactant, mapping.values())
+            reactantrot = clump(reactant, mapping.values(), nf)
         
             # Make a copy of kdbmin for rotation and put it in the box.
             kdbrot = kdbmin.copy()
@@ -358,7 +353,7 @@ def query(reactant, kdbdir, outputdir = "./kdbmatches", nf=0.2, dc=0.3, nodupes 
             # Calculate a score for this mapping.
             score = max([numpy.linalg.norm(pbc(kdbrot.positions[m] - reactantrot.positions[mapping[m]], reactantrot.cell)) for m in mapping])
             
-            if score > DISTANCE_CUTOFF:
+            if score > dc:
                 continue
             
             # Load the saddle from the database.
@@ -406,11 +401,11 @@ def query(reactant, kdbdir, outputdir = "./kdbmatches", nf=0.2, dc=0.3, nodupes 
                     sugproduct.positions[mapping[m]] = kdbProduct.positions[m]
             
             # Check for duplicates.
-            if REMOVE_DUPLICATES:
+            if nodupes:
                 isdupe = False
                 for unique in uniques:
                     pan = per_atom_norm(unique.positions - suggestion.positions, suggestion.cell, ibox)
-                    if max(pan) <= DISTANCE_CUTOFF:
+                    if max(pan) <= dc:
                         isdupe = True
                         break
                 if isdupe:
@@ -468,23 +463,6 @@ if __name__ == "__main__":
 
             
             
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
