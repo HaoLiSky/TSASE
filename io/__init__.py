@@ -50,7 +50,7 @@ def read(filename):
     except:
         pass
     try:
-        return ase.io.read(filename, format='xyz')
+        return ase.io.read(filename+"@:", format='xyz')
     except:
         pass
     try:
