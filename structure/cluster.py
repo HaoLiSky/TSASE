@@ -8,7 +8,6 @@ def randomCluster(n):
     atoms = ase.Atoms()
     atoms.append(ase.Atom('H', [0,0,0]))
     for i in range(n-1):
-        print i
         farthest = 1e300
         a = numpy.random.normal(0, 1, 3)
         a = n * a/numpy.linalg.norm(a)
