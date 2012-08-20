@@ -9,6 +9,7 @@ from optparse import OptionParser
 
 import tsase
 from tsase.io import read_con
+from tsase.data import elements
 
 import ase
 from ase.io.xyz import read_xyz, write_xyz

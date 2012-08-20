@@ -11,7 +11,7 @@ import math
 from optparse import OptionParser
 
 from kdb import *
-
+from tsase.data import elements
 from tsase.io import read_con, write_con
 from ase.io.xyz import read_xyz, write_xyz
 
