@@ -5,6 +5,7 @@ import sys
 import httplib
 import urllib
 import json
+import shutil
 from optparse import OptionParser
 
 
@@ -14,9 +15,6 @@ def server_insert(args, options):
     params['saddle']   = ''.join(open(args[2], 'r').readlines())
     params['product']  = ''.join(open(args[3], 'r').readlines())
     params['mode']     = ''.join(open(args[4], 'r').readlines())
-    params['nf']  = options.nf
-    params['dc']  = options.dc
-    params['mac'] = options.mac
     params  = urllib.urlencode(params)
     headers = {'Content-type': 'application/x-www-form-urlencoded', 'Accept': 'text/plain'}
     conn = httplib.HTTPConnection(host=options.host, port=options.port)
@@ -30,8 +28,6 @@ def server_insert(args, options):
 def server_query(args, options):
     params = {}
     params['reactant'] = ''.join(open(args[1], 'r').readlines())
-    params['nf']  = options.nf
-    params['dc']  = options.dc
     params  = urllib.urlencode(params)
     headers = {'Content-type': 'application/x-www-form-urlencoded', 'Accept': 'text/plain'}
     conn = httplib.HTTPConnection(host=options.host, port=options.port)
@@ -56,15 +52,6 @@ if __name__ == "__main__":
         - or - 
        %prog query [options] reactant"""
     parser = OptionParser(usage = usage)
-    parser.add_option("-n", "--nf", dest = "nf", action="store", type="float", 
-                      help = "neighbor fudge parameter",
-                      default = 0.2)
-    parser.add_option("-c", "--dc", dest = "dc", action="store", type="float", 
-                      help = "distance cutoff parameter",
-                      default = 0.3)
-    parser.add_option("-m", "--mac", dest = "mac", action="store", type="float", 
-                      help = "mobile atom cutoff parameter",
-                      default = 0.7)
     parser.add_option("--host", dest = "host", help = "the hostname of a kdbserver",
                       default = "localhost")
     parser.add_option("--port", dest = "port", action="store", type="int", 
