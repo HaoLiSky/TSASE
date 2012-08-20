@@ -2,6 +2,7 @@
 import ase
 from tsase.data import elements
 import math
+import random
 import numpy
 
 def randomCluster(n):
@@ -33,4 +34,57 @@ def randomCluster(n):
     return atoms
         
     
+def fastRandomCluster(n, gridSize=1.0, rattle=0.1):
+
+    def getNeighborSlots(position):
+        options = []
+        if (position[0] + gridSize, position[1] + 0, position[2] + 0) not in taken:
+            options.append((position[0] + gridSize, position[1] + 0, position[2] + 0))
+        if (position[0] - gridSize, position[1] + 0, position[2] + 0) not in taken:
+            options.append((position[0] - gridSize, position[1] + 0, position[2] + 0))
+        if (position[0] + 0, position[1] + gridSize, position[2] + 0) not in taken:
+            options.append((position[0] + 0, position[1] + gridSize, position[2] + 0))
+        if (position[0] + 0, position[1] - gridSize, position[2] + 0) not in taken:
+            options.append((position[0] + 0, position[1] - gridSize, position[2] + 0))
+        if (position[0] + 0, position[1] + 0, position[2] + gridSize) not in taken:
+            options.append((position[0] + 0, position[1] + 0, position[2] + gridSize))
+        if (position[0] + 0, position[1] + 0, position[2] - gridSize) not in taken:
+            options.append((position[0] + 0, position[1] + 0, position[2] - gridSize))
+        return options
+
+    atoms = ase.Atoms()
+    taken = {}
+    available = [(0,0,0)]
+    for i in range(n):
+        selected = random.choice(available)
+        taken[selected] = True
+        available.remove(selected)
+        newSlots = getNeighborSlots(selected)
+        for slot in newSlots:
+            if slot not in available:
+                available.append(slot)
+        atoms.append(ase.Atom('H', selected))
+    dr = numpy.random.normal(0, 1, (n,3))
+    big = max([numpy.linalg.norm(a) for a in dr])
+    for a in dr:
+        a /= big
+    dr *= rattle
+    atoms.positions += dr
+    return atoms
+        
+        
     
+if __name__ == "__main__":
+    from ase.optimize import FIRE
+    import ase.io
+    import tsase
+    p = fastRandomCluster(100)
+    p.center(1000)
+    lj = tsase.calculators.lj()
+    p.set_calculator(lj)
+    dyn = FIRE(p, trajectory='relax.traj')
+    dyn.run(fmax=0.05)
+    
+    
+    
+        
