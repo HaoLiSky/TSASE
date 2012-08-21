@@ -321,35 +321,3 @@ if __name__ == "__main__":
     
     insert(reactant, saddle, product, mode, options.kdbdir, 
            options.nf, options.dc, options.mac)
-
-    
-        
-    
-    
-                    
-                
-                
-        
-        
-    
-    
-    
-        
-        
-        
-        
-        
-            
-
-        
-
-
-
-
-
-
-
-
-
-
-

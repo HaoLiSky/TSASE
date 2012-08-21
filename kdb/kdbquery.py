@@ -423,9 +423,6 @@ def query(reactant, kdbdir, outputdir = "./kdbmatches", nf=0.2, dc=0.3, nodupes 
             save_mode(outputdir + "/MODE_%d" % numMatches, modeTemp)
             os.system("touch %s/.done_%d" % (outputdir, numMatches))                        
             
-            #save debug xyz suggestion file.
-            write_xyz(outputdir + "/saddle_%d.xyz" % numMatches, suggestion)
-
             entryMatches += 1
             numMatches += 1
 
@@ -458,12 +455,3 @@ if __name__ == "__main__":
     reactant = read_con(args[0])
     
     query(reactant, options.kdbdir, "./kdbmatches", options.dc, options.nf, options.nodupes)
-
-            
-
-            
-            
-
-
-
-

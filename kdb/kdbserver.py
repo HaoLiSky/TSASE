@@ -37,7 +37,8 @@ def insert():
                       os.path.join(tmpdir, 'mode.dat'),
                       NEIGHBOR_FUDGE, DISTANCE_CUTOFF, MOBILE_ATOM_CUTOFF, KDB_PATH)) 
     return output
-    
+
+
 @b.post('/query')
 def query():
     tmpdir = tempfile.mkdtemp()
