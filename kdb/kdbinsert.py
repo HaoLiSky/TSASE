@@ -8,7 +8,7 @@ import glob
 from optparse import OptionParser
 
 import tsase
-from tsase.io import read_con
+from tsase.io import read_con, write_con
 from tsase.data import elements
 
 import ase
@@ -179,6 +179,12 @@ def getProcessNeighbors(mobileAtoms, r, s, p, nf):
 
 def insert(reactant, saddle, product, mode, kdbdir="./kdb", nf=0.2, dc=0.3, mac=0.7):
 
+    # Keep a copy of the original reactant, saddle, product, and mode
+    original_reactant = reactant.copy()
+    original_saddle = saddle.copy()
+    original_product = product.copy()
+    original_mode = mode.copy()
+
     mobileAtoms = getProcessMobileAtoms(reactant, saddle, product, mac)
         
     selectedAtoms = mobileAtoms + getProcessNeighbors(mobileAtoms, reactant, product, saddle, nf)
@@ -192,6 +198,7 @@ def insert(reactant, saddle, product, mode, kdbdir="./kdb", nf=0.2, dc=0.3, mac=
     reactant, mapping = stripUnselectedAtoms(reactant, selectedAtoms)
     saddle, mapping = stripUnselectedAtoms(saddle, selectedAtoms)
     product, mapping = stripUnselectedAtoms(product, selectedAtoms)
+
 
     # Update the mode.
     newMode = numpy.zeros((len(selectedAtoms), 3))
@@ -285,6 +292,12 @@ def insert(reactant, saddle, product, mode, kdbdir="./kdb", nf=0.2, dc=0.3, mac=
     # Save a movie of the local process.
     movie = tsase.interpolate([reactant, saddle, product], 8)
     write_xyz(os.path.join(processPath, "movie.xyz"), movie)
+    
+    # Save a copy of the original structures.
+    write_con(os.path.join(processPath, 'original_reactant.con'), original_reactant)
+    write_con(os.path.join(processPath, 'original_saddle.con'), original_saddle)
+    write_con(os.path.join(processPath, 'original_product.con'), original_product)
+    save_mode(os.path.join(processPath, 'original_mode.dat'), original_mode)
         
     # Indicate that the process was inserted successfully.
     print "good"
