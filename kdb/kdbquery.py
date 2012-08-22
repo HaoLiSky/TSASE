@@ -268,7 +268,9 @@ def query(reactant, kdbdir, outputdir = "./kdbmatches", nf=0.2, dc=0.3, nodupes 
             mappings = newMappings
 
         # Load the mode.
-        mode = numpy.array([[float(item) for item in line.strip().split()] for line in open(entry["mode"], 'r').readlines()])
+        mode = None
+        if os.path.isfile(entry["mode"]):
+            mode = numpy.array([[float(item) for item in line.strip().split()] for line in open(entry["mode"], 'r').readlines()])
 
         # Loop over each mapping and try to find a rotation that aligns the
         # kdb configuration with the query configuration.
@@ -373,10 +375,11 @@ def query(reactant, kdbdir, outputdir = "./kdbmatches", nf=0.2, dc=0.3, nodupes 
                     kdbProduct.positions[i] += 2.0 * (kdbmin.positions[0] - kdbProduct.positions[i])
 
             # Map the mode.
-            modeTemp = reactantrot.positions * 0.0
-            for m in mapping:
-                modeTemp[mapping[m]] = mode[m]
-            modeTemp /= numpy.linalg.norm(modeTemp)
+            if mode is not None:
+                modeTemp = reactantrot.positions * 0.0
+                for m in mapping:
+                    modeTemp[mapping[m]] = mode[m]
+                modeTemp /= numpy.linalg.norm(modeTemp)
 
             # Perform the saddle transformation.
             kdbSaddle.positions -= translation1
@@ -384,7 +387,8 @@ def query(reactant, kdbdir, outputdir = "./kdbmatches", nf=0.2, dc=0.3, nodupes 
             kdbSaddle.positions += translation2
             
             # Perform the mode transformation.
-            modeTemp = numpy.dot(modeTemp, Rmat)
+            if mode is not None:
+                modeTemp = numpy.dot(modeTemp, Rmat)
 
             # Perform the product transformation.
             kdbProduct.positions -= translation1
@@ -420,7 +424,8 @@ def query(reactant, kdbdir, outputdir = "./kdbmatches", nf=0.2, dc=0.3, nodupes 
             # Write suggestion.
             write_con(outputdir + "/SADDLE_%d" % numMatches, suggestion)
             write_con(outputdir + "/PRODUCT_%d" % numMatches, sugproduct)
-            save_mode(outputdir + "/MODE_%d" % numMatches, modeTemp)
+            if mode is not None:
+                save_mode(outputdir + "/MODE_%d" % numMatches, modeTemp)
             os.system("touch %s/.done_%d" % (outputdir, numMatches))                        
             
             entryMatches += 1

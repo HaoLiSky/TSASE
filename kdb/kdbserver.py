@@ -27,15 +27,19 @@ def insert():
     f = open(os.path.join(tmpdir, 'product.con'), 'w')
     f.write(b.request.forms.get('product'))
     f.close()
-    f = open(os.path.join(tmpdir, 'mode.dat'), 'w')
-    f.write(b.request.forms.get('mode'))
-    f.close()
-    output = commands.getoutput('%s %s %s %s %s --nf=%f --dc=%f --mac=%f --kdbdir=%s' % (INSERT_PATH,
+    mode = b.request.forms.get('mode')
+    if mode:
+      f = open(os.path.join(tmpdir, 'mode.dat'), 'w')
+      f.write(mode)
+      f.close()
+    command = '%s %s %s %s --nf=%f --dc=%f --mac=%f --kdbdir=%s' % (INSERT_PATH,
                       os.path.join(tmpdir, 'reactant.con'),
                       os.path.join(tmpdir, 'saddle.con'),
                       os.path.join(tmpdir, 'product.con'),
-                      os.path.join(tmpdir, 'mode.dat'),
-                      NEIGHBOR_FUDGE, DISTANCE_CUTOFF, MOBILE_ATOM_CUTOFF, KDB_PATH)) 
+                      NEIGHBOR_FUDGE, DISTANCE_CUTOFF, MOBILE_ATOM_CUTOFF, KDB_PATH)
+    if mode:
+        command += ' --mode=%s' % os.path.join(tmpdir, 'mode.dat')
+    output = commands.getoutput(command) 
     return output
 
 

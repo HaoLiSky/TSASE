@@ -177,13 +177,15 @@ def getProcessNeighbors(mobileAtoms, r, s, p, nf):
     return neighborAtoms
 
 
-def insert(reactant, saddle, product, mode, kdbdir="./kdb", nf=0.2, dc=0.3, mac=0.7):
+def insert(reactant, saddle, product, mode=None, kdbdir="./kdb", nf=0.2, dc=0.3, mac=0.7):
 
-    # Keep a copy of the original reactant, saddle, product, and mode
+    # Keep a copy of the original data
     original_reactant = reactant.copy()
     original_saddle = saddle.copy()
     original_product = product.copy()
-    original_mode = mode.copy()
+
+    if mode is not None:
+        original_mode = mode.copy()
 
     mobileAtoms = getProcessMobileAtoms(reactant, saddle, product, mac)
         
@@ -201,10 +203,11 @@ def insert(reactant, saddle, product, mode, kdbdir="./kdb", nf=0.2, dc=0.3, mac=
 
 
     # Update the mode.
-    newMode = numpy.zeros((len(selectedAtoms), 3))
-    for m in mapping:
-        newMode[mapping[m]] = mode[m]
-    mode = newMode
+    if mode is not None:
+        newMode = numpy.zeros((len(selectedAtoms), 3))
+        for m in mapping:
+            newMode[mapping[m]] = mode[m]
+        mode = newMode
 
     # Remove PBC's.
     temp = reactant.copy()
@@ -276,7 +279,8 @@ def insert(reactant, saddle, product, mode, kdbdir="./kdb", nf=0.2, dc=0.3, mac=
     write_xyz(os.path.join(processPath, "min1.xyz"), reactant)
     write_xyz(os.path.join(processPath, "saddle.xyz"), saddle)
     write_xyz(os.path.join(processPath, "min2.xyz"), product)
-    save_mode(os.path.join(processPath, "mode"), mode)
+    if mode is not None:
+        save_mode(os.path.join(processPath, "mode"), mode)
 
     def numberfile(filename, number):
         f = open(filename, 'w')
@@ -297,7 +301,8 @@ def insert(reactant, saddle, product, mode, kdbdir="./kdb", nf=0.2, dc=0.3, mac=
     write_con(os.path.join(processPath, 'original_reactant.con'), original_reactant)
     write_con(os.path.join(processPath, 'original_saddle.con'), original_saddle)
     write_con(os.path.join(processPath, 'original_product.con'), original_product)
-    save_mode(os.path.join(processPath, 'original_mode.dat'), original_mode)
+    if mode is not None:
+        save_mode(os.path.join(processPath, 'original_mode.dat'), original_mode)
         
     # Indicate that the process was inserted successfully.
     print "good"
@@ -310,6 +315,9 @@ if __name__ == "__main__":
     parser.add_option("-d", "--kdbdir", dest = "kdbdir", 
                       help = "the path to the kinetic database",
                       default = "./kdb")
+    parser.add_option("-o", "--mode", dest = "mode", 
+                      help = "optional mode file",
+                      default = None)
     parser.add_option("-n", "--nf", dest = "nf", action="store", type="float", 
                       help = "neighbor fudge parameter",
                       default = NEIGHBOR_FUDGE)
@@ -322,7 +330,7 @@ if __name__ == "__main__":
     options, args = parser.parse_args()
 
     # Make sure we get the reactant, saddle, product, and mode files.
-    if len(args) < 4:
+    if len(args) < 3:
         parser.print_help()
         sys.exit()
 
@@ -330,7 +338,9 @@ if __name__ == "__main__":
     reactant = read_con(args[0])
     saddle = read_con(args[1])
     product = read_con(args[2])
-    mode = load_mode(args[3])
+    mode = None
+    if options.mode is not None:
+        mode = load_mode(options.mode)
     
     insert(reactant, saddle, product, mode, options.kdbdir, 
            options.nf, options.dc, options.mac)

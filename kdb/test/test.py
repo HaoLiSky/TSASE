@@ -6,14 +6,14 @@ import commands
 
 os.system("rm -rf kdb kdbmatches")
 
-out1 = commands.getoutput("../kdbinsert.py reactant.con saddle.con product.con mode.dat")
+out1 = commands.getoutput("../kdbinsert.py reactant.con saddle.con product.con --mode mode.dat")
 
 if out1 != "good":
 	print out1
 	print "fail"
 	sys.exit()
 
-out2 = commands.getoutput("../kdbinsert.py reactant.con saddle.con product.con mode.dat")
+out2 = commands.getoutput("../kdbinsert.py reactant.con saddle.con product.con --mode mode.dat")
 
 if out2 != "duplicate of ./kdb/Al/0":
 	print out2

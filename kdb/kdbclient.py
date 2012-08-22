@@ -14,7 +14,9 @@ def server_insert(args, options):
     params['reactant'] = ''.join(open(args[1], 'r').readlines())
     params['saddle']   = ''.join(open(args[2], 'r').readlines())
     params['product']  = ''.join(open(args[3], 'r').readlines())
-    params['mode']     = ''.join(open(args[4], 'r').readlines())
+    params['mode'] = ''
+    if options.mode:
+        params['mode'] = ''.join(open(options.mode, 'r').readlines())
     params  = urllib.urlencode(params)
     headers = {'Content-type': 'application/x-www-form-urlencoded', 'Accept': 'text/plain'}
     conn = httplib.HTTPConnection(host=options.host, port=options.port)
@@ -48,10 +50,13 @@ def server_query(args, options):
 if __name__ == "__main__":
 
     # Parse command line options.
-    usage = """%prog insert [options] reactant saddle product mode
+    usage = """%prog insert [options] reactant saddle product
         - or - 
        %prog query [options] reactant"""
     parser = OptionParser(usage = usage)
+    parser.add_option("-o", "--mode", dest = "mode", 
+                      help = "optional mode file",
+                      default = None)
     parser.add_option("--host", dest = "host", help = "the hostname of a kdbserver",
                       default = "localhost")
     parser.add_option("--port", dest = "port", action="store", type="int", 
@@ -60,8 +65,8 @@ if __name__ == "__main__":
 
     # Are we inserting or querying?
     if args[0] == 'insert':
-        # Make sure we get the reactant, saddle, product, and mode files.
-        if len(args) < 5:
+        # Make sure we get the reactant, saddle, and product files.
+        if len(args) < 4:
             parser.print_help()
             sys.exit()
         # Perform the insert.
