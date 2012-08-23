@@ -49,6 +49,10 @@ class _tsase_viewer:
                 needSend = True
             elif (atoms.cell != lastAtoms.cell).any():
                 needSend = True
+            elif len(atoms.constraints) != len(lastAtoms.constraints):
+                needSend = True
+            elif len(atoms.constraints) > 0 and (atoms.constraints[0].index != lastAtoms.constraints[0].index).any():
+                needSend = True
             if needSend:
                 self.xyz.put(atoms)
                 lastAtoms = atoms.copy()

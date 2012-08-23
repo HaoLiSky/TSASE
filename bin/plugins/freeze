@@ -1,0 +1,9 @@
+import ase.constraints
+
+def _tsase_func():
+    atoms = _get_ca()
+    c = ase.constraints.FixAtoms([int(i) for i in _plugin_args])
+    atoms.set_constraint(c)
+
+_tsase_func()
+
