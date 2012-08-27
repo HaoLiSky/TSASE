@@ -1,4 +1,6 @@
 
+import glob
+import os
 import numpy
 
 MOBILE_ATOM_CUTOFF = 0.7
@@ -109,3 +111,33 @@ def save_mode(modefileout, displace_vector):
     for i in range(len(displace_vector)):
         f.write("%.3f %.3f %.3f\n" % (displace_vector[i][0], 
             displace_vector[i][1], displace_vector[i][2]))
+
+def list_element_combinations(kdbdir):
+    combinations = [os.path.basename(i) for i in glob.glob(os.path.join(kdbdir, "*"))]
+    return combinations
+
+def combo_split(combo):
+    elements = []
+    for i in range(len(combo)):
+        if combo[i] == combo[i].lower():
+            elements[-1] += combo[i]
+        else:
+            elements.append(combo[i])
+    return elements
+
+def is_symbol_subset(a, b):
+    for symbol in a:
+        if symbol not in b:
+            return False
+    return True
+
+def query_has_all(kdbdir, symbols):
+    result = []
+    combinations = [os.path.basename(i) for i in glob.glob(os.path.join(kdbdir, "*"))]
+    for combo in combinations:
+        elements = combo_split(combo)
+        if not is_symbol_subset(symbols, elements):
+            continue
+        for N in glob.glob(os.path.join(kdbdir, combo, '*')):
+            result.append(N)
+    return result

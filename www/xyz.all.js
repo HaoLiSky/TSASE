@@ -71,8 +71,11 @@ function xyz(canvas) {
     
     self.atomColor = [0.8, 0.8, 1.0];
     self.clearColor = [1, 1, 1];
-    self.animated = false;
+    self.animator = null;
     self.radius = 1.0;
+    self.index = 0;
+    self.fps = 0;
+    self.mfps = 0;
 
     self.event_mousemove = function(e) {
         if(self.lastmousex == undefined) {
@@ -116,12 +119,25 @@ function xyz(canvas) {
         self.draw();
     }
 
+    self.event_mouseover = function(e) {
+        if(self.mfps > 0) {
+            self.animate(self.mfps);
+        }
+    }
+
+    self.event_mouseout = function(e) {
+        if(self.mfps > 0) {
+            self.animate(self.fps);
+        }
+    }
+
 
     self.queue_atoms = function() {
-        for(var i = 0; i < self.atoms.length; i++) {
-            var radius = elements[self.atoms[i]['symbol']]['radius'];
-            var color = elements[self.atoms[i]['symbol']]['color'].slice(0);
-            var position = self.atoms[i]['position'].slice(0);
+        for(var i = 0; i < self.atoms[self.index].length; i++) {
+            var atom = self.atoms[self.index][i];
+            var radius = elements[atom['symbol']]['radius'];
+            var color = elements[atom['symbol']]['color'].slice(0);
+            var position = atom['position'].slice(0);
             self.queue.push(["atom", position, radius, color, 0]);
         }
 
@@ -152,8 +168,8 @@ function xyz(canvas) {
 
 
     self.draw = function() {
-        self.canvas.width = self.canvas.offsetWidth;
-        self.canvas.height = self.canvas.offsetHeight;
+        self.canvas.width = self.canvas.width;
+        self.canvas.height = self.canvas.width;
         self.clear();
         self.queue = [];
         self.queue_atoms();
@@ -249,21 +265,24 @@ function xyz(canvas) {
         }
     }
 
-
     self.setAtoms = function(a) {
-        self.atoms = a.slice(0);
+        self.atoms = a.slice();
+        atoms = self.atoms[0];
         var minx=1e200, maxx=-1e200, miny=1e200, maxy=-1e200, minz=1e200, maxz=-1e200;
-        for(var i = 0; i < self.atoms.length; i++) {
-            minx = Math.min(minx, self.atoms[i]['position'][0]);
-            maxx = Math.max(maxx, self.atoms[i]['position'][0]);
-            miny = Math.min(miny, self.atoms[i]['position'][1]);
-            maxy = Math.max(maxy, self.atoms[i]['position'][1]);
-            minz = Math.min(minz, self.atoms[i]['position'][2]);
-            maxz = Math.max(maxz, self.atoms[i]['position'][2]);
+        for(var i = 0; i < atoms.length; i++) {
+            minx = Math.min(minx, atoms[i]['position'][0]);
+            maxx = Math.max(maxx, atoms[i]['position'][0]);
+            miny = Math.min(miny, atoms[i]['position'][1]);
+            maxy = Math.max(maxy, atoms[i]['position'][1]);
+            minz = Math.min(minz, atoms[i]['position'][2]);
+            maxz = Math.max(maxz, atoms[i]['position'][2]);
         }
         self.translation[0] = -minx - ((maxx - minx) * 0.5);
         self.translation[1] = -miny - ((maxy - miny) * 0.5);
         self.translation[2] = -minz - ((maxz - minz) * 0.5);
+        var xscale = self.canvas.width / ((maxx - minx) + 2*self.radius);
+        var yscale = self.canvas.height / ((maxy - miny) + 2*self.radius);
+        self.scale = Math.min(xscale, yscale);
         self.draw();
     }
 
@@ -278,6 +297,7 @@ function xyz(canvas) {
         if(radius != undefined) {
             self.radius = radius;
         }
+        self.animate(self.fps);
     }
 
     self.loadJSON = function(url) {
@@ -286,6 +306,10 @@ function xyz(canvas) {
         });
     }
     
+    self.trim = function(str) {
+        return str.replace(/^\s\s*/, '').replace(/\s\s*$/, '');
+    }
+
     self.loadXYZ = function(url) {
         jx.load(url, function(data) {
             var lines = data.split('\n');
@@ -295,7 +319,7 @@ function xyz(canvas) {
             for(var i = 0; i < nframes; i++) {
                 var atoms = [];
                 for(var j = 0; j < natoms; j++) {
-                    var line = lines[i*(natoms+2)+j+2].split(/\s+/);
+                    var line = self.trim(lines[i*(natoms+2)+j+2]).split(/\s+/);
                     var atom = {};
                     atom.symbol = line[0];
                     atom.position = [parseFloat(line[1]), parseFloat(line[2]), parseFloat(line[3])];
@@ -303,11 +327,27 @@ function xyz(canvas) {
                 }
                 trajectory.push(atoms);
             }
-            self.setAtoms(trajectory[0]);
+            self.setAtoms(trajectory);
         });
         
     }
 
+    self.nextFrame = function(){
+        self.index += 1;
+        if(self.index >= self.atoms.length) {
+            self.index = 0;
+        }
+        self.draw();
+    }
+
+    self.animate = function(fps) {
+        clearInterval(self.animator);
+        if (fps <= 0) {
+            clearInterval(self.animator);
+            return;
+        }
+        self.animator = setInterval(self.nextFrame, 1000/fps);
+    }
 
 
     self.canvas = canvas;
@@ -329,10 +369,11 @@ function xyz(canvas) {
     self.ctx = self.canvas.getContext("2d");
     window.addEventListener('mousemove', self.event_mousemove);
     window.addEventListener('mouseup', self.event_mouseup);
+    self.canvas.onmouseover = self.event_mouseover;
+    self.canvas.onmouseout = self.event_mouseout;
     self.canvas.onmousedown = self.event_mousedown;
     self.canvas.onmousewheel = self.event_mousewheel;
 
-    self.draw();
 
 }
 
@@ -343,6 +384,8 @@ function _xyz_populate() {
         var canvas = canvases[i];
         var newXYZ = new xyz(canvas);
         window._xyzs.push(newXYZ);
+        newXYZ.mfps = canvas.getAttribute('mfps') ? parseInt(canvas.getAttribute('mfps')) : 0;
+        newXYZ.fps = canvas.getAttribute('fps') ? parseInt(canvas.getAttribute('fps')) : 0;
         newXYZ.load(canvas.getAttribute('url'), 
                     canvas.getAttribute('filetype'), 
                     canvas.getAttribute('radius'));

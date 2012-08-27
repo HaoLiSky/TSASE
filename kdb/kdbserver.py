@@ -7,13 +7,17 @@ import json
 import glob
 from optparse import OptionParser
 import bottle as b
+from tsase.data import elements, num_elements
+import kdb
 from kdb import MOBILE_ATOM_CUTOFF, NEIGHBOR_FUDGE, DISTANCE_CUTOFF
-
 
 QUERY_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'kdbquery.py')
 INSERT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'kdbinsert.py')
 KDB_PATH = os.path.join(os.path.abspath(os.getcwd()), 'kdb')
+WWW_PATH = os.path.join(os.path.abspath(os.getcwd()), '..', 'www')
+PATH = os.path.dirname(os.path.abspath(__file__))
 
+b.TEMPLATE_PATH.append(os.path.join(PATH, 'templates'))
 
 @b.post('/insert')
 def insert():
@@ -62,7 +66,54 @@ def query():
 
 @b.route('/')
 def index():
-    return '<b>... under construction ...</b>'
+    return '... under construction ...'
+
+
+def toSymbolList(items):
+    symbols = []
+    if items is None:
+        return symbols
+    for item in items:
+        print item
+        newSymbol = None
+        try:
+            newSymbol = elements[int(item)]['symbol']
+        except:
+            pass
+        try:
+            newSymbol = elements[item.lower().capitalize()]['symbol']
+        except:
+            pass
+        if newSymbol is None:
+            for i in range(1, num_elements):
+                if item.lower() == elements[i]['name']:
+                    newSymbol = elements[i]['symbol']
+                    break
+        if newSymbol is not None:
+            symbols.append(newSymbol)
+    return symbols
+
+
+@b.route('/browse')
+def browse():
+    filter = toSymbolList(b.request.query.filter.split())
+    results = [os.path.relpath(r) for r in kdb.query_has_all(KDB_PATH, filter)]
+    return b.template('browse', filter=filter, results=results)
+
+@b.route('/static/<filename>')
+def static(filename):
+    return b.static_file(filename, os.path.join(PATH, 'static'))    
+
+@b.route('/www/<filename>')
+def www(filename):
+    return b.static_file(filename, WWW_PATH)    
+
+@b.route('/kdb/<combo>/<number>/<filename>')
+def kdbpath(combo, number, filename):
+    return b.static_file(os.path.join(combo, number, filename), KDB_PATH)    
+
+
+    
 
 if __name__ == "__main__":
     # Parse command line options.

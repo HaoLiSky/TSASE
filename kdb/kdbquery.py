@@ -460,3 +460,4 @@ if __name__ == "__main__":
     reactant = read_con(args[0])
     
     query(reactant, options.kdbdir, "./kdbmatches", options.dc, options.nf, options.nodupes)
+    
