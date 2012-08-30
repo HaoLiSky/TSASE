@@ -55,7 +55,7 @@ class fire_ssneb(minimizer_ssneb):
             if(self.Nsteps>self.Nmin):
                 self.dt = min(self.dt*self.finc,self.dtmax)
                 self.a *= self.fa
-            self.Nsteps+=1
+            self.Nsteps += 1
         else:
             # reset velocity and slow down
             self.v  *= 0.0

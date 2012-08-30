@@ -37,12 +37,12 @@ def read_con(filename):
     line_index = 0
     while True:
         try:
-            boxlengths = numpy.array([float(length) for length in lines[line_index+2].split()])
-            boxangles = numpy.array([float(angle) for angle in lines[line_index+3].split()])
+            boxlengths = numpy.array([float(length) for length in lines[line_index+2].split()[0:3]])
+            boxangles = numpy.array([float(angle) for angle in lines[line_index+3].split()[0:3]])
             cell = length_angle_to_box(boxlengths, boxangles)
-            num_types = int(lines[line_index+6].strip())
-            num_each_type = [int(n) for n in lines[line_index+7].split()]
-            mass_each_type = [float(n) for n in lines[line_index+8].split()]
+            num_types = int(lines[line_index+6].split()[0])
+            num_each_type = [int(n) for n in lines[line_index+7].split()[0:num_types]]
+            mass_each_type = [float(n) for n in lines[line_index+8].split()[0:num_types]]
             a = ase.Atoms('H'*sum(num_each_type))
             a.cell = cell
             a.set_pbc((True, True, True))

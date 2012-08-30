@@ -8,7 +8,7 @@ def FixBlock(indices_list):
             for j in range(i + 1, len(indices)):
                 bonds.append([indices[i], indices[j]])
     return FixBondLengths(bonds)
-    
+
 class FixBlockAxes:
 
     def __init__(self, index):
@@ -24,11 +24,7 @@ class FixBlockAxes:
 
     def copy(self):
         return FixBlockAxes(self.index)
-        
-        
-        
-        
-    
 
 
-    
+
+
