@@ -141,3 +141,4 @@ def query_has_all(kdbdir, symbols):
         for N in glob.glob(os.path.join(kdbdir, combo, '*')):
             result.append(N)
     return result
+

@@ -193,13 +193,14 @@ def insert(reactant, saddle, product, mode=None, kdbdir="./kdb", nf=0.2, dc=0.3,
     
     # Quit if not enough selected atoms.
     if len(selectedAtoms) < 2:
-        print "Too few atoms in process, or neighbor_fudge too small."
+        print "kdbinsert abort: Too few atoms in process, or neighbor_fudge too small."
         return
             
     # Remove unselected atoms.
     reactant, mapping = stripUnselectedAtoms(reactant, selectedAtoms)
-    saddle, mapping = stripUnselectedAtoms(saddle, selectedAtoms)
-    product, mapping = stripUnselectedAtoms(product, selectedAtoms)
+    saddle,   mapping = stripUnselectedAtoms(saddle,   selectedAtoms)
+    product,  mapping = stripUnselectedAtoms(product,  selectedAtoms)
+
 
 
     # Update the mode.
@@ -215,7 +216,7 @@ def insert(reactant, saddle, product, mode=None, kdbdir="./kdb", nf=0.2, dc=0.3,
     working = [undone.pop()]        
     while len(undone) > 0:
         if len(working) == 0:
-            print "Dissociated reactant, or neighbor_fudge too small."
+            print "kdbinsert abort: Dissociated reactant, or neighbor_fudge too small."
             return
         a = working.pop()
         for i in undone[:]:
@@ -342,5 +343,5 @@ if __name__ == "__main__":
     if options.mode is not None:
         mode = load_mode(options.mode)
     
-    insert(reactant, saddle, product, mode, options.kdbdir, 
-           options.nf, options.dc, options.mac)
+    insert(reactant, saddle, product, mode, kdbdir=options.kdbdir, 
+           nf=options.nf, dc=options.dc, mac=options.mac)

@@ -229,7 +229,7 @@ def query(reactant, kdbdir, outputdir = "./kdbmatches", nf=0.2, dc=0.3, nodupes 
                 db_a = m
         
         kdbUnmapped.remove(db_a)
-        
+
         while len(kdbUnmapped) > 0 and len(mappings) > 0:
             # Create a list of new mappings that will replace mappings at the
             # end of this iteration.
@@ -265,6 +265,7 @@ def query(reactant, kdbdir, outputdir = "./kdbmatches", nf=0.2, dc=0.3, nodupes 
                         newMapping = mapping.copy()
                         newMapping[kdbAtom] = reactantAtom
                         newMappings.append(newMapping)
+            # print mappings
             mappings = newMappings
 
         # Load the mode.
@@ -459,5 +460,5 @@ if __name__ == "__main__":
     # Load the reactant con file.
     reactant = read_con(args[0])
     
-    query(reactant, options.kdbdir, "./kdbmatches", options.dc, options.nf, options.nodupes)
+    query(reactant, options.kdbdir, "./kdbmatches", dc=options.dc, nf=options.nf, nodupes=options.nodupes)
     
