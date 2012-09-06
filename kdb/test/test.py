@@ -33,7 +33,7 @@ commands.getoutput("../kdbquery.py product.con")
 
 out4 = commands.getoutput("diff SADDLE_1 kdbmatches/SADDLE_1")
 
-if out3 != "":
+if out4 != "":
 	print out4
 	print "fail"
 	sys.exit()
