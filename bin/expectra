@@ -78,7 +78,6 @@ def main():
 
     args.func(args)
 
-
 def getxk(e):
     return numpy.sign(e)*numpy.sqrt(numpy.abs(e))
 
@@ -456,8 +455,9 @@ def exafs_first_shell(S02, energy_shift, absorber,
                     else:
                         chi_total = chi
         chi_total = COMM_WORLD.allreduce(chi_total)
-        chi_total /= COMM_WORLD.allreduce(interactions)
+        chi_total /= len(atoms)
         chi_total /= len(trajectory)
+        chi_total *= 2
         return k, chi_total
 
 def exafs_multiple_scattering(S02, energy_shift, absorber, 
