@@ -12,6 +12,11 @@ import mpi4py.MPI
 import numpy
 
 COMM_WORLD = mpi4py.MPI.COMM_WORLD
+def mpiexcepthook(type, value, traceback):
+    sys.__excepthook__(type, value, traceback)
+    sys.stderr.write("exception occured on rank %i\n" % COMM_WORLD.rank)
+    COMM_WORLD.Abort()
+sys.excepthook = mpiexcepthook
 
 BOHR = 0.529177249
 RYD = 13.605698
@@ -401,7 +406,6 @@ def exafs_first_shell(S02, energy_shift, absorber,
                 'RMAX':str(neighbor_cutoff),
                 'HOLE':'%i %.4f' % (feff_edge_number(edge), S02),
                 'CORRECTIONS':'%.4f %.4f' % (energy_shift, 0.0),
-                'NLEG':'4'
         }
 
         #generate the bulk reference state 
@@ -416,8 +420,10 @@ def exafs_first_shell(S02, energy_shift, absorber,
         k = None
         chi_total = None
 
-        counter = 0
+        counter = -1
+        interactions = 0
         nl = None
+
         for step, atoms in enumerate(trajectory):
             if COMM_WORLD.rank == 0:
                 print 'step %i/%i' % (step+1, len(trajectory))
@@ -436,21 +442,22 @@ def exafs_first_shell(S02, energy_shift, absorber,
                     continue
                 indicies, offsets = nl.get_neighbors(i)
                 for j, offset in zip(indicies, offsets):
-
+                    counter += 1
                     if counter % COMM_WORLD.size != COMM_WORLD.rank: 
-                        counter += 1
                         continue
-                    else:
-                        counter += 1
 
                     r = atoms.get_distance(i,j,True)
+                    if r >= neighbor_cutoff: continue
+                    interactions += 1
                     k, chi = chi_path(path, r, 0.0, energy_shift, S02, 1)
 
                     if chi_total != None:
                         chi_total += chi
                     else:
                         chi_total = chi
-
+        chi_total = COMM_WORLD.allreduce(chi_total)
+        chi_total /= COMM_WORLD.allreduce(interactions)
+        chi_total /= len(trajectory)
         return k, chi_total
 
 def exafs_multiple_scattering(S02, energy_shift, absorber, 
@@ -459,12 +466,15 @@ def exafs_multiple_scattering(S02, energy_shift, absorber,
                 'RMAX':str(rmax),
                 'HOLE':'%i %.4f' % (feff_edge_number(edge), S02),
                 'CORRECTIONS':'%.4f %.4f' % (energy_shift, 0.0),
-                'NLEG':'4'
+                'NLEG':'4',
         }
 
         k = None
         chi_total = None
-        for atoms in trajectory:
+        counter = -1
+        for step, atoms in enumerate(trajectory):
+            if COMM_WORLD.rank == 0:
+                print 'step %i/%i' % (step+1, len(trajectory))
             atoms = atoms.copy()
             if ignore_elements:
                 ignore_indicies = [atom.index for atom in atoms 
@@ -472,14 +482,23 @@ def exafs_multiple_scattering(S02, energy_shift, absorber,
                 del atoms[ignore_indicies]
 
             for i in xrange(len(atoms)):
+                counter += 1
+                if counter % COMM_WORLD.size != COMM_WORLD.rank: 
+                    continue
+
                 if atoms[i].symbol != absorber:
                     continue
 
                 k, chi = run_feff(atoms, i, feff_options)
+
                 if chi_total != None:
                     chi_total += chi
                 else:
                     chi_total = chi
+
+        chi_total = COMM_WORLD.allreduce(chi_total)
+        chi_total /= len(atoms)
+        chi_total /= len(trajectory)
 
         return k, chi_total
 
