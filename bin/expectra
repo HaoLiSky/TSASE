@@ -368,6 +368,7 @@ def modes_command(args):
     ensemble = harmonic_sampler(atoms, ews, evs, args.temperature, 
             args.samples)
 
+    #XXX: needs to be parallelized
     trajectory = []
     for snapshot in ensemble:
         trajectory.append(snapshot)
@@ -464,7 +465,7 @@ def exafs_first_shell(S02, energy_shift, absorber,
                     else:
                         chi_total = chi
         chi_total = COMM_WORLD.allreduce(chi_total)
-        chi_total /= atoms.get_chemical_symbols().count(symbol)
+        chi_total /= atoms.get_chemical_symbols().count(absorber)
         chi_total /= len(trajectory)
         chi_total *= 2
         return k, chi_total
@@ -506,7 +507,7 @@ def exafs_multiple_scattering(S02, energy_shift, absorber,
                     chi_total = chi
 
         chi_total = COMM_WORLD.allreduce(chi_total)
-        chi_total /= atoms.get_chemical_symbols().count(symbol)
+        chi_total /= atoms.get_chemical_symbols().count(absorber)
         chi_total /= len(trajectory)
 
         return k, chi_total
