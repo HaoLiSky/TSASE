@@ -7,10 +7,72 @@ import tempfile
 
 import ase.io
 import ase.lattice
+from ase.calculators.neighborlist import NeighborList
+import mpi4py.MPI
 import numpy
+
+COMM_WORLD = mpi4py.MPI.COMM_WORLD
 
 BOHR = 0.529177249
 RYD = 13.605698
+
+def main():
+    import argparse
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--first-shell', action='store_true', default=True)
+    parser.add_argument('--neighbor-cutoff', type=float, metavar='DISTANCE',
+            help='1st neighbor cutoff distance', default=3.4)
+
+    parser.add_argument('--multiple-scattering', action='store_true')
+    parser.add_argument('--rmax', type=float, metavar='DISTANCE', 
+            default=6.0, help='maximum scattering half-path length')
+
+    parser.add_argument('--S02', type=float, metavar='FACTOR', 
+            default=1.0, help='amplitude reduction factor')
+    parser.add_argument('--energy-shift', type=float, metavar='ENERGY', 
+            default=0.0, help='energy shift to apply in eV')
+    parser.add_argument('--absorber', type=str, metavar='ELEMENT', 
+            help='atomic symbol of the xray absorber')
+    parser.add_argument('--ignore-elements', type=str, metavar='ELEMENTS',
+            help='comma delimited list of elements to ignore in the ' + \
+            'scattering calculation')
+    parser.add_argument('--edge', type=str, help='one of K, L1, L2, L3',
+                        default='K')
+
+    subparsers = parser.add_subparsers(help='sub-command help')
+    parser_snapshots = subparsers.add_parser('snapshots',
+            help='average EXAFS signal from snapshots of a trajectory')
+    parser_snapshots.add_argument('--skip', type=int, default=0,
+            help='number of frames to skip at the beginning')
+    parser_snapshots.add_argument('--every', type=int, default=1,
+            help='number of frames to between each step')
+    parser_snapshots.add_argument('trajectories', metavar='TRAJ', nargs='+',
+            help='trajectory file (POSCAR, con, xyz)')
+    parser_snapshots.set_defaults(func=snapshots_command)
+
+    parser_modes = subparsers.add_parser('modes',
+            help='average EXAFS signal from harmonic approximation using ' + \
+            'normal modes')
+    parser_modes.add_argument('--samples', type=int, default=100,
+            help='number of samples to average together')
+    parser_modes.add_argument('--temperature', type=float, default=298.0)
+    parser_modes.add_argument('POSITIONS', help='structure file (POSCAR, con, xyz)')
+    parser_modes.add_argument('EIGENVECTORS')
+    parser_modes.add_argument('EIGENVALUES')
+    parser_modes.set_defaults(func=modes_command)
+
+    args = parser.parse_args()
+
+    if args.ignore_elements:
+        args.ignore_elements = args.ignore_elements.split(',')
+
+    if args.multiple_scattering == True:
+        args.first_shell = False
+
+    args.func(args)
+
 
 def getxk(e):
     return numpy.sign(e)*numpy.sqrt(numpy.abs(e))
@@ -200,7 +262,7 @@ def load_feff_dat(filename):
 
 def write_feff(filename, atoms, absorber, feff_options={}):
     f = open(filename, "w")
-    f.write("TITLE %s\n" % atoms.get_chemical_formula())
+    f.write("TITLE %s\n" % str(atoms))
     for key, value in feff_options.iteritems():
         f.write("%s %s\n" % (key, value))
     f.write("\nPOTENTIALS\n")
@@ -281,6 +343,7 @@ def get_default_absorber(atoms, args):
         sys.exit(2)
 
 def save_result(k, chi):
+    if COMM_WORLD.rank != 0: return
     print 'saving result to chi.dat'
     f = open('chi.dat', 'w')
     for i in xrange(len(k)):
@@ -324,7 +387,13 @@ def exafs_trajectory(args, trajectory):
 
     return k, chi
     
-
+def get_bond_pairs(atoms, cutoff=3.3):
+    bonds = []                                                                  
+    for i in range(len(atoms)):
+        for j in range(i+1, len(atoms)):
+            if atoms.get_distance(i,j,True) < cutoff:
+                bonds.append( (i,j) )
+    return bonds
 
 def exafs_first_shell(S02, energy_shift, absorber, 
         ignore_elements, edge, neighbor_cutoff, trajectory):
@@ -346,19 +415,33 @@ def exafs_first_shell(S02, energy_shift, absorber,
 
         k = None
         chi_total = None
+
+        counter = 0
+        nl = None
         for step, atoms in enumerate(trajectory):
-            print "step %i/%i" % (step+1, len(trajectory))
+            if COMM_WORLD.rank == 0:
+                print 'step %i/%i' % (step+1, len(trajectory))
             atoms = atoms.copy()
             if ignore_elements:
                 ignore_indicies = [atom.index for atom in atoms 
                                    if atom.symbol in ignore_elements]
                 del atoms[ignore_indicies]
+            if nl == None:
+                nl = NeighborList(len(atoms)*[neighbor_cutoff], skin=0.3, 
+                        self_interaction=False)
+            nl.update(atoms)
 
             for i in xrange(len(atoms)):
                 if atoms[i].symbol != absorber:
                     continue
+                indicies, offsets = nl.get_neighbors(i)
+                for j, offset in zip(indicies, offsets):
 
-                for j in xrange(i+1, len(atoms)):
+                    if counter % COMM_WORLD.size != COMM_WORLD.rank: 
+                        counter += 1
+                        continue
+                    else:
+                        counter += 1
 
                     r = atoms.get_distance(i,j,True)
                     k, chi = chi_path(path, r, 0.0, energy_shift, S02, 1)
@@ -399,65 +482,6 @@ def exafs_multiple_scattering(S02, energy_shift, absorber,
                     chi_total = chi
 
         return k, chi_total
-
-def main():
-    import argparse
-
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument('--first-shell', action='store_true', default=True)
-    parser.add_argument('--neighbor-cutoff', type=float, metavar='DISTANCE',
-            help='1st neighbor cutoff distance', default=3.4)
-
-    parser.add_argument('--multiple-scattering', action='store_true')
-    parser.add_argument('--rmax', type=float, metavar='DISTANCE', 
-            default=6.0, help='maximum scattering half-path length')
-
-    parser.add_argument('--S02', type=float, metavar='FACTOR', 
-            default=1.0, help='amplitude reduction factor')
-    parser.add_argument('--energy-shift', type=float, metavar='ENERGY', 
-            default=0.0, help='energy shift to apply in eV')
-    parser.add_argument('--absorber', type=str, metavar='ELEMENT', 
-            help='atomic symbol of the xray absorber')
-    parser.add_argument('--ignore-elements', type=str, metavar='ELEMENTS',
-            help='comma delimited list of elements to ignore in the ' + \
-            'scattering calculation')
-    parser.add_argument('--edge', type=str, help='one of K, L1, L2, L3',
-                        default='K')
-
-    subparsers = parser.add_subparsers(help='sub-command help')
-    parser_snapshots = subparsers.add_parser('snapshots',
-            help='average EXAFS signal from snapshots of a trajectory')
-    parser_snapshots.add_argument('--skip', type=int, default=0,
-            help='number of frames to skip at the beginning')
-    parser_snapshots.add_argument('--every', type=int, default=1,
-            help='number of frames to between each step')
-    parser_snapshots.add_argument('trajectories', metavar='TRAJ', nargs='+',
-            help='trajectory file (POSCAR, con, xyz)')
-    parser_snapshots.set_defaults(func=snapshots_command)
-
-    parser_modes = subparsers.add_parser('modes',
-            help='average EXAFS signal from harmonic approximation using ' + \
-            'normal modes')
-    parser_modes.add_argument('--samples', type=int, default=100,
-            help='number of samples to average together')
-    parser_modes.add_argument('--temperature', type=float, default=298.0)
-    parser_modes.add_argument('POSITIONS', help='structure file (POSCAR, con, xyz)')
-    parser_modes.add_argument('EIGENVECTORS')
-    parser_modes.add_argument('EIGENVALUES')
-    parser_modes.set_defaults(func=modes_command)
-
-
-    #args = parser.parse_args(['modes', 'POSCAR', 'modes.dat', 'eigs.dat'])
-    args = parser.parse_args()
-
-    if args.ignore_elements:
-        args.ignore_elements = args.ignore_elements.split(',')
-
-    if args.multiple_scattering == True:
-        args.first_shell = False
-
-    args.func(args)
 
 
 if __name__ == '__main__':
