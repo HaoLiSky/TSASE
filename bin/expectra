@@ -1,0 +1,479 @@
+#!/usr/bin/env python
+
+import sys
+from optparse import OptionParser, OptionGroup
+import math
+import resource
+import time
+
+from mpi4py import MPI
+def mpiexcepthook(type, value, traceback):
+    sys.__excepthook__(type, value, traceback)
+    sys.stderr.write("exception occured on rank %i\n" % MPI.COMM_WORLD.rank)
+    MPI.COMM_WORLD.Abort()
+sys.excepthook = mpiexcepthook
+
+class ASE_MPI4PY:
+    def __init__(self):
+        from mpi4py import MPI
+        self.comm = MPI.COMM_WORLD
+        self.rank = self.comm.rank
+        self.size = self.comm.size
+
+    def sum(self, a):
+        return self.comm.allreduce(a)
+
+    def barrier(self):
+        self.comm.barrier()
+
+    def broadcast(self, a, rank):
+        a[:] = self.comm.bcast(a, rank)
+
+import ase
+import ase.parallel
+ase.parallel.world = ASE_MPI4PY()
+ase.parallel.rank = ase.parallel.world.rank
+ase.parallel.size = ase.parallel.world.size
+ase.parallel.barrier = ase.parallel.world.barrier
+from ase.parallel import parprint, paropen
+from ase.md.langevin import Langevin
+from ase.md.velocitydistribution import MaxwellBoltzmannDistribution
+from ase.md import MDLogger
+from ase import units
+from ase.io.trajectory import PickleTrajectory
+import tsase
+import numpy
+from qsc import QSC
+from ase.optimize.optimize import Dynamics
+from ase.units import kB
+
+def mpiexcepthook(type, value, traceback):
+    sys.__excepthook__(type, value, traceback)
+    from mpi4py import MPI
+    sys.stderr.write("exception occured on rank %i\n" % MPI.COMM_WORLD.rank);
+    MPI.COMM_WORLD.Abort()
+sys.excepthook = mpiexcepthook
+
+world = MPI.COMM_WORLD
+rank = world.rank
+size = world.size
+
+
+
+class MetropolisMonteCarlo(Dynamics):
+    def __init__(self, atoms,
+                 temperature=100 * kB,
+                 dr=0.001,
+                 logfile='-', 
+                 trajectory='monte_carlo.traj',
+                 adjust_cm=True):
+        Dynamics.__init__(self, atoms, logfile, trajectory)
+        self.kT = temperature
+        self.dr = dr
+        self.accepts = 0
+        self.total_steps = 0
+        if adjust_cm:
+            self.cm = atoms.get_center_of_mass()
+        else:
+            self.cm = None
+        self.initialize()
+
+    def initialize(self):
+        self.positions = 0.0 * self.atoms.get_positions()
+        self.positions = self.atoms.get_positions()
+        self.call_observers()
+        self.log(-1, self.atoms.get_potential_energy())
+                
+    def step(self):
+        while True:
+            yield self.run(1)
+                
+    def run(self, steps):
+        E_current = self.atoms.get_potential_energy()
+        for step in range(steps):
+            ro = self.atoms.get_positions()
+            self.move()
+            E_trial = self.atoms.get_potential_energy()
+
+            accept = numpy.exp((E_current - E_trial) / self.kT) > numpy.random.uniform()
+            if accept:
+                E_current = E_trial
+                self.accepts += 1
+            else:
+                self.atoms.set_positions(ro)
+            self.total_steps += 1
+            self.log(self.total_steps, E_current)
+            self.call_observers()
+
+    def get_acceptance_ratio(self):
+        return float(self.accepts)/float(self.total_steps)
+
+
+    def log(self, step, E_current):
+        if self.logfile is None:
+            return
+        name = self.__class__.__name__
+        self.logfile.write('%s: step %2d, energy %15.6f\n'
+                           % (name, step, E_current))
+        self.logfile.flush()
+
+    def move(self):
+        atoms = self.atoms
+        # displace coordinates
+        disp = numpy.random.uniform(-1., 1., (len(atoms), 3))
+        rn = atoms.get_positions() + self.dr * disp
+        atoms.set_positions(rn)
+        if self.cm is not None:
+            cm = atoms.get_center_of_mass()
+            atoms.translate(self.cm - cm)
+        rn = atoms.get_positions()
+        ase.parallel.world.broadcast(rn, 0)
+        atoms.set_positions(rn)
+        return atoms.get_positions()
+
+
+class MDSnapshots:
+    def __init__(self, atoms, options):
+        self.atoms = atoms
+        self.options = options
+        self.max_snapshot_steps = options.max_steps
+        self.nsnapshots = 0
+
+        calc = QSC()
+        self.atoms.set_calculator(calc)
+        MaxwellBoltzmannDistribution(atoms, options.temperature*units.kB)
+        self.dyn = Langevin(self.atoms, options.time_step*units.fs, 
+                             options.temperature*units.kB, 0.02)
+        traj = PickleTrajectory("exafs_md.traj", 'w', self.atoms,
+                                backup=False)
+        self.dyn.attach(traj, interval=options.snapshot_steps)
+
+        mdlog = MDLogger(self.dyn, self.atoms, "exafs_md.log", stress=False,
+                         peratom=True, header=True)
+        self.dyn.attach(mdlog, interval=options.snapshot_steps)
+
+        self.simulation_time = options.equillibration_steps*options.time_step
+        parprint("equillibrating for %.2e s" % (1e-15*self.simulation_time))
+        self.dyn.run(options.equillibration_steps)
+        self.first_time = True
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        if self.nsnapshots == self.max_snapshot_steps:
+            raise StopIteration
+
+        if self.first_time:
+            self.first_time = False
+            return self.atoms.copy()
+        self.nsnapshots += 1
+
+        self.dyn.run(self.options.snapshot_steps)
+        self.simulation_time += self.options.snapshot_steps * \
+                                self.options.time_step
+        return self.atoms.copy()
+
+class TrajectorySnapshots:
+    def __init__(self, traj, options):
+        self.traj = traj
+        self.options = options
+        self.frame = self.options.equillibration_steps
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        if self.frame >= len(self.traj):
+            raise StopIteration
+        rframe = self.traj[self.frame]
+        self.frame += options.snapshot_steps
+        return rframe
+
+class AverageChi:
+    def __init__(self, options):
+        self.chis = {}
+        self.k = None
+        self.k_weight = options.k_weight
+        self.residual = None
+
+    def append(self, k, chi):
+        self.k = k
+        old_average = self.get_weighted_average()
+        for symbol in chi:
+            if symbol not in self.chis:
+                self.chis[symbol] = []
+            self.chis[symbol].append(chi[symbol])
+        new_average = self.get_weighted_average()
+
+        if old_average == None:
+            return
+
+        residuals = []
+        for symbol in self.chis:
+            residual = numpy.linalg.norm(new_average[symbol] - 
+                                         old_average[symbol])
+            residuals.append(residual)
+        self.residual = max(residuals)
+
+    def get_average(self):
+        if len(self.chis) == 0:
+            return None
+        result = {}
+        for symbol in self.chis:
+            result[symbol] = numpy.average(self.chis[symbol], axis=0)
+        return result
+
+    def get_weighted_average(self):
+        if len(self.chis) == 0:
+            return None
+        result = {}
+        for symbol in self.chis:
+            result[symbol] = self.chis[symbol]*self.k**self.k_weight
+            result[symbol] = numpy.average(self.chis[symbol], axis=0)
+        return result
+
+def write_chi(k, average_chi, number=None):
+    chi = average_chi.get_average()
+    for symbol in chi:
+        if number:
+            fn_chi = "chi_%s_%i.dat" % (symbol, number)
+            fn_kchi = "kchi_%s_%i.dat" % (symbol, number)
+        else:
+            fn_chi = "chi_%s.dat" % symbol
+            fn_kchi = "kchi_%s.dat" % symbol
+        f_chi = paropen(fn_chi, "w")
+        f_kchi = paropen(fn_kchi, "w")
+        for j in range(len(k)):
+            f_chi.write("%f %f\n"%(k[j],chi[symbol][j]))
+            f_kchi.write("%f %f\n"%(k[j],k[j]*chi[symbol][j]))
+        f_chi.close()
+        f_kchi.close()
+
+class Logger:
+    def __init__(self, logpath):
+        self.logpath = logpath
+        self.logfile = None
+        
+    def log(self, msg):
+        if rank == 0:
+            if not self.logfile:
+                self.logfile = open(self.logpath, 'w', 1)
+            self.logfile.write(msg+'\n')
+            print msg
+log = Logger('expectra.log').log
+
+
+class PDF:
+    def __init__(self, options):
+        self.bond_lengths = []
+        self.r_min = options.pdf_start
+        self.r_max = options.pdf_end
+        self.updates = 0
+
+    def update(self, atoms):
+        self.atoms = atoms
+        self.updates += 1
+        pos = atoms.get_positions()
+        for i in range(0, len(atoms)):
+            if atoms[i].symbol not in options.elements:
+                continue
+            for j in range(0, len(atoms)):
+                if i==j: continue
+                if atoms[j].symbol not in options.elements:
+                    continue
+                d = atoms.get_distance(i,j)
+                if d <= self.r_max and d >= self.r_min:
+                    self.bond_lengths.append(d)
+
+    def write(self):
+        log("writing pdf histogram to pdf.dat")
+        bins = numpy.arange(options.pdf_start, options.pdf_end+options.bin_width, options.bin_width)
+        hist, bins = numpy.histogram(self.bond_lengths, bins=bins)
+        center = (bins[:-1]+bins[1:])/2.0
+        f = paropen('pdf.dat', 'w')
+        hist = numpy.array(hist, dtype='float')
+        hist /= self.updates
+        if len(options.elements) > 0:
+            for z in options.elements:
+                n += self.atoms.get_chemical_symbols().count(z)
+            hist /= float(n)
+        else:
+            hist /= len(self.atoms)
+
+        for i in xrange(len(hist)):
+            f.write("%8.4f %.6f\n" % (center[i], hist[i]))
+        f.close()
+
+        f = paropen('dw.dat','w')
+        f.write('%e\n' % numpy.var(self.bond_lengths))
+        f.close()
+
+def main(options, filename):
+    log("Options:")
+    for option, value in options.__dict__.iteritems():
+        log("    %s: %r" % (option, value))
+    start_time = time.time()
+    if options.read_trajectory:
+        if filename.startswith('XDATCAR'):
+            traj = tsase.io.read_xdatcar(filename)
+        else:
+            traj = PickleTrajectory(filename)
+        snapshots = TrajectorySnapshots(traj, options)
+    else:
+        if filename[-3:] == "con" and '.' in filename:
+            atoms = tsase.io.read_con(filename)
+        else:
+            atoms = ase.io.read(filename)
+        snapshots = MDSnapshots(atoms, options)
+
+
+    iter_below_tol = 0
+
+    if options.pdf:
+        pdf = PDF(options)
+
+    average_chi = AverageChi(options)
+
+    for i, atoms in enumerate(snapshots):
+        feff_options = {'RMAX':str(options.rmax),
+                        'HOLE':'%i %.4f'%(options.hole, options.S02),
+                        'CORRECTIONS':'%.3f %.3f'%(options.real_shift, options.imag_shift),
+                        'NLEG':'4'}
+        k, chi = tsase.exafs.exafs(atoms, feff_options=feff_options, txt=None,
+                                   elements=options.elements)
+        average_chi.append(k, chi)
+
+        if options.pdf:
+            pdf.update(atoms)
+
+        res = average_chi.residual
+        if res:
+            if res < options.residual:
+                iter_below_tol += 1
+            else:
+                iter_below_tol = 0
+            s = "iter: %3i log10(residual): %.1f %2i" % (i, math.log10(res), 
+                                                         iter_below_tol)
+            log(s)
+        if options.write_every != 0:
+            if i%options.write_every == 0:
+                write_chi(k, average_chi, i)
+        #convergence check
+        if iter_below_tol == options.residual_steps:
+            break
+    number_of_iterations = i
+
+    end_time = time.time()
+    log("spectra calculation complete")
+    log("averaged over %i MD configurations" % i)
+
+    write_chi(k, average_chi)
+
+    if options.pdf:
+        pdf.write()
+
+    rusage = resource.getrusage(resource.RUSAGE_SELF)
+    utime = world.reduce(rusage.ru_utime)
+    stime = world.reduce(rusage.ru_stime)
+
+    if rank == 0:
+        log("real:   %.2f" % (end_time-start_time))
+        log("user:   %.2f" % (utime/float(world.size)))
+        log("system: %.2f" % (stime/float(world.size)))
+
+
+if __name__ == "__main__":
+    parser = OptionParser(usage="%prog [options] FILE")
+
+    io_group = OptionGroup(parser, "I/O Options")
+    io_group.add_option("-r", "--read-trajectory",
+                      action="store_true", default=False,
+                      help="instead of running an md simulation read " \
+                           "in a ASE trajectory file [default: %default]")
+    io_group.add_option("--write-every", default=0, type="int", metavar="N",
+                      help="write out chi and kchi every N steps instead " \
+                           "of only at the end [default: %default]")
+    parser.add_option_group(io_group)
+
+    pdf_group = OptionGroup(parser, "PDF Options")
+    pdf_group.add_option("--pdf", default=False,
+                      action="store_true",
+                      help="write out pdf [default: %default]")
+    pdf_group.add_option("--bin-width", type="float", metavar="width", default=.05,
+                      help="width of pdf bins [default: %default]")
+    pdf_group.add_option("--pdf-start", type="float", default=2.6,
+                      help="the shortest bond length considered in the pdf [default: %default]")
+    pdf_group.add_option("--pdf-end", type="float", default=3.4,
+                      help="the longest bond length considered in the pdf [default: %default]")
+    parser.add_option_group(pdf_group)
+
+    convergence_group = OptionGroup(parser, "Convergence Options")
+    convergence_group.add_option("--max-steps", default=500, type="int",
+                      help="maximum number of snapshots to be considered "\
+                           "[default: %default]")
+    convergence_group.add_option("--residual", default=0, type="float",
+                      help="residual convergence critera [default: %default]")
+    convergence_group.add_option("--residual-steps", default=10, type="int",
+                      help="number of consecutive steps that the residual "\
+                           "critera must be satisfied for [default: %default]")
+    convergence_group.add_option("-k", "--k-weight", default=0, type="int",
+                      help="the k-weight used for the residual calculation: " \
+                           "k^w * chi(k) [default: %default]")
+    convergence_group.add_option("-e", "--equillibration-steps",
+                      type="int", action="store", default=5000,
+                      help="number of time steps/traj frames skipped " \
+                           "before the exafs averaging begins [default: %default]")
+    convergence_group.add_option("-s", "--snapshot-steps",
+                      type="int", default=10,
+                      help="the number of steps/frames between each exafs " \
+                           "calculation [default: %default]")
+    parser.add_option_group(convergence_group)
+
+    md_group = OptionGroup(parser, "MD Options")
+    md_group.add_option("-t", "--temperature",
+                      type="float", action="store", default=300.0,
+                      help="temperature for md simulation in Kelvin [default: %default]")
+    md_group.add_option("--time-step", dest="time_step",
+                      type="float", action="store", default=1.0,
+                      help="time step for md simulation in fs [default: %default]")
+    parser.add_option_group(md_group)
+
+    feff_group = OptionGroup(parser, "FEFF Options")
+    feff_group.add_option("--hole", dest="hole",
+                      type="int", default=1,
+                      help="select where the electron hole should be created "\
+                      "a value of 1 is K-shell, 2 is LI-shell, 3 is "\
+                      "LII-shell, 4 is LIII-shell [default: %default]")
+    feff_group.add_option("--rmax", dest="rmax",
+                      type="float", default=6.0,
+                      help= "The maximum effective distance for a single path"\
+                            " [default: %default]")
+    feff_group.add_option("--S02", dest="S02", type="float", default=1.0,
+                          help="amplitude reduction factor")
+    feff_group.add_option("--real-shift", dest="real_shift", type="float", default=0.0,
+                          help="real energy shift in eV")
+    feff_group.add_option("--imag-shift", dest="imag_shift", type="float", default=0.0,
+                          help="imaginary energy shift in eV")
+    feff_group.add_option("-z", "--elements", dest="elements", default="",
+                          help="Only consider scatting off of these elements.")
+                          
+    parser.add_option_group(feff_group)
+
+    options, args = parser.parse_args()
+    if len(options.elements) == 0:
+        options.elements = []
+    else:
+        options.elements = options.elements.split(',')
+
+    if len(args) != 1:
+        parser.print_help(sys.stderr)
+        if options.read_trajectory:
+            if rank == 0:
+                sys.stderr.write("Error: must specify an ASE traj file\n")
+        else:
+            if rank == 0:
+                sys.stderr.write("Error: must specify a con file\n")
+        sys.exit(1)
+
+    main(options, args[0])
