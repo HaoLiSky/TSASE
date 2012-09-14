@@ -136,7 +136,7 @@ def chi_path(path, r, sig2, energy_shift, s02, N):
 
     return xkout, numpy.imag(chi)
 
-def read_xdatcar(filename):
+def read_xdatcar(filename, skip=0, every=1):
     f = open(filename, 'r')
     lines = f.readlines()
     f.close()
@@ -148,7 +148,7 @@ def read_xdatcar(filename):
     natoms = [int(x) for x in lines[6].split()]
     nframes = (len(lines)-7)/(sum(natoms) + 1)
     trajectory = []
-    for i in range(nframes):
+    for i in range(skip, nframes, every):
         a = ase.Atoms('H'*sum(natoms))
         a.masses = [1.0] * len(a)
         a.set_chemical_symbols(''.join([n*e for (n, e) in zip(natoms, elements)]))
@@ -376,9 +376,13 @@ def modes_command(args):
     save_result(k, chi)
 
 def snapshots_command(args):
-    trajectory = []
-    for filename in args.trajectories:
-        trajectory += read_xdatcar(filename)[:args.skip:args.every]
+    if COMM_WORLD.rank == 0:
+        trajectory = []
+        for filename in args.trajectories:
+            print 'reading', filename
+            trajectory += read_xdatcar(filename, args.skip, args.every)
+    trajectory = COMM_WORLD.bcast(trajectory)
+
     args.absorber = get_default_absorber(trajectory[0], args)
 
     k, chi = exafs_trajectory(args, trajectory)
