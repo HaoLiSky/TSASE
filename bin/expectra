@@ -1,479 +1,464 @@
 #!/usr/bin/env python
-
+import os
+import shutil
+import subprocess
 import sys
-from optparse import OptionParser, OptionGroup
-import math
-import resource
-import time
+import tempfile
 
-from mpi4py import MPI
-def mpiexcepthook(type, value, traceback):
-    sys.__excepthook__(type, value, traceback)
-    sys.stderr.write("exception occured on rank %i\n" % MPI.COMM_WORLD.rank)
-    MPI.COMM_WORLD.Abort()
-sys.excepthook = mpiexcepthook
-
-class ASE_MPI4PY:
-    def __init__(self):
-        from mpi4py import MPI
-        self.comm = MPI.COMM_WORLD
-        self.rank = self.comm.rank
-        self.size = self.comm.size
-
-    def sum(self, a):
-        return self.comm.allreduce(a)
-
-    def barrier(self):
-        self.comm.barrier()
-
-    def broadcast(self, a, rank):
-        a[:] = self.comm.bcast(a, rank)
-
-import ase
-import ase.parallel
-ase.parallel.world = ASE_MPI4PY()
-ase.parallel.rank = ase.parallel.world.rank
-ase.parallel.size = ase.parallel.world.size
-ase.parallel.barrier = ase.parallel.world.barrier
-from ase.parallel import parprint, paropen
-from ase.md.langevin import Langevin
-from ase.md.velocitydistribution import MaxwellBoltzmannDistribution
-from ase.md import MDLogger
-from ase import units
-from ase.io.trajectory import PickleTrajectory
-import tsase
+import ase.io
+import ase.lattice
 import numpy
-from qsc import QSC
-from ase.optimize.optimize import Dynamics
-from ase.units import kB
 
-def mpiexcepthook(type, value, traceback):
-    sys.__excepthook__(type, value, traceback)
-    from mpi4py import MPI
-    sys.stderr.write("exception occured on rank %i\n" % MPI.COMM_WORLD.rank);
-    MPI.COMM_WORLD.Abort()
-sys.excepthook = mpiexcepthook
+BOHR = 0.529177249
+RYD = 13.605698
 
-world = MPI.COMM_WORLD
-rank = world.rank
-size = world.size
+def getxk(e):
+    return numpy.sign(e)*numpy.sqrt(numpy.abs(e))
 
+def xk2xkp(xk, vrcorr):
+    xk0 = xk*BOHR
+    vr = vrcorr / RYD
+    xksign = numpy.sign(xk0)
+    e = xksign*xk0**2 + vr
+    
+    return getxk(e) / BOHR
 
+def xkp2xk(xk, vrcorr):
+    xk0 = xk*BOHR
+    vr = vrcorr / RYD
+    xksign = numpy.sign(xk0)
+    e = xksign*xk0**2 - vr
+    
+    return getxk(e) / BOHR
 
-class MetropolisMonteCarlo(Dynamics):
-    def __init__(self, atoms,
-                 temperature=100 * kB,
-                 dr=0.001,
-                 logfile='-', 
-                 trajectory='monte_carlo.traj',
-                 adjust_cm=True):
-        Dynamics.__init__(self, atoms, logfile, trajectory)
-        self.kT = temperature
-        self.dr = dr
-        self.accepts = 0
-        self.total_steps = 0
-        if adjust_cm:
-            self.cm = atoms.get_center_of_mass()
-        else:
-            self.cm = None
-        self.initialize()
+def chi_path(path, r, sig2, energy_shift, s02, N):
+    #this gives errors at small k (<0.1), but it doesn't matter
+    #as the k-window should always be zero in this region
+    #also uses real momentum for dw factor
+    delta_k = 0.05
+    vrcorr = energy_shift
 
-    def initialize(self):
-        self.positions = 0.0 * self.atoms.get_positions()
-        self.positions = self.atoms.get_positions()
-        self.call_observers()
-        self.log(-1, self.atoms.get_potential_energy())
-                
-    def step(self):
-        while True:
-            yield self.run(1)
-                
-    def run(self, steps):
-        E_current = self.atoms.get_potential_energy()
-        for step in range(steps):
-            ro = self.atoms.get_positions()
-            self.move()
-            E_trial = self.atoms.get_potential_energy()
+    xkpmin = xk2xkp(path['xk'][0], vrcorr)
+    n = int(xkpmin / delta_k)
+    if xkpmin > 0.0: n += 1
+    xkmin = n*delta_k
 
-            accept = numpy.exp((E_current - E_trial) / self.kT) > numpy.random.uniform()
-            if accept:
-                E_current = E_trial
-                self.accepts += 1
-            else:
-                self.atoms.set_positions(ro)
-            self.total_steps += 1
-            self.log(self.total_steps, E_current)
-            self.call_observers()
+    npts = len(path['xk'])
 
-    def get_acceptance_ratio(self):
-        return float(self.accepts)/float(self.total_steps)
+    xkout = numpy.arange(xkmin, 20.0+delta_k, delta_k)
+    xk0 = xkp2xk(xkout, vrcorr)
 
+    f0      =  numpy.interp(xk0, path['xk'], path['afeff'])
+    lambda0 =  numpy.interp(xk0, path['xk'], path['xlam'])
+    delta0  =  numpy.interp(xk0, path['xk'], path['cdelta'] + path['phfeff'])
+    redfac0 =  numpy.interp(xk0, path['xk'], path['redfac'])
+    rep0    =  numpy.interp(xk0, path['xk'], path['rep'])
+    p0      =  rep0 + 1j/lambda0
+    dr = r - path['reff']
 
-    def log(self, step, E_current):
-        if self.logfile is None:
-            return
-        name = self.__class__.__name__
-        self.logfile.write('%s: step %2d, energy %15.6f\n'
-                           % (name, step, E_current))
-        self.logfile.flush()
+    chi = numpy.zeros(len(xk0), dtype=complex)
+    
+    chi[1:]  = redfac0[1:]*s02*N*f0[1:]/(xk0[1:]*(path['reff']+dr)**2.0)
+    chi[1:] *= numpy.exp(-2*path['reff']/lambda0[1:])
+    chi[1:] *= numpy.exp(-2*(p0[1:]**2.0)*sig2)
+    chi[1:] *= numpy.exp(1j*(2*p0[1:]*dr - 4*p0[1:]*sig2/path['reff']))
+    chi[1:] *= numpy.exp(1j*(2*xk0[1:]*path['reff'] + delta0[1:]))
 
-    def move(self):
-        atoms = self.atoms
-        # displace coordinates
-        disp = numpy.random.uniform(-1., 1., (len(atoms), 3))
-        rn = atoms.get_positions() + self.dr * disp
-        atoms.set_positions(rn)
-        if self.cm is not None:
-            cm = atoms.get_center_of_mass()
-            atoms.translate(self.cm - cm)
-        rn = atoms.get_positions()
-        ase.parallel.world.broadcast(rn, 0)
-        atoms.set_positions(rn)
-        return atoms.get_positions()
+    return xkout, numpy.imag(chi)
 
+def read_xdatcar(filename):
+    f = open(filename, 'r')
+    lines = f.readlines()
+    f.close()
+    lattice_constant = float(lines[1].strip())
+    cell = numpy.array([[float(x) * lattice_constant for x in lines[2].split()], 
+                        [float(x) * lattice_constant for x in lines[3].split()], 
+                        [float(x) * lattice_constant for x in lines[4].split()]])
+    elements = lines[5].split()
+    natoms = [int(x) for x in lines[6].split()]
+    nframes = (len(lines)-7)/(sum(natoms) + 1)
+    trajectory = []
+    for i in range(nframes):
+        a = ase.Atoms('H'*sum(natoms))
+        a.masses = [1.0] * len(a)
+        a.set_chemical_symbols(''.join([n*e for (n, e) in zip(natoms, elements)]))
+        a.cell = cell.copy()
+        j = 0
+        for N, e in zip(natoms, elements):
+            for k in range(N):
+                split = lines[8 + i * (sum(natoms) + 1) + j].split()
+                a[j].position = [float(l) for l in split[0:3]]
+                j += 1
+        a.positions = numpy.dot(a.positions, cell)
+        trajectory.append(a)
+    return trajectory
 
-class MDSnapshots:
-    def __init__(self, atoms, options):
-        self.atoms = atoms
-        self.options = options
-        self.max_snapshot_steps = options.max_steps
-        self.nsnapshots = 0
-
-        calc = QSC()
-        self.atoms.set_calculator(calc)
-        MaxwellBoltzmannDistribution(atoms, options.temperature*units.kB)
-        self.dyn = Langevin(self.atoms, options.time_step*units.fs, 
-                             options.temperature*units.kB, 0.02)
-        traj = PickleTrajectory("exafs_md.traj", 'w', self.atoms,
-                                backup=False)
-        self.dyn.attach(traj, interval=options.snapshot_steps)
-
-        mdlog = MDLogger(self.dyn, self.atoms, "exafs_md.log", stress=False,
-                         peratom=True, header=True)
-        self.dyn.attach(mdlog, interval=options.snapshot_steps)
-
-        self.simulation_time = options.equillibration_steps*options.time_step
-        parprint("equillibrating for %.2e s" % (1e-15*self.simulation_time))
-        self.dyn.run(options.equillibration_steps)
-        self.first_time = True
-
-    def __iter__(self):
-        return self
-
-    def next(self):
-        if self.nsnapshots == self.max_snapshot_steps:
-            raise StopIteration
-
-        if self.first_time:
-            self.first_time = False
-            return self.atoms.copy()
-        self.nsnapshots += 1
-
-        self.dyn.run(self.options.snapshot_steps)
-        self.simulation_time += self.options.snapshot_steps * \
-                                self.options.time_step
-        return self.atoms.copy()
-
-class TrajectorySnapshots:
-    def __init__(self, traj, options):
-        self.traj = traj
-        self.options = options
-        self.frame = self.options.equillibration_steps
-
-    def __iter__(self):
-        return self
-
-    def next(self):
-        if self.frame >= len(self.traj):
-            raise StopIteration
-        rframe = self.traj[self.frame]
-        self.frame += options.snapshot_steps
-        return rframe
-
-class AverageChi:
-    def __init__(self, options):
-        self.chis = {}
-        self.k = None
-        self.k_weight = options.k_weight
-        self.residual = None
-
-    def append(self, k, chi):
-        self.k = k
-        old_average = self.get_weighted_average()
-        for symbol in chi:
-            if symbol not in self.chis:
-                self.chis[symbol] = []
-            self.chis[symbol].append(chi[symbol])
-        new_average = self.get_weighted_average()
-
-        if old_average == None:
-            return
-
-        residuals = []
-        for symbol in self.chis:
-            residual = numpy.linalg.norm(new_average[symbol] - 
-                                         old_average[symbol])
-            residuals.append(residual)
-        self.residual = max(residuals)
-
-    def get_average(self):
-        if len(self.chis) == 0:
-            return None
-        result = {}
-        for symbol in self.chis:
-            result[symbol] = numpy.average(self.chis[symbol], axis=0)
-        return result
-
-    def get_weighted_average(self):
-        if len(self.chis) == 0:
-            return None
-        result = {}
-        for symbol in self.chis:
-            result[symbol] = self.chis[symbol]*self.k**self.k_weight
-            result[symbol] = numpy.average(self.chis[symbol], axis=0)
-        return result
-
-def write_chi(k, average_chi, number=None):
-    chi = average_chi.get_average()
-    for symbol in chi:
-        if number:
-            fn_chi = "chi_%s_%i.dat" % (symbol, number)
-            fn_kchi = "kchi_%s_%i.dat" % (symbol, number)
-        else:
-            fn_chi = "chi_%s.dat" % symbol
-            fn_kchi = "kchi_%s.dat" % symbol
-        f_chi = paropen(fn_chi, "w")
-        f_kchi = paropen(fn_kchi, "w")
-        for j in range(len(k)):
-            f_chi.write("%f %f\n"%(k[j],chi[symbol][j]))
-            f_kchi.write("%f %f\n"%(k[j],k[j]*chi[symbol][j]))
-        f_chi.close()
-        f_kchi.close()
-
-class Logger:
-    def __init__(self, logpath):
-        self.logpath = logpath
-        self.logfile = None
+def feff_edge_number(edge):
+    edge_map = {}
+    edge_map['k'] = 1
+    edge_map['l1'] = edge_map['li'] = 1
+    edge_map['l2'] = edge_map['lii'] = 3
+    edge_map['l3'] = edge_map['liii'] = 4
+    return edge_map[edge.lower()]
         
-    def log(self, msg):
-        if rank == 0:
-            if not self.logfile:
-                self.logfile = open(self.logpath, 'w', 1)
-            self.logfile.write(msg+'\n')
-            print msg
-log = Logger('expectra.log').log
 
+def load_chi_dat(filename):
+    f = open(filename)
+    chi_section = False
+    k = []
+    chi = []
+    for line in f:
+        line = line.strip()
+        if len(line) == 0:
+            continue
 
-class PDF:
-    def __init__(self, options):
-        self.bond_lengths = []
-        self.r_min = options.pdf_start
-        self.r_max = options.pdf_end
-        self.updates = 0
+        fields = line.split()
+        if fields[0] == "k" and fields[1] == "chi" and fields[2] == "mag":
+            chi_section = True
+            continue
 
-    def update(self, atoms):
-        self.atoms = atoms
-        self.updates += 1
-        pos = atoms.get_positions()
-        for i in range(0, len(atoms)):
-            if atoms[i].symbol not in options.elements:
+        if chi_section:
+            k.append(float(fields[0]))
+            chi.append(float(fields[1]))
+    return numpy.array(k), numpy.array(chi)
+
+def load_feff_dat(filename):
+    xk = []
+    cdelta = []
+    afeff = []
+    phfeff = []
+    redfac = []
+    xlam = []
+    rep = []
+
+    atoms = ase.Atoms()
+    atoms.set_pbc((False,False,False))
+
+    path_section = False
+    atoms_section = False
+    data_section = False
+    f = open(filename)
+    for line in f:
+        line = line.strip()
+        fields = line.split()
+        if "genfmt" in line:
+            path_section = True
+            continue
+        if fields[0] == "x" and fields[1] == "y" and fields[2] == "z":
+            atoms_section = True
+            path_section = False
+            continue
+        if fields[0] == "k" and fields[1] == "real[2*phc]":
+            data_section = True
+            atoms_section = False
+            continue
+
+        if path_section:
+            if "---------------" in line:
                 continue
-            for j in range(0, len(atoms)):
-                if i==j: continue
-                if atoms[j].symbol not in options.elements:
+            reff = float(fields[2])
+            path_section = False
+
+        if atoms_section:
+            x = float(fields[0])
+            y = float(fields[1])
+            z = float(fields[2])
+            pot = int(fields[3])
+            atomic_number = int(fields[4])
+            atoms.append(ase.Atom(symbol=atomic_number, position=(x,y,z),
+                         tag=pot))
+
+        if data_section:
+            fields = [ float(f) for f in fields ]
+            xk.append(fields[0])
+            cdelta.append(fields[1])
+            afeff.append(fields[2])
+            phfeff.append(fields[3])
+            redfac.append(fields[4])
+            xlam.append(fields[5])
+            rep.append(fields[6])
+
+    xk = numpy.array(xk)
+    cdelta = numpy.array(cdelta)
+    afeff = numpy.array(afeff)
+    phfeff = numpy.array(phfeff)
+    redfac = numpy.array(redfac)
+    xlam = numpy.array(xlam)
+    rep = numpy.array(rep)
+
+    return { 
+             "atoms":atoms,
+             "reff":reff,
+             "xk":xk,
+             "cdelta":cdelta,
+             "afeff":afeff,
+             "phfeff":phfeff,
+             "redfac":redfac,
+             "xlam":xlam,
+             "rep":rep,
+           }
+
+def write_feff(filename, atoms, absorber, feff_options={}):
+    f = open(filename, "w")
+    f.write("TITLE %s\n" % atoms.get_chemical_formula())
+    for key, value in feff_options.iteritems():
+        f.write("%s %s\n" % (key, value))
+    f.write("\nPOTENTIALS\n")
+    absorber_z = atoms[absorber].number
+    f.write("%i %i\n" % (0, absorber_z))
+
+    unique_z = list(set(atoms.get_atomic_numbers()))
+    pot_map = {}
+    i = 1
+    for z in unique_z:
+        nz = len( [ a for a in atoms if a.number == z ] )
+        if z == absorber_z and nz-1==0:
+            continue
+        f.write("%i %i\n" % (i, z))
+        pot_map[z] = i
+        i+=1
+
+    f.write("\nATOMS\n")
+    for i,atom in enumerate(atoms):
+        if i == absorber:
+            pot = 0
+        else:
+            pot = pot_map[atom.number]
+        f.write("%f %f %f %i\n" % (atom.x, atom.y, atom.z, pot))
+
+def run_feff(atoms, absorber, feff_options={}, tmp_dir=None, get_path=False):
+    tmp_dir_path = tempfile.mkdtemp(prefix="tmp_feff_", dir=tmp_dir)
+    write_feff(os.path.join(tmp_dir_path, "feff.inp"), atoms, absorber, feff_options)
+    p = subprocess.Popen(["feff"], cwd=tmp_dir_path, stdout=open('/dev/null','w'),
+                         stderr=subprocess.PIPE)
+    retval = p.wait()
+    if retval != 0:
+        print "Problem with feff calculation in %s" % tmp_dir_path
+        return
+    stdout, stderr = p.communicate()
+    stderr = stderr.strip()
+    if stderr == "hash error":
+        atoms[absorber].set_position(atoms[absorber].get_position()+0.001)
+        sys.stderr.write("%s\n"%stderr)
+        return run_feff(atoms, absorber, feff_options, tmp_dir)
+    k, chi = load_chi_dat(os.path.join(tmp_dir_path, "chi.dat"))
+    if get_path:
+        path = load_feff_dat(os.path.join(tmp_dir_path, "feff0001.dat"))
+    shutil.rmtree(tmp_dir_path)
+
+    if get_path:
+        return k, chi, path
+    else:
+        return k, chi
+
+
+def harmonic_sampler(atoms, ews, evs, temperature, iters):
+    atoms = atoms.copy()
+    r0 = atoms.get_positions()
+
+    for iter in xrange(iters):
+        r = r0.copy()
+        for j in xrange(len(ews)):
+            stddev = numpy.sqrt( (ase.units.kB*temperature)/ews[j])
+            #mass = 196.96655
+            #min_stddev = numpy.sqrt(0.0646562/(2.0*numpy.sqrt(ews[j]*mass)))
+            min_stddev = 0.0
+            stddev = max(min_stddev, stddev)
+            g = numpy.random.normal(loc=0, scale=stddev)
+            v = g*evs[:,j]
+            r += v.reshape(len(atoms), 3)
+        atoms.set_positions(r)
+        yield atoms.copy()
+
+def get_default_absorber(atoms, args):
+    symbols = set(atoms.get_chemical_symbols())
+    if args.ignore_elements:
+        symbols -= set(args.ignore_elements)
+    if len(symbols) == 1:
+        return list(symbols)[0]
+    else:
+        print 'must specify --absorber if more than one chemical specie'
+        sys.exit(2)
+
+def save_result(k, chi):
+    print 'saving result to chi.dat'
+    f = open('chi.dat', 'w')
+    for i in xrange(len(k)):
+        f.write("%6.3f %16.8e\n" % (k[i], chi[i]))
+    f.close()
+
+def modes_command(args):
+    atoms = ase.io.read(args.POSITIONS)
+    args.absorber = get_default_absorber(atoms, args)
+    ews = numpy.loadtxt(args.EIGENVALUES, dtype=float)[6:]
+    evs = numpy.loadtxt(args.EIGENVECTORS, dtype=float)[:,6:]
+
+    ensemble = harmonic_sampler(atoms, ews, evs, args.temperature, 
+            args.samples)
+
+    trajectory = []
+    for snapshot in ensemble:
+        trajectory.append(snapshot)
+
+    k, chi = exafs_trajectory(args, trajectory)
+    save_result(k, chi)
+
+def snapshots_command(args):
+    trajectory = []
+    for filename in args.trajectories:
+        trajectory += read_xdatcar(filename)[:args.skip:args.every]
+    args.absorber = get_default_absorber(trajectory[0], args)
+
+    k, chi = exafs_trajectory(args, trajectory)
+    save_result(k, chi)
+
+def exafs_trajectory(args, trajectory):
+    if args.multiple_scattering:
+        k, chi = exafs_multiple_scattering(args.S02, args.energy_shift, 
+                args.absorber, args.ignore_elements, args.edge, args.rmax, 
+                trajectory)
+    elif args.first_shell:
+        k, chi = exafs_first_shell(args.S02, args.energy_shift, 
+                args.absorber, args.ignore_elements, args.edge, 
+                args.neighbor_cutoff, trajectory)
+
+    return k, chi
+    
+
+
+def exafs_first_shell(S02, energy_shift, absorber, 
+        ignore_elements, edge, neighbor_cutoff, trajectory):
+        feff_options = {
+                'RMAX':str(neighbor_cutoff),
+                'HOLE':'%i %.4f' % (feff_edge_number(edge), S02),
+                'CORRECTIONS':'%.4f %.4f' % (energy_shift, 0.0),
+                'NLEG':'4'
+        }
+
+        #generate the bulk reference state 
+        atoms = ase.lattice.bulk(absorber, orthorhombic=True, cubic=True)
+        atoms = atoms.repeat((4,4,4))
+        center = numpy.argmin(numpy.sum((atoms.get_scaled_positions() -
+            numpy.array( (.5,.5,.5) ))**2.0, axis=1))
+        #do the bulk reference scattering calculation and get the path
+        #data from feff
+        path = run_feff(atoms, center, feff_options, get_path=True)[2]
+
+        k = None
+        chi_total = None
+        for step, atoms in enumerate(trajectory):
+            print "step %i/%i" % (step+1, len(trajectory))
+            atoms = atoms.copy()
+            if ignore_elements:
+                ignore_indicies = [atom.index for atom in atoms 
+                                   if atom.symbol in ignore_elements]
+                del atoms[ignore_indicies]
+
+            for i in xrange(len(atoms)):
+                if atoms[i].symbol != absorber:
                     continue
-                d = atoms.get_distance(i,j)
-                if d <= self.r_max and d >= self.r_min:
-                    self.bond_lengths.append(d)
 
-    def write(self):
-        log("writing pdf histogram to pdf.dat")
-        bins = numpy.arange(options.pdf_start, options.pdf_end+options.bin_width, options.bin_width)
-        hist, bins = numpy.histogram(self.bond_lengths, bins=bins)
-        center = (bins[:-1]+bins[1:])/2.0
-        f = paropen('pdf.dat', 'w')
-        hist = numpy.array(hist, dtype='float')
-        hist /= self.updates
-        if len(options.elements) > 0:
-            for z in options.elements:
-                n += self.atoms.get_chemical_symbols().count(z)
-            hist /= float(n)
-        else:
-            hist /= len(self.atoms)
+                for j in xrange(i+1, len(atoms)):
 
-        for i in xrange(len(hist)):
-            f.write("%8.4f %.6f\n" % (center[i], hist[i]))
-        f.close()
+                    r = atoms.get_distance(i,j,True)
+                    k, chi = chi_path(path, r, 0.0, energy_shift, S02, 1)
 
-        f = paropen('dw.dat','w')
-        f.write('%e\n' % numpy.var(self.bond_lengths))
-        f.close()
+                    if chi_total != None:
+                        chi_total += chi
+                    else:
+                        chi_total = chi
 
-def main(options, filename):
-    log("Options:")
-    for option, value in options.__dict__.iteritems():
-        log("    %s: %r" % (option, value))
-    start_time = time.time()
-    if options.read_trajectory:
-        if filename.startswith('XDATCAR'):
-            traj = tsase.io.read_xdatcar(filename)
-        else:
-            traj = PickleTrajectory(filename)
-        snapshots = TrajectorySnapshots(traj, options)
-    else:
-        if filename[-3:] == "con" and '.' in filename:
-            atoms = tsase.io.read_con(filename)
-        else:
-            atoms = ase.io.read(filename)
-        snapshots = MDSnapshots(atoms, options)
+        return k, chi_total
 
+def exafs_multiple_scattering(S02, energy_shift, absorber, 
+        ignore_elements, edge, rmax, trajectory):
+        feff_options = {
+                'RMAX':str(rmax),
+                'HOLE':'%i %.4f' % (feff_edge_number(edge), S02),
+                'CORRECTIONS':'%.4f %.4f' % (energy_shift, 0.0),
+                'NLEG':'4'
+        }
 
-    iter_below_tol = 0
+        k = None
+        chi_total = None
+        for atoms in trajectory:
+            atoms = atoms.copy()
+            if ignore_elements:
+                ignore_indicies = [atom.index for atom in atoms 
+                                   if atom.symbol in ignore_elements]
+                del atoms[ignore_indicies]
 
-    if options.pdf:
-        pdf = PDF(options)
+            for i in xrange(len(atoms)):
+                if atoms[i].symbol != absorber:
+                    continue
 
-    average_chi = AverageChi(options)
+                k, chi = run_feff(atoms, i, feff_options)
+                if chi_total != None:
+                    chi_total += chi
+                else:
+                    chi_total = chi
 
-    for i, atoms in enumerate(snapshots):
-        feff_options = {'RMAX':str(options.rmax),
-                        'HOLE':'%i %.4f'%(options.hole, options.S02),
-                        'CORRECTIONS':'%.3f %.3f'%(options.real_shift, options.imag_shift),
-                        'NLEG':'4'}
-        k, chi = tsase.exafs.exafs(atoms, feff_options=feff_options, txt=None,
-                                   elements=options.elements)
-        average_chi.append(k, chi)
+        return k, chi_total
 
-        if options.pdf:
-            pdf.update(atoms)
+def main():
+    import argparse
 
-        res = average_chi.residual
-        if res:
-            if res < options.residual:
-                iter_below_tol += 1
-            else:
-                iter_below_tol = 0
-            s = "iter: %3i log10(residual): %.1f %2i" % (i, math.log10(res), 
-                                                         iter_below_tol)
-            log(s)
-        if options.write_every != 0:
-            if i%options.write_every == 0:
-                write_chi(k, average_chi, i)
-        #convergence check
-        if iter_below_tol == options.residual_steps:
-            break
-    number_of_iterations = i
+    parser = argparse.ArgumentParser()
 
-    end_time = time.time()
-    log("spectra calculation complete")
-    log("averaged over %i MD configurations" % i)
+    parser.add_argument('--first-shell', action='store_true', default=True)
+    parser.add_argument('--neighbor-cutoff', type=float, metavar='DISTANCE',
+            help='1st neighbor cutoff distance', default=3.4)
 
-    write_chi(k, average_chi)
+    parser.add_argument('--multiple-scattering', action='store_true')
+    parser.add_argument('--rmax', type=float, metavar='DISTANCE', 
+            default=6.0, help='maximum scattering half-path length')
 
-    if options.pdf:
-        pdf.write()
+    parser.add_argument('--S02', type=float, metavar='FACTOR', 
+            default=1.0, help='amplitude reduction factor')
+    parser.add_argument('--energy-shift', type=float, metavar='ENERGY', 
+            default=0.0, help='energy shift to apply in eV')
+    parser.add_argument('--absorber', type=str, metavar='ELEMENT', 
+            help='atomic symbol of the xray absorber')
+    parser.add_argument('--ignore-elements', type=str, metavar='ELEMENTS',
+            help='comma delimited list of elements to ignore in the ' + \
+            'scattering calculation')
+    parser.add_argument('--edge', type=str, help='one of K, L1, L2, L3',
+                        default='K')
 
-    rusage = resource.getrusage(resource.RUSAGE_SELF)
-    utime = world.reduce(rusage.ru_utime)
-    stime = world.reduce(rusage.ru_stime)
+    subparsers = parser.add_subparsers(help='sub-command help')
+    parser_snapshots = subparsers.add_parser('snapshots',
+            help='average EXAFS signal from snapshots of a trajectory')
+    parser_snapshots.add_argument('--skip', type=int, default=0,
+            help='number of frames to skip at the beginning')
+    parser_snapshots.add_argument('--every', type=int, default=1,
+            help='number of frames to between each step')
+    parser_snapshots.add_argument('trajectories', metavar='TRAJ', nargs='+',
+            help='trajectory file (POSCAR, con, xyz)')
+    parser_snapshots.set_defaults(func=snapshots_command)
 
-    if rank == 0:
-        log("real:   %.2f" % (end_time-start_time))
-        log("user:   %.2f" % (utime/float(world.size)))
-        log("system: %.2f" % (stime/float(world.size)))
+    parser_modes = subparsers.add_parser('modes',
+            help='average EXAFS signal from harmonic approximation using ' + \
+            'normal modes')
+    parser_modes.add_argument('--samples', type=int, default=100,
+            help='number of samples to average together')
+    parser_modes.add_argument('--temperature', type=float, default=298.0)
+    parser_modes.add_argument('POSITIONS', help='structure file (POSCAR, con, xyz)')
+    parser_modes.add_argument('EIGENVECTORS')
+    parser_modes.add_argument('EIGENVALUES')
+    parser_modes.set_defaults(func=modes_command)
 
 
-if __name__ == "__main__":
-    parser = OptionParser(usage="%prog [options] FILE")
+    #args = parser.parse_args(['modes', 'POSCAR', 'modes.dat', 'eigs.dat'])
+    args = parser.parse_args()
 
-    io_group = OptionGroup(parser, "I/O Options")
-    io_group.add_option("-r", "--read-trajectory",
-                      action="store_true", default=False,
-                      help="instead of running an md simulation read " \
-                           "in a ASE trajectory file [default: %default]")
-    io_group.add_option("--write-every", default=0, type="int", metavar="N",
-                      help="write out chi and kchi every N steps instead " \
-                           "of only at the end [default: %default]")
-    parser.add_option_group(io_group)
+    if args.ignore_elements:
+        args.ignore_elements = args.ignore_elements.split(',')
 
-    pdf_group = OptionGroup(parser, "PDF Options")
-    pdf_group.add_option("--pdf", default=False,
-                      action="store_true",
-                      help="write out pdf [default: %default]")
-    pdf_group.add_option("--bin-width", type="float", metavar="width", default=.05,
-                      help="width of pdf bins [default: %default]")
-    pdf_group.add_option("--pdf-start", type="float", default=2.6,
-                      help="the shortest bond length considered in the pdf [default: %default]")
-    pdf_group.add_option("--pdf-end", type="float", default=3.4,
-                      help="the longest bond length considered in the pdf [default: %default]")
-    parser.add_option_group(pdf_group)
+    if args.multiple_scattering == True:
+        args.first_shell = False
 
-    convergence_group = OptionGroup(parser, "Convergence Options")
-    convergence_group.add_option("--max-steps", default=500, type="int",
-                      help="maximum number of snapshots to be considered "\
-                           "[default: %default]")
-    convergence_group.add_option("--residual", default=0, type="float",
-                      help="residual convergence critera [default: %default]")
-    convergence_group.add_option("--residual-steps", default=10, type="int",
-                      help="number of consecutive steps that the residual "\
-                           "critera must be satisfied for [default: %default]")
-    convergence_group.add_option("-k", "--k-weight", default=0, type="int",
-                      help="the k-weight used for the residual calculation: " \
-                           "k^w * chi(k) [default: %default]")
-    convergence_group.add_option("-e", "--equillibration-steps",
-                      type="int", action="store", default=5000,
-                      help="number of time steps/traj frames skipped " \
-                           "before the exafs averaging begins [default: %default]")
-    convergence_group.add_option("-s", "--snapshot-steps",
-                      type="int", default=10,
-                      help="the number of steps/frames between each exafs " \
-                           "calculation [default: %default]")
-    parser.add_option_group(convergence_group)
+    args.func(args)
 
-    md_group = OptionGroup(parser, "MD Options")
-    md_group.add_option("-t", "--temperature",
-                      type="float", action="store", default=300.0,
-                      help="temperature for md simulation in Kelvin [default: %default]")
-    md_group.add_option("--time-step", dest="time_step",
-                      type="float", action="store", default=1.0,
-                      help="time step for md simulation in fs [default: %default]")
-    parser.add_option_group(md_group)
 
-    feff_group = OptionGroup(parser, "FEFF Options")
-    feff_group.add_option("--hole", dest="hole",
-                      type="int", default=1,
-                      help="select where the electron hole should be created "\
-                      "a value of 1 is K-shell, 2 is LI-shell, 3 is "\
-                      "LII-shell, 4 is LIII-shell [default: %default]")
-    feff_group.add_option("--rmax", dest="rmax",
-                      type="float", default=6.0,
-                      help= "The maximum effective distance for a single path"\
-                            " [default: %default]")
-    feff_group.add_option("--S02", dest="S02", type="float", default=1.0,
-                          help="amplitude reduction factor")
-    feff_group.add_option("--real-shift", dest="real_shift", type="float", default=0.0,
-                          help="real energy shift in eV")
-    feff_group.add_option("--imag-shift", dest="imag_shift", type="float", default=0.0,
-                          help="imaginary energy shift in eV")
-    feff_group.add_option("-z", "--elements", dest="elements", default="",
-                          help="Only consider scatting off of these elements.")
-                          
-    parser.add_option_group(feff_group)
-
-    options, args = parser.parse_args()
-    if len(options.elements) == 0:
-        options.elements = []
-    else:
-        options.elements = options.elements.split(',')
-
-    if len(args) != 1:
-        parser.print_help(sys.stderr)
-        if options.read_trajectory:
-            if rank == 0:
-                sys.stderr.write("Error: must specify an ASE traj file\n")
-        else:
-            if rank == 0:
-                sys.stderr.write("Error: must specify a con file\n")
-        sys.exit(1)
-
-    main(options, args[0])
+if __name__ == '__main__':
+    main()
