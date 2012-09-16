@@ -38,10 +38,10 @@ class mushybox(Atoms):
 
     def set_positions(self,r):
         ratom  = r[:-3]
-        self.atomsx.set_positions(ratom)
         rcell  = self.atomsx.get_cell()
         rcell += np.dot(rcell,r[-3:])/self.jacobian
         self.atomsx.set_cell(rcell,scale_atoms=True)
+        self.atomsx.set_positions(ratom)
     
     def __len__(self):
         return self.natom+3
