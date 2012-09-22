@@ -32,15 +32,15 @@ class mushybox(Atoms):
         self.jacobian = avglen * self.natom**0.5
 
     def get_positions(self):
-        r    = self.atomsx.get_positions()
+        r    = self.atomsx.get_positions()*0.0
         Rc   = np.vstack((r, self.atomsx.get_cell()*0.0))
         return Rc
 
-    def set_positions(self,r):
-        ratom  = r[:-3]
+    def set_positions(self,dr):
         rcell  = self.atomsx.get_cell()
-        rcell += np.dot(rcell,r[-3:])/self.jacobian
-        self.atomsx.set_cell(rcell,scale_atoms=True)
+        rcell += np.dot(rcell, dr[-3:]) / self.jacobian
+        self.atomsx.set_cell(rcell, scale_atoms=True)
+        ratom  = self.atomx.get_positions() + dr[:-3]
         self.atomsx.set_positions(ratom)
     
     def __len__(self):
