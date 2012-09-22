@@ -13,7 +13,7 @@ from tsase.neb.util import vunit, vmag, vrand, sPBC
 class SSDimer_atoms:
 
     def __init__(self, R0 = None, mode = None, maxStep = 0.2, dT = 0.1, dR = 0.005, 
-                 phi_tol = 5, rotationWindow = (1, 5), weight = 1, express=np.zeros((3,3))):
+                 phi_tol = 10, rotationMax = 3, weight = 1, express=np.zeros((3,3))):
         """
         Parameters:
         force - the force to use
@@ -23,7 +23,7 @@ class SSDimer_atoms:
         dT - quickmin timestep
         dR - finite difference step size for translation
         phi_tol - rotation converging tolerence, degree
-        rotationWindow - (min, max) rotations per translational step
+        rotationMax - max rotations per translational step
         """
         self.steps = 0
         self.dT = dT
@@ -43,7 +43,7 @@ class SSDimer_atoms:
         calc    = self.R0.get_calculator()
         self.R1.set_calculator(calc)
         self.R1_prime.set_calculator(calc)
-        self.rotationWindow = rotationWindow
+        self.rotationMax = rotationMax
         self.express  = express
    
         vol           = self.R0.get_volume()
@@ -75,6 +75,7 @@ class SSDimer_atoms:
 
     def update_general_forces(self, Ri):
         #update the generalized forces (f, st)
+        self.forceCalls += 1
         f    = Ri.get_forces()
         stt  = Ri.get_stress()
         vol  = Ri.get_volume()*(-1)
@@ -147,7 +148,7 @@ class SSDimer_atoms:
         phi_min = 1.5
         Fperp   = F1 * 0.0 # avoid Fperp_old asignment error
         iteration = 0
-        while abs(phi_min) > self.phi_tol and iteration < self.rotationWindow[1]:
+        while abs(phi_min) > self.phi_tol and iteration < self.rotationMax:
 
             F1perp    = F1 - np.vdot(F1, self.N) * self.N
             Fperp_old = Fperp
