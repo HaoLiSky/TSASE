@@ -13,7 +13,7 @@ from tsase.neb.util import vunit, vmag, vrand, sPBC
 class SSDimer_atoms:
 
     def __init__(self, R0 = None, mode = None, maxStep = 0.2, dT = 0.1, dR = 0.005, 
-                 phi_tol = 10, rotationMax = 4, express=np.zeros((3,3))):
+                 phi_tol = 10, rotationMax = 4, express=np.zeros((3,3)), weight = 1):
         """
         Parameters:
         force - the force to use
