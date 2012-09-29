@@ -31,9 +31,9 @@ class SSDimer_atoms:
         self.phi_tol = phi_tol /180.0 * pi
         self.R0    = R0
         self.N = mode
-        natom  = self.R0.get_number_of_atoms()
+        self.natom  = self.R0.get_number_of_atoms()
         if self.N == None:
-            self.N = vrand(np.zeros((natom+3,3)))
+            self.N = vrand(np.zeros((self.natom+3,3)))
         self.N = vunit(self.N)
         self.maxStep = maxStep
         self.Ftrans = None
@@ -47,16 +47,21 @@ class SSDimer_atoms:
         self.express  = express
    
         vol           = self.R0.get_volume()
-        avglen        = (vol/natom)**(1.0/3.0)
+        avglen        = (vol/self.natom)**(1.0/3.0)
         self.weight   = weight
-        self.jacobian = avglen * natom**0.5 * self.weight
-        self.V = np.zeros((natom+3,3))
+        self.jacobian = avglen * self.natom**0.5 * self.weight
+        self.V = np.zeros((self.natom+3,3))
 
     # Pipe all the stuff from Atoms that is not overwritten.
     # Pipe all requests for get_original_* to self.atoms0.
     def __getattr__(self, attr):
         """Return any value of the Atoms object"""
         return getattr(self.R0, attr)
+        print "*************************************"
+        print attr
+
+    def __len__(self):
+        return self.natom+3
 
     def get_positions(self):
         r    = self.R0.get_positions()*0.0
@@ -70,9 +75,6 @@ class SSDimer_atoms:
         ratom  = self.R0.get_positions() + dr[:-3]
         self.R0.set_positions(ratom)
     
-    def __len__(self):
-        return self.natom+3
-
     def update_general_forces(self, Ri):
         #update the generalized forces (f, st)
         self.forceCalls += 1
@@ -115,7 +117,6 @@ class SSDimer_atoms:
         ratom = R0.get_positions() + dRvec[:-3]
         Ri.set_positions(ratom)
  
-     
     def rotation_update(self):
         # position of R1
         self.iset_endpoint_pos(self.N, self.R0, self.R1)
@@ -191,9 +192,10 @@ class SSDimer_atoms:
             iteration += 1
         self.curvature = c0
         return F0
-           
-
         
+
+#######################################################################################################
+# The following part can be replaced by FIRE or MDMin optimizer in ase, see the ssdimer.py in examples
     def step(self):
         self.steps += 1
         Ftrans = self.get_forces() 
@@ -246,16 +248,3 @@ class SSDimer_atoms:
         if self.getMaxAtomForce() <= minForce:
             self.converged = True
                                    
-
-if __name__ == "__main__":
-    from tsse.io import loadcon, savecon
-    from tsse.pot import al
-    from numpy.random import normal
-    p = loadcon("../test/pot/al.con")
-    al = al()
-    mode = numpy.zeros(p.r.shape)
-    mode[0] += normal(scale = 1.0, size = 3)
-    d = dimer(al.force, p, N = mode, displace = 1.0)
-    d.search(minForce = 0.001, movie = "dimer1.xyz")
-    savecon("dimer1.con", d.R0)
-    
