@@ -99,6 +99,9 @@ class SSDimer_atoms:
     def get_curvature(self):
         return self.curvature
 
+    def get_mode(self):
+        return self.N
+
     def get_forces(self):
         F0 = self.minmodesearch()
         Fparallel = np.vdot(F0, self.N) * self.N
@@ -114,7 +117,8 @@ class SSDimer_atoms:
         cell0 = R0.get_cell()
         cell1 = cell0 + np.dot(cell0, dRvec[-3:]) / self.jacobian
         Ri.set_cell(cell1, scale_atoms=True)
-        ratom = R0.get_positions() + dRvec[:-3]
+        vdir  = R0.get_scaled_positions()
+        ratom = np.dot(vdir, cell1) + dRvec[:-3]
         Ri.set_positions(ratom)
  
     def rotation_update(self):
