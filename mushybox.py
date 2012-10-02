@@ -61,8 +61,8 @@ class mushybox(Atoms):
         st[2][0] = stt[4] * vol
         st[1][0] = stt[5] * vol
         st  -= self.express * (-1)*vol
-        print "original stress (no projecton applied):"
-        print st
+        #print "original stress (no projecton applied):"
+        #print st
         Fc   = np.vstack((f, st/self.jacobian))
         return Fc
     
