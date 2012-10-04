@@ -13,7 +13,7 @@ from tsase.neb.util import vunit, vmag, vrand, sPBC
 class SSDimer_atoms:
 
     def __init__(self, R0 = None, mode = None, maxStep = 0.2, dT = 0.1, dR = 0.005, 
-                 phi_tol = 10, rotationMax = 4, express=np.zeros((3,3)), weight = 1):
+                 phi_tol = 10, rotationMax = 4, ss = True, express=np.zeros((3,3)), weight = 1):
         """
         Parameters:
         force - the force to use
@@ -24,6 +24,7 @@ class SSDimer_atoms:
         dR - finite difference step size for translation
         phi_tol - rotation converging tolerence, degree
         rotationMax - max rotations per translational step
+        ss - boolean, solid-state dimer or regular dimer. Default: ssdimer
         """
         self.steps = 0
         self.dT = dT
@@ -44,6 +45,7 @@ class SSDimer_atoms:
         self.R1.set_calculator(calc)
         self.R1_prime.set_calculator(calc)
         self.rotationMax = rotationMax
+        self.ss       = ss
         self.express  = express
    
         vol           = self.R0.get_volume()
@@ -84,13 +86,14 @@ class SSDimer_atoms:
         st   = np.zeros((3,3))
         #following the order of get_stress in vasp.py
         #(the order of stress in ase are the same for all calculators)
-        st[0][0] = stt[0] * vol  
-        st[1][1] = stt[1] * vol
-        st[2][2] = stt[2] * vol
-        st[2][1] = stt[3] * vol
-        st[2][0] = stt[4] * vol
-        st[1][0] = stt[5] * vol
-        st  -= self.express * (-1)*vol
+        if self.ss:
+            st[0][0] = stt[0] * vol  
+            st[1][1] = stt[1] * vol
+            st[2][2] = stt[2] * vol
+            st[2][1] = stt[3] * vol
+            st[2][0] = stt[4] * vol
+            st[1][0] = stt[5] * vol
+            st  -= self.express * (-1)*vol
         #print "original stress (no projecton applied):"
         #print st
         Fc   = np.vstack((f, st/self.jacobian))
@@ -105,8 +108,9 @@ class SSDimer_atoms:
     def get_forces(self):
         F0 = self.minmodesearch()
         Fparallel = np.vdot(F0, self.N) * self.N
-        if self.curvature > 0:
+        if self.curvature > 0 and self.steps < 50:
             self.Ftrans = -Fparallel
+            print "drag up directly"
         else:
             self.Ftrans = F0 - 2.0 * Fparallel
         return self.Ftrans
