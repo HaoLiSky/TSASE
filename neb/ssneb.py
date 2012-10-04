@@ -16,7 +16,8 @@ class ssneb:
 
     def __init__(self, p1, p2, numImages = 7, k = 5.0, tangent = "new",       \
                  dneb = False, dnebOrg = False, method = 'normal',            \
-                 onlyci = False, weight = 1, parallel = False, express = numpy.zeros((3,3))):
+                 onlyci = False, weight = 1, parallel = False, ss = True,     \
+                 express = numpy.zeros((3,3))):
         """
         The neb constructor.
         Parameters:
@@ -31,6 +32,7 @@ class ssneb:
             dnebOrg..... set to true to use the original double-nudging method
             method...... "ci" for the climbing image method, anything else for
                          normal NEB method 
+            ss - boolean, solid-state dimer or regular dimer. Default: ssdimer
         """
         
         self.numImages = numImages
@@ -42,6 +44,7 @@ class ssneb:
         self.onlyci    = onlyci
         self.weight    = weight 
         self.parallel  = parallel 
+        self.ss        = ss
         self.express   = express * units.GPa
         if express[0][1]**2+express[0][2]**2+express[1][2]**2 > 1e-3:
            express[0][1] = 0
@@ -106,18 +109,20 @@ class ssneb:
             self.path[i].icell = numpy.linalg.inv(self.path[i].get_cell())
             self.path[i].vdir  = self.path[i].get_scaled_positions()
             self.path[i].st = numpy.zeros((3,3))
-            vol = self.path[i].get_volume()*(-1)
-            self.path[i].st[0][0] = stt[0] * vol
-            self.path[i].st[1][1] = stt[1] * vol
-            self.path[i].st[2][2] = stt[2] * vol
-            self.path[i].st[2][1] = stt[3] * vol
-            self.path[i].st[2][0] = stt[4] * vol
-            self.path[i].st[1][0] = stt[5] * vol
-            print "stress before modified:imgage ",i 
-            print self.path[i].st
-            self.path[i].st      -= self.express * (-1)*vol
-            print "stress after modified:imgage ",i 
-            print self.path[i].st
+            #solid-state or not
+            if self.ss:
+                vol = self.path[i].get_volume()*(-1)
+                self.path[i].st[0][0] = stt[0] * vol
+                self.path[i].st[1][1] = stt[1] * vol
+                self.path[i].st[2][2] = stt[2] * vol
+                self.path[i].st[2][1] = stt[3] * vol
+                self.path[i].st[2][0] = stt[4] * vol
+                self.path[i].st[1][0] = stt[5] * vol
+                print "stress before modified:imgage ",i 
+                print self.path[i].st
+                self.path[i].st      -= self.express * (-1)*vol
+                print "stress after modified:imgage ",i 
+                print self.path[i].st
 
             #calculate the pv term in enthalpy E+PV, setting image 0 as reference
             dcell  = self.path[i].get_cell() - self.path[0].get_cell()
@@ -152,17 +157,19 @@ class ssneb:
                 self.path[i].st
             except:
                 self.path[i].st = numpy.zeros((3,3))
-            vol = self.path[i].get_volume()*(-1)
-            self.path[i].st[0][0] = stt[0] * vol
-            self.path[i].st[1][1] = stt[1] * vol
-            self.path[i].st[2][2] = stt[2] * vol
-            self.path[i].st[2][1] = stt[3] * vol
-            self.path[i].st[2][0] = stt[4] * vol
-            self.path[i].st[1][0] = stt[5] * vol
-            self.path[i].st[0][1] = 0.0
-            self.path[i].st[0][2] = 0.0
-            self.path[i].st[1][2] = 0.0
-            self.path[i].st      -= self.express * vol*(-1)
+            #solid-state or not
+            if self.ss:
+                vol = self.path[i].get_volume()*(-1)
+                self.path[i].st[0][0] = stt[0] * vol
+                self.path[i].st[1][1] = stt[1] * vol
+                self.path[i].st[2][2] = stt[2] * vol
+                self.path[i].st[2][1] = stt[3] * vol
+                self.path[i].st[2][0] = stt[4] * vol
+                self.path[i].st[1][0] = stt[5] * vol
+                self.path[i].st[0][1] = 0.0
+                self.path[i].st[0][2] = 0.0
+                self.path[i].st[1][2] = 0.0
+                self.path[i].st      -= self.express * vol*(-1)
              
             #calculate the pv term in enthalpy E+PV, setting image 0 as reference
             dcell  = self.path[i].get_cell() - self.path[0].get_cell()
