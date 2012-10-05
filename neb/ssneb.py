@@ -118,11 +118,7 @@ class ssneb:
                 self.path[i].st[2][1] = stt[3] * vol
                 self.path[i].st[2][0] = stt[4] * vol
                 self.path[i].st[1][0] = stt[5] * vol
-                print "stress before modified:imgage ",i 
-                print self.path[i].st
                 self.path[i].st      -= self.express * (-1)*vol
-                print "stress after modified:imgage ",i 
-                print self.path[i].st
 
             #calculate the pv term in enthalpy E+PV, setting image 0 as reference
             dcell  = self.path[i].get_cell() - self.path[0].get_cell()
@@ -309,13 +305,7 @@ class ssneb:
                 Rp1  = numpy.vstack((Rp1,Rp1b))
 
                 self.path[i].fsN = (vmag(Rp1) - vmag(Rm1)) * self.k * self.path[i].n
-                ######4 print
-                print '*********************'
-                print i, vmag(Rp1),vmag(Rm1)
-                #---------------01/26/11 to speedup by weakening spring force's convergence-----------
-                #if vmag(self.path[i].fsN) < 0.01:
-                    #self.path[i].fsN = 0.0
-                #-------------------------------------------------------------------------------------
+                #print i, vmag(Rp1),vmag(Rm1)
 
                 # For dneb use total spring force -spring force in the grad
                 # direction.
