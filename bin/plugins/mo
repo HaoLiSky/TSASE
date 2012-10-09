@@ -1,0 +1,5 @@
+
+mo = tsase.calculators.mo()
+_get_ca().set_calculator(mo)
+
+
