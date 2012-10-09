@@ -25,6 +25,10 @@ try:
 except:
     pass
 try:
+    from mo import mo
+except:
+    pass
+try:
     from si import si
 except:
     pass
@@ -45,7 +49,10 @@ try:
 except:
 	pass
 
-from socorro import Socorro
+try:
+    from socorro import Socorro
+except:
+    pass
 	
 
 from push import push
