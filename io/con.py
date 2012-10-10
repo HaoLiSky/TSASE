@@ -43,7 +43,7 @@ def read_con(filename):
             num_types = int(lines[line_index+6].split()[0])
             num_each_type = [int(n) for n in lines[line_index+7].split()[0:num_types]]
             mass_each_type = [float(n) for n in lines[line_index+8].split()[0:num_types]]
-            a = ase.Atoms('H'*sum(num_each_type))
+            a = ase.Atoms(str(sum(num_each_type))+'H')
             a.cell = cell
             a.set_pbc((True, True, True))
             frozen = []
@@ -73,7 +73,7 @@ def read_con(filename):
             if len(trajectory) == 1:
                 return trajectory[0]
             if len(trajectory) == 0:
-                raise IOError, "Could not read con file."
+                raise IOError, "Could not read con file." + "\n" + str(e)
             return trajectory
         trajectory.append(a)        
             
