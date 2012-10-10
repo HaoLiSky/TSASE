@@ -10,8 +10,8 @@ def mo(cmd = None):
     os.environ['LAMMPS_COMMAND'] = cmd
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     parameters = {'pair_style': 'eam/alloy',
-                  'pair_coeff': ['* * Mo.AT1.fs Mo']}
-    files = ['Mo.AT1.fs']
+                  'pair_coeff': ['* * Mo.set Mo']}
+    files = ['Mo.set']
     calc = LAMMPS(parameters = parameters, files = files)
     os.chdir(cwd)
     return calc
