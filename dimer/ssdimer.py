@@ -9,11 +9,14 @@ import os
 from math import sqrt, atan, cos, sin, tan, pi
 from ase  import atoms, units, io
 from tsase.neb.util import vunit, vmag, vrand, sPBC
+from tsase.io import read_con
+from tsase import neb
 
 class SSDimer_atoms:
 
     def __init__(self, R0 = None, mode = None, maxStep = 0.2, dT = 0.1, dR = 0.005, 
-                 phi_tol = 10, rotationMax = 4, ss = True, express=np.zeros((3,3)), weight = 1):
+                 phi_tol = 10, rotationMax = 4, ss = True, express=np.zeros((3,3)), 
+                 nebInitiate = False, weight = 1):
         """
         Parameters:
         force - the force to use
@@ -47,6 +50,7 @@ class SSDimer_atoms:
         self.rotationMax = rotationMax
         self.ss       = ss
         self.express  = express
+        self.nebInitiate = nebInitiate
    
         vol           = self.R0.get_volume()
         avglen        = (vol/self.natom)**(1.0/3.0)
@@ -81,7 +85,7 @@ class SSDimer_atoms:
         #update the generalized forces (f, st)
         self.forceCalls += 1
         f    = Ri.get_forces()
-        stt  = Ri.get_stress()
+        if self.ss: stt  = Ri.get_stress()
         vol  = Ri.get_volume()*(-1)
         st   = np.zeros((3,3))
         #following the order of get_stress in vasp.py
@@ -108,7 +112,8 @@ class SSDimer_atoms:
     def get_forces(self):
         F0 = self.minmodesearch()
         Fparallel = np.vdot(F0, self.N) * self.N
-        if self.curvature > 0 and self.steps < 50:
+        #if self.curvature > 0 and self.steps < 50:
+        if self.curvature > 0:
             self.Ftrans = -Fparallel
             print "drag up directly"
         else:
@@ -219,6 +224,7 @@ class SSDimer_atoms:
  
         self.set_positions(step)
         self.E = self.get_potential_energy()
+        
     
     def getMaxAtomForce(self):
         if self.Ftrans is None:
@@ -238,6 +244,7 @@ class SSDimer_atoms:
         while self.getMaxAtomForce() > minForce and self.forceCalls < maxForceCalls:
             # Take a Dimer step.
             self.step()
+
             if movie and self.steps % interval == 0:
                 io.write('movie.tmp', self.R0, format='vasp')
                 os.system('cat movie.tmp >> '+movie)
@@ -253,6 +260,28 @@ class SSDimer_atoms:
                     print "%3i %13.6f %13.6f %13.6f %3i" % (ii,float(ff),float(cc),float(ee),nf)
                 else:
                     print "%3i %13.6f %13.6f %13.6f %3i" % (ii,float(ff),float(cc),float(ee),nf)
+
+            #######################needs to clean up######################
+            # when curvature < 0 for the first time, run finswing neb
+            if self.nebInitiate and self.curvature < 0: 
+                 calc   = self.R0.get_calculator()
+                 ini     = read_con("reactant.con")
+                 tags = [a.symbol == 'Ti' for a in ini]
+                 charges = [2.196+(i-1)*3.294 for i in tags]
+                 ini.set_charges(charges)
+                 ini.set_calculator(calc)
+                 fin     = self.R0.copy()
+                 fin.set_calculator(calc)
+                 nim    = 5
+                 band   = neb.ssneb_finswing(ini, fin, numImages = nim, finswing = True)
+                 optneb = neb.fire_ssneb_finswing(band, maxmove =0.1, dtmax = 0.1, dt=0.1)
+                 optneb.minimize(forceConverged=0.01, maxIterations = 1000)
+                 maxi   = band.Umaxi
+                 self.N = band.path[maxi].n
+                 self.R0= band.path[maxi]
+                 self.nebInitiate = False
+            #######################needs to clean up######################
+
         if self.getMaxAtomForce() <= minForce:
             self.converged = True
                                    
