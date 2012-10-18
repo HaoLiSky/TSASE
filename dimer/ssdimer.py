@@ -16,7 +16,8 @@ class SSDimer_atoms:
 
     def __init__(self, R0 = None, mode = None, maxStep = 0.2, dT = 0.1, dR = 0.005, 
                  phi_tol = 10, rotationMax = 4, ss = True, express=np.zeros((3,3)), 
-                 nebInitiate = False, weight = 1):
+                 estimateF1 = True, nebInitiate = False, originalRotation = False, 
+                 dTheta = 3.0, weight = 1):
         """
         Parameters:
         force - the force to use
@@ -51,6 +52,9 @@ class SSDimer_atoms:
         self.ss       = ss
         self.express  = express
         self.nebInitiate = nebInitiate
+        self.estimateF1  = estimateF1
+        self.originalRotation = originalRotation
+        self.dTheta   = dTheta / 180.0 * pi
    
         vol           = self.R0.get_volume()
         avglen        = (vol/self.natom)**(1.0/3.0)
@@ -157,13 +161,13 @@ class SSDimer_atoms:
 
         F0    = self.update_general_forces(self.R0)
         F1    = self.rotation_update()
-        F0perp = F0 - np.vdot(F0, self.N) * self.N
 
         phi_min = 1.5
         Fperp   = F1 * 0.0 # avoid Fperp_old asignment error
         iteration = 0
         while abs(phi_min) > self.phi_tol and iteration < self.rotationMax:
 
+            F0perp    = F0 - np.vdot(F0, self.N) * self.N
             F1perp    = F1 - np.vdot(F1, self.N) * self.N
             Fperp_old = Fperp
             Fperp     = 2.0 * (F1perp - F0perp)
@@ -177,31 +181,52 @@ class SSDimer_atoms:
             c0     = np.vdot(F0-F1, self.N) / self.dR
             c0d    = np.vdot(F0-F1, self.T) / self.dR * 2.0
             phi_1  = -0.5 * atan(c0d / (2.0 * abs(c0)))
-
             if abs(phi_1) <= self.phi_tol: break
-            # calculate F_prime: force after rotating the dimer by phi_prime
-            N1_prime = vunit(self.N * cos(phi_1) + self.T * sin(phi_1))
-            self.iset_endpoint_pos(N1_prime, self.R0, self.R1_prime)
-            F1_prime = self.update_general_forces(self.R1_prime)
-            c0_prime = np.vdot(F0-F1_prime, N1_prime) / self.dR 
-            
-            # calculate phi_min
-            b1 = 0.5 * c0d
-            a1 = (c0 - c0_prime + b1 * sin(2 * phi_1)) / (1 - cos(2 * phi_1))
-            a0 = 2 * (c0 - a1)
-            phi_min = 0.5 * atan(b1 / a1)
-            c0_min  = 0.5 * a0 + a1 * cos(2.0 * phi_min) + b1 * sin(2 * phi_min)
 
-            # check whether it is minimum or maximum
-            if c0_min > c0 :
-                phi_min += pi * 0.5
-                c0_min   = 0.5 * a0 + a1 * cos(2.0 * phi_min) + b1 * sin(2 * phi_min)
-                 
-            # update self.N
-            self.N = vunit(self.N * cos(phi_min) + self.T * sin(phi_min))
-            # update F1 by linear extropolation
-            F1 = F1 * (sin(phi_1 - phi_min) / sin(phi_1)) + F1_prime * (sin(phi_min) / sin(phi_1)) \
-                 + F0 * (1.0 - cos(phi_min) - sin(phi_min) * tan(phi_1 * 0.5))
+            if self.originalRotation:
+                N_prime       = vunit(self.N * cos(self.dTheta) + self.T * sin(self.dTheta))
+                self.iset_endpoint_pos(N_prime, self.R0, self.R1_prime)
+                F1_prime      = self.update_general_forces(self.R1_prime)
+                F1perp_prime  = F1_prime - np.vdot(F1_prime, N_prime) * N_prime
+                Fperp_prime   = 2.0 * (F1perp_prime - F0perp)
+                T_prime       = vunit(-self.N * sin(self.dTheta) + self.T * cos(self.dTheta))
+                Fmag_prime    = np.vdot(Fperp_prime, T_prime)
+                Fmag          = np.vdot(Fperp, self.T)
+                Fmag_avg      = (Fmag_prime + Fmag) * 0.5
+                dFmag_dTheta  = (Fmag_prime - Fmag) / self.dTheta 
+                phi_min       = -0.5 * atan(2.0 * Fmag_avg / dFmag_dTheta) + self.dTheta * 0.5
+                if dFmag_dTheta > 0:
+                    phi_min  += pi * 0.5
+
+                self.N = vunit(self.N * cos(phi_min) + self.T * sin(phi_min))
+                F1     = self.rotation_update()
+            else:
+                # calculate F_prime: force after rotating the dimer by phi_prime
+                N1_prime = vunit(self.N * cos(phi_1) + self.T * sin(phi_1))
+                self.iset_endpoint_pos(N1_prime, self.R0, self.R1_prime)
+                F1_prime = self.update_general_forces(self.R1_prime)
+                c0_prime = np.vdot(F0-F1_prime, N1_prime) / self.dR 
+                
+                # calculate phi_min
+                b1 = 0.5 * c0d
+                a1 = (c0 - c0_prime + b1 * sin(2 * phi_1)) / (1 - cos(2 * phi_1))
+                a0 = 2 * (c0 - a1)
+                phi_min = 0.5 * atan(b1 / a1)
+                c0_min  = 0.5 * a0 + a1 * cos(2.0 * phi_min) + b1 * sin(2 * phi_min)
+
+                # check whether it is minimum or maximum
+                if c0_min > c0 :
+                    phi_min += pi * 0.5
+                    c0_min   = 0.5 * a0 + a1 * cos(2.0 * phi_min) + b1 * sin(2 * phi_min)
+                     
+                # update self.N
+                self.N = vunit(self.N * cos(phi_min) + self.T * sin(phi_min))
+                # update F1 by linear extropolation
+                if self.estimateF1:
+                    F1 = F1 * (sin(phi_1 - phi_min) / sin(phi_1)) + F1_prime * (sin(phi_min) / sin(phi_1)) \
+                         + F0 * (1.0 - cos(phi_min) - sin(phi_min) * tan(phi_1 * 0.5))
+                else: 
+                    F1    = self.rotation_update()
             iteration += 1
         self.curvature = c0
         return F0
