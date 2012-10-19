@@ -1,3 +1,2 @@
-pair_style meam
-pair_coeff * * library.meam W NULL W
-
+pair_style eam/alloy
+pair_coeff * * W.set W

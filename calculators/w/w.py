@@ -9,9 +9,9 @@ def w(cmd = None):
         cmd = os.path.join(cwd, 'lmp_serial')
     os.environ['LAMMPS_COMMAND'] = cmd
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    parameters = {'pair_style': 'meam',
-                  'pair_coeff': ['* * library.meam W NULL W']}
-    files = ['library.meam']
+    parameters = {'pair_style': 'eam/alloy',
+                  'pair_coeff': ['* * W.set W']}
+    files = ['W.set']
     calc = LAMMPS(parameters = parameters, files = files)
     os.chdir(cwd)
     return calc

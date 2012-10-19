@@ -1,8 +1,0 @@
-# meam data from vax files fcc,bcc,dia    11/4/92
-# elt        lat     z       ielement     atwt
-# alpha      b0      b1      b2           b3    alat    esub    asub
-# t0         t1              t2           t3            rozero  ibar
-
-'W'         'bcc'   8.      74           183.85
-5.62777409  3.978   1.00    1.00065894   1.00  3.165   8.66    0.98
-1.0         3.16353338      8.24586928   -2.7          1.      0
