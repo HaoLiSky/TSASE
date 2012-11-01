@@ -6,9 +6,6 @@ import gtk
 from tsase.xyz.xyz import xyz
 
 if __name__ == "__main__":
-    pid = os.fork()
-    if pid:
-        os._exit(0)
     q = xyz()
     if len(sys.argv) > 1:
         q.data_read(sys.argv[1])
