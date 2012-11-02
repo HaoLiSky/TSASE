@@ -17,7 +17,7 @@ class SSDimer_atoms:
     def __init__(self, R0 = None, mode = None, maxStep = 0.2, dT = 0.1, dR = 0.005, 
                  phi_tol = 10, rotationMax = 4, ss = True, express=np.zeros((3,3)), 
                  estimateF1 = True, nebInitiate = False, originalRotation = False, 
-                 alpha = 0.7, relax_perp = False, dTheta = 3.0, weight = 1):
+                 alpha = 0.6, dTheta = 3.0, weight = 1):
         """
         Parameters:
         force - the force to use
@@ -32,6 +32,7 @@ class SSDimer_atoms:
         alpha - the ratio of Fperp/Freal to switch to relaxation to keep 
                 the dimer away from the ridge region. If alpha > 1.0, relaxation
                 is turned off.
+        beta, A - parameters for the swith function
                  
         """
         self.steps = 0
@@ -54,7 +55,8 @@ class SSDimer_atoms:
         self.R1_prime.set_calculator(calc)
         self.rotationMax = rotationMax
         self.alpha    = alpha
-        self.relax_perp  = relax_perp
+        self.beta     = 11.0
+        self.A        = 1.0 / arctan(self.beta * (1-self.alpha))
         self.ss       = ss
         self.express  = express
         self.nebInitiate = nebInitiate
@@ -125,9 +127,7 @@ class SSDimer_atoms:
         Fperp     = F0-Fparallel
         alpha     = vmag(Fperp)/vmag(F0)
         print "alpha: ", alpha
-        beta      = 11.0
-        A         = 1.0 / arctan(beta * (1-self.alpha))
-        gamma     = A * (arctan(beta * (self.alpha - alpha))) 
+        gamma     = self.A * (arctan(self.beta * (self.alpha - alpha))) 
         if alpha > 0.9:
             self.danger = True
         else: 
