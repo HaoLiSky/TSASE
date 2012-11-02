@@ -17,7 +17,7 @@ class SSDimer_atoms:
     def __init__(self, R0 = None, mode = None, maxStep = 0.2, dT = 0.1, dR = 0.005, 
                  phi_tol = 10, rotationMax = 4, ss = True, express=np.zeros((3,3)), 
                  estimateF1 = True, nebInitiate = False, originalRotation = False, 
-                 dTheta = 3.0, weight = 1):
+                 alpha = 0.7, relax_perp = False, dTheta = 3.0, weight = 1):
         """
         Parameters:
         force - the force to use
@@ -29,6 +29,10 @@ class SSDimer_atoms:
         phi_tol - rotation converging tolerence, degree
         rotationMax - max rotations per translational step
         ss - boolean, solid-state dimer or regular dimer. Default: ssdimer
+        alpha - the ratio of Fperp/Freal to switch to relaxation to keep 
+                the dimer away from the ridge region. If alpha > 1.0, relaxation
+                is turned off.
+                 
         """
         self.steps = 0
         self.dT = dT
@@ -49,6 +53,8 @@ class SSDimer_atoms:
         self.R1.set_calculator(calc)
         self.R1_prime.set_calculator(calc)
         self.rotationMax = rotationMax
+        self.alpha    = alpha
+        self.relax_perp  = relax_perp
         self.ss       = ss
         self.express  = express
         self.nebInitiate = nebInitiate
@@ -114,14 +120,24 @@ class SSDimer_atoms:
         return self.N
 
     def get_forces(self):
-        F0 = self.minmodesearch()
+        F0        = self.minmodesearch()
         Fparallel = np.vdot(F0, self.N) * self.N
-        #if self.curvature > 0 and self.steps < 50:
+        Fperp     = F0-Fparallel
+        alpha     = vmag(Fperp)/vmag(F0)
+        print "alpha: ", alpha
+        beta      = 11.0
+        A         = 1.0 / arctan(beta * (1-self.alpha))
+        gamma     = A * (arctan(beta * (self.alpha - alpha))) 
+        if alpha > 0.9:
+            self.danger = True
+        else: 
+            self.danger = False
+
         if self.curvature > 0:
-            self.Ftrans = -Fparallel
+            self.Ftrans = -1 * Fparallel
             print "drag up directly"
         else:
-            self.Ftrans = F0 - 2.0 * Fparallel
+            self.Ftrans = Fperp - gamma * Fparallel
         return self.Ftrans
  
     def iset_endpoint_pos(self, Ni, R0, Ri):
@@ -243,6 +259,10 @@ class SSDimer_atoms:
             self.V = dV * (1.0 + np.vdot(dV, self.V) / np.vdot(dV, dV))
         else:
             self.V = dV
+
+        if self.danger:
+            self.V = dV
+
         step = self.V * self.dT
         if vmag(step) > self.maxStep:
             step = self.maxStep * vunit(step)
