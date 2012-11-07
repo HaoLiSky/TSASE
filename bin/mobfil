@@ -1,0 +1,41 @@
+#!/usr/bin/env python
+
+import sys
+import numpy as np
+
+import tsase
+
+try:
+    fin = sys.argv[1]
+    fout = sys.argv[2]
+    cut = float(sys.argv[3])
+except:
+    print '\nusage: mobfil in.con out.con cutoff\n'
+
+traj = tsase.io.read(fin)
+
+selected = []
+
+for p in traj[1:]:
+    for i in range(len(p)):
+        D = p.positions[i] - traj[0].positions[i]
+        Dr = np.linalg.solve(p._cell.T, D)
+        D = np.dot(Dr - np.round(Dr) * p._pbc, p._cell)
+        D = np.linalg.norm(D)
+        if D >= cut:
+            selected.append(i)
+            
+selected = list(set(selected))
+
+for p in traj:
+    p.set_constraint()
+    del p[[a.index for a in p if a.index not in selected]]
+    
+tsase.io.write_con(fout, traj[0], 'w')
+for p in traj[1:]:
+    tsase.io.write_con(fout, p, 'a')
+    
+
+    
+
+

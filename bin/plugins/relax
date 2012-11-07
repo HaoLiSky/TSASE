@@ -130,7 +130,7 @@ while not done:
     F = F_new
 
     # check convergence.
-    if max([numpy.linalg.norm(f) for f in F]) < 0.001:
+    if max([numpy.linalg.norm(f) for f in F]) < 0.01:
         done = True
         break
 
@@ -159,7 +159,7 @@ while not done:
 
     iterations += 1
 
-    if iterations > 100:
+    if iterations > 10000:
         done = True
 
 
