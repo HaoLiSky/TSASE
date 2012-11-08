@@ -11,6 +11,7 @@ from ase  import atoms, units, io
 from tsase.neb.util import vunit, vmag, vrand, sPBC
 from tsase.io import read_con
 from tsase import neb
+from numpy import arctan
 
 class SSDimer_atoms:
 
@@ -128,6 +129,12 @@ class SSDimer_atoms:
         alpha     = vmag(Fperp)/vmag(F0)
         print "alpha: ", alpha
         gamma     = self.A * (arctan(self.beta * (self.alpha - alpha))) 
+        #A          = 2
+        #beta1      = 15
+        #beta2      = 100
+        #gamma1     = 1.0 / (np.exp((alpha - self.alpha) * beta1) + 1.0) 
+        #gamma2     = A * ( 1.0 / (np.exp((alpha - 0.90) * beta2) + 1.0) - 1 )
+        #gamma      = gamma1 + gamma2
         if alpha > 0.9:
             self.danger = True
         else: 
@@ -204,7 +211,8 @@ class SSDimer_atoms:
                 self.iset_endpoint_pos(N_prime, self.R0, self.R1_prime)
                 F1_prime      = self.update_general_forces(self.R1_prime)
                 F1perp_prime  = F1_prime - np.vdot(F1_prime, N_prime) * N_prime
-                Fperp_prime   = 2.0 * (F1perp_prime - F0perp)
+                F0perp_prime  = F0 - np.vdot(F0, N_prime) * N_prime
+                Fperp_prime   = 2.0 * (F1perp_prime - F0perp_prime)
                 T_prime       = vunit(-self.N * sin(self.dTheta) + self.T * cos(self.dTheta))
                 Fmag_prime    = np.vdot(Fperp_prime, T_prime)
                 Fmag          = np.vdot(Fperp, self.T)
