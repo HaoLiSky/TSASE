@@ -26,7 +26,7 @@ def write_lammps(filename, atoms):
     f.write('\n')
     f.write(' Velocities\n\n')
     for i in range(len(atoms)):
-        f.write(' %d 0.0 0.0 0.0\n' % i+1)
+        f.write(' %d 0.0 0.0 0.0\n' % (i+1))
     f.close()
     
 if __name__ == '__main__':
