@@ -103,7 +103,7 @@ class ssneb:
             os.chdir(fdname)
             self.path[i].u = self.path[i].get_potential_energy()
             self.path[i].f = self.path[i].get_forces()
-            stt            = self.path[i].get_stress()
+            if self.ss: stt = self.path[i].get_stress()
             os.chdir('../')
             self.path[i].cellt = self.path[i].get_cell() * self.jacobian 
             self.path[i].icell = numpy.linalg.inv(self.path[i].get_cell())
@@ -144,7 +144,7 @@ class ssneb:
             os.chdir(fdname)
             self.path[i].u     = self.path[i].get_potential_energy()
             self.path[i].f     = self.path[i].get_forces()
-            stt                = self.path[i].get_stress()
+            if self.ss: stt    = self.path[i].get_stress()
             os.chdir('../')
             self.path[i].cellt = self.path[i].get_cell() * self.jacobian 
             self.path[i].icell = numpy.linalg.inv(self.path[i].get_cell())
