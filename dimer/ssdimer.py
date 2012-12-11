@@ -11,14 +11,13 @@ from ase  import atoms, units, io
 from tsase.neb.util import vunit, vmag, vrand, sPBC
 from tsase.io import read_con
 from tsase import neb
-from numpy import arctan
 
 class SSDimer_atoms:
 
     def __init__(self, R0 = None, mode = None, maxStep = 0.2, dT = 0.1, dR = 0.005, 
                  phi_tol = 10, rotationMax = 4, ss = True, express=np.zeros((3,3)), 
                  estimateF1 = True, nebInitiate = False, originalRotation = False, 
-                 alpha = 0.6, dTheta = 3.0, weight = 1):
+                 alpha = 0.6, alpha2 = 0.9, beta = 11, dTheta = 3.0, weight = 1):
         """
         Parameters:
         force - the force to use
@@ -56,8 +55,9 @@ class SSDimer_atoms:
         self.R1_prime.set_calculator(calc)
         self.rotationMax = rotationMax
         self.alpha    = alpha
-        self.beta     = 11.0
-        self.A        = 1.0 / arctan(self.beta * (1-self.alpha))
+        self.alpha2   = alpha2
+        self.beta     = beta
+        self.A        = 1.0 / atan(self.beta * (1-self.alpha))
         self.ss       = ss
         self.express  = express
         self.nebInitiate = nebInitiate
@@ -124,17 +124,18 @@ class SSDimer_atoms:
 
     def get_forces(self):
         F0        = self.minmodesearch()
+        self.F0   = F0
         Fparallel = np.vdot(F0, self.N) * self.N
         Fperp     = F0-Fparallel
         alpha     = vmag(Fperp)/vmag(F0)
         print "alpha: ", alpha
-        gamma     = self.A * (arctan(self.beta * (self.alpha - alpha))) 
-        #A          = 2
-        #beta1      = 15
-        #beta2      = 100
-        #gamma1     = 1.0 / (np.exp((alpha - self.alpha) * beta1) + 1.0) 
-        #gamma2     = A * ( 1.0 / (np.exp((alpha - 0.90) * beta2) + 1.0) - 1 )
-        #gamma      = gamma1 + gamma2
+        #gamma     = self.A * (atan(self.beta * (self.alpha - alpha))) 
+        A          = 2
+        beta1      = self.beta
+        beta2      = 100
+        gamma1     = 1.0 / (np.exp((alpha - self.alpha) * beta1) + 1.0) 
+        gamma2     = A * ( 1.0 / (np.exp((alpha - self.alpha2) * beta2) + 1.0) - 1 )
+        gamma      = gamma1 + gamma2
         if alpha > 0.9:
             self.danger = True
         else: 
@@ -173,6 +174,7 @@ class SSDimer_atoms:
         else:
             gamma = 0
         Ttmp       = Fperp + gamma * self.T * self.Tnorm
+        Ttmp       = Ttmp - np.vdot(Ttmp, self.N) * self.N
         self.Tnorm = np.linalg.norm(Ttmp)
         self.T     = vunit(Ttmp)
         
@@ -283,9 +285,9 @@ class SSDimer_atoms:
         if self.Ftrans is None:
             return 1000
         maxForce = -1
-        #for i in range(len(self.FCross)):
-        #    maxForce = max(maxForce, vmag(self.FCross[i]))
-        maxForce = vmag(self.Ftrans)
+        for i in range(len(self.Ftrans)):
+            maxForce = max(maxForce, vmag(self.Ftrans[i]))
+        #maxForce = vmag(self.Ftrans)
         return maxForce
             
     def search(self, minForce = 0.01, quiet = False, maxForceCalls = 100000, movie = None, interval = 50):
