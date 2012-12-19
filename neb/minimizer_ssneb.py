@@ -41,7 +41,7 @@ class minimizer_ssneb:
                     fMax = fi
                 if fPi > fPMax:
                     fPMax = fPi
-            io.write(str(i)+'.CON',self.band.path[i],format='vasp')
+                io.write(str(i)+'.CON',self.band.path[i],format='vasp')
 
             maxi=self.band.Umaxi
             fci =self.band.path[maxi].st 
