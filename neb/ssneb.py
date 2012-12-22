@@ -185,7 +185,7 @@ class ssneb:
             # Timing box volume should have been done.
             self.path[i].totalf = numpy.vstack((self.path[i].f, self.path[i].st / self.jacobian))
             # realtf that needed by nebspline.pl is saved for output 
-            self.path[i].realtf = self.path[i].totalf
+            self.path[i].realtf = deepcopy(self.path[i].totalf)
             
             # If we're using the 'old' tangent, the tangent is defined as the
             # vector from the point behind the current image to the point in
