@@ -4,6 +4,7 @@ from feff import read_feff, write_feff
 from bopfox import read_bopfox, write_bopfox
 from vasp import read_xdatcar
 from socorro import read_socorro, write_socorro
+from aims import read_aims, write_aims
 
 
 def read_vasp_multiframe(filename):
@@ -43,6 +44,10 @@ def read(filename):
         pass
     try:
         return read_socorro(filename)
+    except:
+        pass
+    try:
+        return read_aims(filename)
     except:
         pass
     try:
