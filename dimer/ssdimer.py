@@ -136,10 +136,6 @@ class SSDimer_atoms:
         gamma1     = 1.0 / (np.exp((alpha - self.alpha) * beta1) + 1.0) 
         gamma2     = A * ( 1.0 / (np.exp((alpha - self.alpha2) * beta2) + 1.0) - 1 )
         gamma      = gamma1 + gamma2
-        if alpha > 0.9:
-            self.danger = True
-        else: 
-            self.danger = False
 
         if self.curvature > 0:
             self.Ftrans = -1 * Fparallel
@@ -268,9 +264,6 @@ class SSDimer_atoms:
         if np.vdot(self.V, Ftrans) > 0:
             self.V = dV * (1.0 + np.vdot(dV, self.V) / np.vdot(dV, dV))
         else:
-            self.V = dV
-
-        if self.danger:
             self.V = dV
 
         step = self.V * self.dT
