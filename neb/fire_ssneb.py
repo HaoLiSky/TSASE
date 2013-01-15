@@ -71,7 +71,7 @@ class fire_ssneb(minimizer_ssneb):
 
         for i in range(1, self.band.numImages - 1):
             dR = self.dt * self.v[i-1]
-            if dR > self.maxmove:
+            if vmag(dR) > self.maxmove:
                 dR = self.maxmove * vunit(self.dR)
             # move R 
             rt  = self.band.path[i].get_positions()
