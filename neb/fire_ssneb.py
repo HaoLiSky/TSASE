@@ -66,11 +66,13 @@ class fire_ssneb(minimizer_ssneb):
         # Euler step
         self.v += self.dt * totalf
         # check for max step
-        if vmag(self.v) > self.maxmove/self.dt :
-            self.v = self.maxmove/self.dt * vunit(self.v)
+        #if vmag(self.v) > self.maxmove/self.dt :
+        #    self.v = self.maxmove/self.dt * vunit(self.v)
 
         for i in range(1, self.band.numImages - 1):
             dR = self.dt * self.v[i-1]
+            if dR > self.maxmove:
+                dR = self.maxmove * vunit(self.dR)
             # move R 
             rt  = self.band.path[i].get_positions()
             rt += dR[:-3]
