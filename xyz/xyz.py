@@ -517,7 +517,7 @@ class xyz(gtk.Window):
             atom.radius = elements[symbols[i]]['radius']
             tc = self.get_frame_colors()
             if tc != None:
-                atom.color = tc[i]
+                atom.color = tc[atom.id]
             else:
                 atom.color = elements[symbols[i]]['color']
             atom.depth = 0
