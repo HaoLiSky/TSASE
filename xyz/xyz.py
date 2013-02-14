@@ -44,7 +44,6 @@ class xyz(gtk.Window):
         self.show()
         self.initialize_members()
         self.event_configure()
-        self.gfx_setup_colors()
         self.gfx_reset_transform()
         gobject.timeout_add(8, self.event_timeout)
 
@@ -73,6 +72,7 @@ class xyz(gtk.Window):
         self.area                  = gladetree.get_widget("atomview")
         self.menuFileOpen          = gladetree.get_widget("menuFileOpen")
         self.menuFileOpenView      = gladetree.get_widget("menuFileOpenView")
+        self.menuFileOpenColors    = gladetree.get_widget("menuFileOpenColors")
         self.menuFileSaveAs        = gladetree.get_widget("menuFileSaveAs")
         self.menuFileSaveView      = gladetree.get_widget("menuFileSaveView")
         self.menuFileExport        = gladetree.get_widget("menuFileExport")
@@ -103,6 +103,7 @@ class xyz(gtk.Window):
         self.moviescale.connect("value-changed", lambda w: self.gfx_render())
         self.menuFileOpen.connect("activate", self.event_menuFileOpen)
         self.menuFileOpenView.connect("activate", self.event_menuFileOpenView)
+        self.menuFileOpenColors.connect("activate", self.event_menuFileOpenColors)
         self.menuFileSaveAs.connect("activate", self.event_menuFileSaveAs)
         self.menuFileSaveView.connect("activate", self.event_menuFileSaveView)
         self.menuFileExport.connect("activate", self.event_menuFileExport)
@@ -128,6 +129,7 @@ class xyz(gtk.Window):
         self.playing = False
         self.queue = []
         self.trajectory = None
+        self.trajectoryColors = None
         self.button1 = False
         self.button2 = False
         self.button3 = False
@@ -137,14 +139,13 @@ class xyz(gtk.Window):
         self.black_gc = self.area.get_style().black_gc
         self.white_gc = self.area.get_style().white_gc
         self.color_memo = {}
-        self.background_gc = self.gfx_get_color_gc(self.background[0], self.background[1], self.background[2])
+        self.background_gc = self.gfx_get_color_gc(self.background)
         self.pixmap = None
         self.repeat = (1, 1, 1)
         self.lastTime = time.time()
         self.lastAtoms = None
         self.screenatoms = []
         self.grabbedatom = None
-        self.colors = []
         self.render_cairo = False
         self.pwd = os.getcwd()
         self.bond_width = 4
@@ -273,7 +274,11 @@ class xyz(gtk.Window):
         if len(self.trajectory) > 1:
             drawpoint = self.trajectory[int(self.moviescale.get_value())]
         return drawpoint
-                                                                                    
+        
+    def get_frame_colors(self):
+        if self.trajectoryColors is None:
+            return None
+        return self.trajectoryColors[int(self.moviescale.get_value())]
 
     def event_exposed(self, *args):
         self.gfx_render()
@@ -362,6 +367,14 @@ class xyz(gtk.Window):
             self.queue_draw()
         return True
 
+    def event_menuFileOpenColors(self, *args):
+        response, filename = self.getFilenameOpen()
+        if response == gtk.RESPONSE_OK:
+            self.pwd = os.path.dirname(filename)
+            self.trajectoryColors = tsase.io.read_colors(filename)
+            self.queue_draw()
+        return True
+
     def event_menuFileSaveAs(self, *args):
         if self.trajectory is None:
             return
@@ -436,7 +449,10 @@ class xyz(gtk.Window):
         self.area.window.draw_drawable(self.white_gc, self.pixmap, 0, 0, 0, 0, self.width, self.height)
         self.last_draw = time.time()
 
-    def gfx_get_color_gc(self, r, g, b):
+    def gfx_get_color_gc(self, color):
+        r = color[0]
+        g = color[1]
+        b = color[2]
         if (r,g,b) not in self.color_memo:
             rgb = (int(r * 65535), int(g * 65535), int(b * 65535))
             gc = self.area.window.new_gc()
@@ -444,11 +460,6 @@ class xyz(gtk.Window):
             self.color_memo[(r,g,b)] = gc
         return self.color_memo[(r,g,b)]    
         
-    def gfx_setup_colors(self):
-        for i in range(num_elements):
-            c = elements[i]['color']
-            self.colors.append(self.gfx_get_color_gc(c[0], c[1], c[2]))
-
     def gfx_reset_transform(self):
         self.radiusbutton.set_value(1.5)
         self.zoombutton.set_value(8.0)
@@ -501,10 +512,14 @@ class xyz(gtk.Window):
         symbols = ra.get_chemical_symbols()
         for i in range(len(r)):
             atom = queueitem("atom")
+            atom.id = i % len(self.get_frame_atoms())
             atom.r = np.copy(r[i])
             atom.radius = elements[symbols[i]]['radius']
-            atom.number = elements[symbols[i]]['number']
-            atom.id = i % len(self.get_frame_atoms())
+            tc = self.get_frame_colors()
+            if tc != None:
+                atom.color = tc[i]
+            else:
+                atom.color = elements[symbols[i]]['color']
             atom.depth = 0
             atom.constrained = False
             try:
@@ -638,7 +653,7 @@ class xyz(gtk.Window):
                 rad = int(q.radius * self.zoombutton.get_value() * self.radiusbutton.get_value())
                 x = int(r[0] * s2 + w2)
                 y = int(-r[1] * s2 + h2)
-                self.gfx_draw_circle(x, y, rad, q.number)
+                self.gfx_draw_circle(x, y, rad, q.color)
                 if self.frozenbutton.get_active():
                     if q.constrained:
                         self.gfx_draw_line(x-rad*dr, y-rad*dr, x+rad*dr, y+rad*dr)
@@ -681,10 +696,9 @@ class xyz(gtk.Window):
         else:
             self.pixmap.draw_rectangle(self.background_gc, True, 0, 0, self.width, self.height)
 
-    def gfx_draw_circle(self, x, y, r, element):
+    def gfx_draw_circle(self, x, y, r, color):
         r = max(1,r)
         if self.render_cairo:
-            color = elements[element]['color']
             self.cairo_context.arc(x, y, r, 0, math.pi * 2.0)
             self.cairo_context.set_source_rgb(color[0], color[1], color[2])
             self.cairo_context.fill()
@@ -693,7 +707,7 @@ class xyz(gtk.Window):
             self.cairo_context.set_line_width(0.5)
             self.cairo_context.stroke()
         else:
-            self.pixmap.draw_arc(self.colors[element], True, x - r, y - r, r * 2, r * 2, 0, 64 * 360)
+            self.pixmap.draw_arc(self.gfx_get_color_gc(color), True, x - r, y - r, r * 2, r * 2, 0, 64 * 360)
             self.pixmap.draw_arc(self.black_gc, False, x - r, y - r, r * 2, r * 2, 0, 64 * 360)
 
     def gfx_draw_line(self, x1, y1, x2, y2, width=1, color=[0,0,0]):
@@ -704,7 +718,7 @@ class xyz(gtk.Window):
             self.cairo_context.set_line_width(width)
             self.cairo_context.stroke()
         else:
-            gc = self.gfx_get_color_gc(color[0], color[1], color[2])
+            gc = self.gfx_get_color_gc(color)
             gc.set_line_attributes(width, gtk.gdk.LINE_SOLID, gtk.gdk.CAP_ROUND, gtk.gdk.JOIN_MITER)
             self.pixmap.draw_line(gc, int(x1), int(y1), int(x2), int(y2))        
             gc.set_line_attributes(1, gtk.gdk.LINE_SOLID, gtk.gdk.CAP_ROUND, gtk.gdk.JOIN_MITER)

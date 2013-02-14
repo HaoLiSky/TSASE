@@ -5,7 +5,7 @@ from bopfox import read_bopfox, write_bopfox
 from vasp import read_xdatcar
 from socorro import read_socorro, write_socorro
 from aims import read_aims, write_aims
-
+from colors import read_colors
 
 def read_vasp_multiframe(filename):
     try:
