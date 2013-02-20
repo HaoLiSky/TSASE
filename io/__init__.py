@@ -47,7 +47,10 @@ def read(filename):
     except:
         pass
     try:
-        return read_aims(filename)
+        a = read_aims(filename)
+        if len(a.positions) < 1:
+            raise
+        return a
     except:
         pass
     try:

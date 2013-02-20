@@ -63,8 +63,8 @@ def read_dump(filename):
     
 if __name__ == '__main__':
     import sys
-    #p = tsase.io.read(sys.argv[1])
-    #write_lammps(sys.argv[1] + '.lammps', p)
+#    p = tsase.io.read(sys.argv[1])
+#    write_lammps(sys.argv[1] + '.lammps', p)
     traj = read_dump(sys.argv[1])
     tsase.io.write_con(sys.argv[1] + '.con', traj[0], 'w')
     for t in traj[1:]:
