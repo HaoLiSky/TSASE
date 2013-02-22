@@ -8,7 +8,7 @@ import glob
 from optparse import OptionParser
 
 import tsase
-from tsase.io import read_con, write_con
+from tsase.io import read, write_con
 from tsase.data import elements
 
 import ase
@@ -312,7 +312,7 @@ def insert(reactant, saddle, product, mode=None, kdbdir="./kdb", nf=0.2, dc=0.3,
 if __name__ == "__main__":
 
     # Parse command line options.
-    parser = OptionParser(usage = "%prog [options] reactant.con saddle.con product.con mode")
+    parser = OptionParser(usage = "%prog [options] reactant saddle product mode")
     parser.add_option("-d", "--kdbdir", dest = "kdbdir", 
                       help = "the path to the kinetic database",
                       default = "./kdb")
@@ -336,9 +336,9 @@ if __name__ == "__main__":
         sys.exit()
 
     # Load the reactant, saddle, product, and mode files.
-    reactant = read_con(args[0])
-    saddle = read_con(args[1])
-    product = read_con(args[2])
+    reactant = read(args[0])
+    saddle = read(args[1])
+    product = read(args[2])
     mode = None
     if options.mode is not None:
         mode = load_mode(options.mode)
