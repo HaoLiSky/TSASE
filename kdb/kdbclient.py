@@ -58,7 +58,7 @@ if __name__ == "__main__":
                       help = "optional mode file",
                       default = None)
     parser.add_option("--host", dest = "host", help = "the hostname of a kdbserver",
-                      default = "localhost")
+                      default = "halifax.ices.utexas.edu")
     parser.add_option("--port", dest = "port", action="store", type="int", 
                       help = "the port of a kdbserver", default = 8080)
     options, args = parser.parse_args()
