@@ -22,13 +22,13 @@ b.TEMPLATE_PATH.append(os.path.join(PATH, 'templates'))
 @b.post('/insert')
 def insert():
     tmpdir = tempfile.mkdtemp()
-    f = open(os.path.join(tmpdir, 'reactant.con'), 'w')
+    f = open(os.path.join(tmpdir, 'reactant'), 'w')
     f.write(b.request.forms.get('reactant'))
     f.close()
-    f = open(os.path.join(tmpdir, 'saddle.con'), 'w')
+    f = open(os.path.join(tmpdir, 'saddle'), 'w')
     f.write(b.request.forms.get('saddle'))
     f.close()
-    f = open(os.path.join(tmpdir, 'product.con'), 'w')
+    f = open(os.path.join(tmpdir, 'product'), 'w')
     f.write(b.request.forms.get('product'))
     f.close()
     mode = b.request.forms.get('mode')
@@ -37,9 +37,9 @@ def insert():
       f.write(mode)
       f.close()
     command = '%s %s %s %s --nf=%f --dc=%f --mac=%f --kdbdir=%s' % (INSERT_PATH,
-                      os.path.join(tmpdir, 'reactant.con'),
-                      os.path.join(tmpdir, 'saddle.con'),
-                      os.path.join(tmpdir, 'product.con'),
+                      os.path.join(tmpdir, 'reactant'),
+                      os.path.join(tmpdir, 'saddle'),
+                      os.path.join(tmpdir, 'product'),
                       NEIGHBOR_FUDGE, DISTANCE_CUTOFF, MOBILE_ATOM_CUTOFF, KDB_PATH)
     if mode:
         command += ' --mode=%s' % os.path.join(tmpdir, 'mode.dat')
@@ -50,11 +50,11 @@ def insert():
 @b.post('/query')
 def query():
     tmpdir = tempfile.mkdtemp()
-    f = open(os.path.join(tmpdir, 'reactant.con'), 'w')
+    f = open(os.path.join(tmpdir, 'reactant'), 'w')
     f.write(b.request.forms.get('reactant'))
     f.close()
     output = commands.getoutput('%s %s --nf=%f --dc=%f --kdbdir=%s' % 
-                                (QUERY_PATH, os.path.join(tmpdir, 'reactant.con'), NEIGHBOR_FUDGE, DISTANCE_CUTOFF, KDB_PATH)) 
+                                (QUERY_PATH, os.path.join(tmpdir, 'reactant'), NEIGHBOR_FUDGE, DISTANCE_CUTOFF, KDB_PATH)) 
     filelist = glob.glob(os.path.join('kdbmatches', '*'))
     ret = {}
     ret['stdout'] = output

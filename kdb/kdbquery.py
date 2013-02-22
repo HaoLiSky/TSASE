@@ -12,8 +12,9 @@ from optparse import OptionParser
 
 from kdb import *
 from tsase.data import elements
-from tsase.io import read_con, write_con
+from tsase.io import read_con, write_con, read
 from ase.io.xyz import read_xyz, write_xyz
+from ase.io.vasp import read_vasp, write_vasp
 
 PBC_MAPPING_CHECK = False
 REBOX_SUGGESTIONS = False
@@ -423,8 +424,8 @@ def query(reactant, kdbdir, outputdir = "./kdbmatches", nf=0.2, dc=0.3, nodupes 
                 sugproduct.positions = pbc(sugproduct.positions, sugproduct.cell)
                 
             # Write suggestion.
-            write_con(outputdir + "/SADDLE_%d" % numMatches, suggestion)
-            write_con(outputdir + "/PRODUCT_%d" % numMatches, sugproduct)
+            write_vasp(outputdir + "/SADDLE_%d" % numMatches, suggestion)
+            write_vasp(outputdir + "/PRODUCT_%d" % numMatches, sugproduct)
             if mode is not None:
                 save_mode(outputdir + "/MODE_%d" % numMatches, modeTemp)
             os.system("touch %s/.done_%d" % (outputdir, numMatches))                        
@@ -458,7 +459,7 @@ if __name__ == "__main__":
         sys.exit()
         
     # Load the reactant con file.
-    reactant = read_con(args[0])
+    reactant = read(args[0])
     
     query(reactant, options.kdbdir, "./kdbmatches", dc=options.dc, nf=options.nf, nodupes=options.nodupes)
     
