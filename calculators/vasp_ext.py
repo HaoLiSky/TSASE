@@ -596,6 +596,7 @@ class Vasp(Calculator):
                 stress = -np.array([float(a) for a in line.split()[2:]]) \
                          [[0, 1, 2, 4, 5, 3]] \
                          * 1e-1 * ase.units.GPa
+            #xph: apply external stress
             if line.find(' Pullay stress ') != -1:
                 pstress = float(line.split()[-2]) * -1e-1 * ase.units.GPa
         stress[0:3] -= pstress    
@@ -851,6 +852,7 @@ class Vasp(Calculator):
             energy_free = []
             energy_zero = []
         #for line in open('OUTCAR', 'r'):
+        #xph: enthalpy (E+PV) in OSZICAR, energy in OUTCAR
         for line in open('OSZICAR', 'r'):
             # Free energy
             #if line.lower().startswith('  free  energy   toten'):
