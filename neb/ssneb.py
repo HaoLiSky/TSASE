@@ -271,8 +271,12 @@ class ssneb:
                         self.path[i].n = numpy.vstack((sn,snb))
         
         # Normalize the tangents.
+        print "==========!tangent contribution!=========="
+        print "Jacobian:", self.jacobian
+        print "ImageNum        atom         cell"
         for i in range(1,self.numImages-1):
             self.path[i].n = vunit(self.path[i].n)
+            print i, vmag(self.path[i].n[:-3]), vmag(self.path[i].n[-3:])
 
         # Loop over each intermediate image and adjust the potential energy 
         # force and apply the spring force.
