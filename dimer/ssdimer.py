@@ -14,8 +14,8 @@ from tsase import neb
 
 class SSDimer_atoms:
 
-    def __init__(self, R0 = None, mode = None, maxStep = 0.2, dT = 0.1, dR = 0.005, 
-                 phi_tol = 10, rotationMax = 4, ss = True, express=np.zeros((3,3)), 
+    def __init__(self, R0 = None, mode = None, maxStep = 0.2, dT = 0.1, dR = 0.001, 
+                 phi_tol = 5, rotationMax = 4, ss = True, express=np.zeros((3,3)), 
                  estimateF1 = True, nebInitiate = False, originalRotation = False, 
                  alpha = 0.6, alpha2 = 0.9, beta = 11, dTheta = 3.0, weight = 1):
         """
@@ -129,13 +129,18 @@ class SSDimer_atoms:
         Fperp     = F0-Fparallel
         alpha     = vmag(Fperp)/vmag(F0)
         print "alpha: ", alpha
+        ##turn off parallel force when alpha is high 
         #gamma     = self.A * (atan(self.beta * (self.alpha - alpha))) 
-        A          = 2
-        beta1      = self.beta
-        beta2      = 100
-        gamma1     = 1.0 / (np.exp((alpha - self.alpha) * beta1) + 1.0) 
-        gamma2     = A * ( 1.0 / (np.exp((alpha - self.alpha2) * beta2) + 1.0) - 1 )
-        gamma      = gamma1 + gamma2
+        ##another way to do that
+        #A          = 2
+        #beta1      = self.beta
+        #beta2      = 100
+        #gamma1     = 1.0 / (np.exp((alpha - self.alpha) * beta1) + 1.0) 
+        #gamma2     = A * ( 1.0 / (np.exp((alpha - self.alpha2) * beta2) + 1.0) - 1 )
+        #gamma      = gamma1 + gamma2
+        #gamma      = gamma1 
+        ##original dimer
+        gamma      = 1.0
 
         if self.curvature > 0:
             self.Ftrans = -1 * Fparallel
