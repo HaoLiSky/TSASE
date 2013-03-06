@@ -76,7 +76,6 @@ class SSDimer_atoms:
     def __getattr__(self, attr):
         """Return any value of the Atoms object"""
         return getattr(self.R0, attr)
-        print "*************************************"
         print attr
 
     def __len__(self):
