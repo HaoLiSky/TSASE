@@ -11,6 +11,7 @@ output: 1. fe.out
 
 from tsase import neb
 from tsase.calculators.lammps_ext import LAMMPS
+#from tsase.calculators.vasp_ext import Vasp
 from ase.io import read
 import os
 
