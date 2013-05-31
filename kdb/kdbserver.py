@@ -129,11 +129,16 @@ if __name__ == "__main__":
                       help = "mobile atom cutoff parameter",
                       default = MOBILE_ATOM_CUTOFF)
     parser.add_option("--host", dest = "host", help = "the hostname to use",
-                      default = "localhost")
+                      default = "theory.cm.utexas.edu")
     parser.add_option("--port", dest = "port", action="store", type="int", 
-                      help = "the port to use", default = 8080)
+                      help = "the port to use", default = 8192)
     options, args = parser.parse_args()
     NEIGHBOR_FUDGE = options.nf
     MOBILE_ATOM_CUTOFF = options.mac
     DISTANCE_CUTOFF = options.dc
     b.run(host=options.host, port=options.port, reloader=True)
+    
+    
+    
+    
+    
