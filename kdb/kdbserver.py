@@ -49,6 +49,9 @@ def insert():
 
 @b.post('/query')
 def query():
+    # XXX: I think the best way forward to allow parallel processes
+    # here is to make the query function return atoms objects instead
+    # of writing them to file there.
     tmpdir = tempfile.mkdtemp()
     f = open(os.path.join(tmpdir, 'reactant'), 'w')
     f.write(b.request.forms.get('reactant'))
