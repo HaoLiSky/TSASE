@@ -26,7 +26,7 @@ out3 = commands.getoutput("diff SADDLE_0 kdbmatches/SADDLE_0")
 
 if out3 != "":
 	print out3
-	print "fail"
+	print "fail test 3"
 	sys.exit()
 
 commands.getoutput("../kdbquery.py product.con")
@@ -35,7 +35,7 @@ out4 = commands.getoutput("diff SADDLE_1 kdbmatches/SADDLE_1")
 
 if out4 != "":
 	print out4
-	print "fail"
+	print "fail test 4"
 	sys.exit()
 
 print "success"

@@ -283,11 +283,6 @@ def insert(reactant, saddle, product, mode=None, kdbdir="./kdb", nf=0.2, dc=0.3,
     if mode is not None:
         save_mode(os.path.join(processPath, "mode"), mode)
 
-    def numberfile(filename, number):
-        f = open(filename, 'w')
-        f.write(str(number))
-        f.close()
-        
     # Save the list of mobile atoms.
     f = open(os.path.join(processPath, "mobile"), 'w')
     for atom in mobileAtoms:
