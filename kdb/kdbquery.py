@@ -112,6 +112,9 @@ def getKDBentries(kdbdir, reactant):
 
 
 def query(reactant, kdbdir, outputdir = "./kdbmatches", nf=0.2, dc=0.3, nodupes = False):
+    # XXX: I think the best way forward to allow parallel processes
+    # here is to make the query function return atoms objects instead
+    # of writing them to file there.
 
     # Get the ibox to speed up pbcs.
     ibox = numpy.linalg.inv(reactant.cell)
