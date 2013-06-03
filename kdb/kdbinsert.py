@@ -270,11 +270,17 @@ def insert(reactant, saddle, product, mode=None, kdbdir="./kdb", nf=0.2, dc=0.3,
             return      
 
     # Create the path for this process.
+    # This is where the parallelization protection takes place. No
+    # two processes should be able to create the same numbered directory.
     i = 0
-    while os.path.exists(os.path.join(elementPath, str(i))):
-        i += 1
-    processPath = os.path.join(elementPath, str(i))
-    os.makedirs(processPath)
+    while True:
+        try:
+            processPath = os.path.join(elementPath, str(i))
+            os.makedirs(processPath)
+            break
+        except OSError:
+            i += 1
+
 
     # Save the configurations for this process.  
     write_xyz(os.path.join(processPath, "min1.xyz"), reactant)
