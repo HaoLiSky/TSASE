@@ -78,6 +78,8 @@ def getKDBentries(kdbdir, reactant):
         if not os.path.isdir(elementPath):
             continue
         for procDir in glob.glob(os.path.join(elementPath, "*")):
+            if os.path.isfile(os.path.join(procDir, "incomplete")):
+                continue
             entry = {"minimum": os.path.join(procDir, "min1.xyz"), 
                      "saddle": os.path.join(procDir, "saddle.xyz"), 
                      "mode": os.path.join(procDir, "mode"),

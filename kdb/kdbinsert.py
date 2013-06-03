@@ -272,6 +272,7 @@ def insert(reactant, saddle, product, mode=None, kdbdir="./kdb", nf=0.2, dc=0.3,
     # Create the path for this process.
     # This is where the parallelization protection takes place. No
     # two processes should be able to create the same numbered directory.
+    processPath = ""
     i = 0
     while True:
         try:
@@ -281,6 +282,10 @@ def insert(reactant, saddle, product, mode=None, kdbdir="./kdb", nf=0.2, dc=0.3,
         except OSError:
             i += 1
 
+    # Create a lockfile of sorts to indicate to query that we're not done
+    # filling out this entry.
+    lockfilePath = os.path.join(processPath, "incomplete")
+    open(lockfilePath, 'w').close()
 
     # Save the configurations for this process.  
     write_xyz(os.path.join(processPath, "min1.xyz"), reactant)
@@ -306,6 +311,9 @@ def insert(reactant, saddle, product, mode=None, kdbdir="./kdb", nf=0.2, dc=0.3,
     if mode is not None:
         save_mode(os.path.join(processPath, 'original_mode.dat'), original_mode)
         
+    # Remove the lockfile.
+    os.remove(lockfilePath)
+
     # Indicate that the process was inserted successfully.
     print "good"
 
