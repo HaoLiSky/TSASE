@@ -1,0 +1,223 @@
+#!/usr/bin/env python
+
+import os
+import gtk
+import gtk.glade
+import gtk.gdk as gdk
+from PIL import Image, ImageDraw
+import time
+import tsase
+from tsase.data import *
+from tsase.tem import TEM_image_comparison as tiv
+
+
+class xyz(gtk.Window):
+	def __init__(self):
+		gtk.Window.__init__(self, gtk.WINDOW_TOPLEVEL)
+		self.set_title('Image Evaluation')
+
+		filename = os.path.join(os.path.dirname(__file__), "tem.glade")
+		gt = gtk.glade.XML(filename)
+
+		self.gwindow = gt.get_widget("window")
+		self.area = gt.get_widget("atomview")
+		self.fileName_entry   = gt.get_widget("fileName_entry")
+		self.pFileName_entry  = gt.get_widget("pFileName_entry")
+		self.intensity_entry  = gt.get_widget("intensity_entry")
+		self.bg_entry         = gt.get_widget("bg_entry")
+		self.width_entry      = gt.get_widget("width_entry")
+		self.scale_entry      = gt.get_widget("scale_entry")
+		self.x_trans_entry    = gt.get_widget("x_trans_entry")
+		self.y_trans_entry    = gt.get_widget("y_trans_entry")
+		self.x_rot_entry      = gt.get_widget("x_rot_entry")
+		self.y_rot_entry      = gt.get_widget("y_rot_entry")
+		self.z_rot_entry      = gt.get_widget("z_rot_entry")
+		self.score_entry      = gt.get_widget("score_entry")
+		self.width_button     = gt.get_widget("width_button")
+		self.scale_button     = gt.get_widget("scale_button")
+		self.x_trans_button   = gt.get_widget("x_trans_button")
+		self.y_trans_button   = gt.get_widget("y_trans_button")
+		self.x_rot_button     = gt.get_widget("x_rot_button")
+		self.y_rot_button     = gt.get_widget("y_rot_button")
+		self.z_rot_button     = gt.get_widget("z_rot_button")
+		self.bgi_button       = gt.get_widget("bgi_button")
+		self.optimize_button  = gt.get_widget("optimize_button")
+		self.score_button     = gt.get_widget("score_button")
+		self.tem_button       = gt.get_widget("TEM_button")
+
+		self.connect("destroy", self.close)
+		self.width_button.connect("clicked", lambda w: self.opt_width())
+		self.scale_button.connect("clicked", lambda w: self.opt_scale())
+		self.x_trans_button.connect("clicked", lambda w: self.opt_x_trans())
+		self.y_trans_button.connect("clicked", lambda w: self.opt_y_trans())
+		self.x_rot_button.connect("clicked", lambda w: self.opt_x_rot())
+		self.y_rot_button.connect("clicked", lambda w: self.opt_y_rot())
+		self.z_rot_button.connect("clicked", lambda w: self.opt_z_rot())
+		self.bgi_button.connect("clicked", lambda w: self.opt_bgi())
+		self.optimize_button.connect("clicked", lambda w: self.optimize())
+		self.score_button.connect("clicked", lambda w: self.score())
+
+		self.add(self.gwindow)
+		self.set_resizable(True)
+		self.area.set_size_request(128, 128)
+		self.set_default_size(640, 512)
+		self.show()
+
+
+	def close(self, *args):
+		gtk.main_quit()
+
+	def get_fileName(self, *args):
+		return self.fileName_entry.get_text()
+
+	def get_pFileName(self, *args):
+		return self.pFileName_entry.get_text()
+
+	def get_intensity(self, *args):
+		return self.intensity_entry.get_text()
+
+	def get_bg(self, *args):
+		return self.bg_entry.get_text()
+
+	def get_width(self, *args):
+		return self.width_entry.get_text()
+
+	def get_scale(self, *args):
+		return self.scale_entry.get_text()
+
+	def get_x_trans(self, *args):
+		return self.x_trans_entry.get_text()
+
+	def get_y_trans(self, *args):
+		return self.y_trans_entry.get_text()
+
+	def get_x_rot(self, *args):
+		return self.x_rot_entry.get_text()
+
+	def get_y_rot(self, *args):
+		return self.y_rot_entry.get_text()
+
+	def get_z_rot(self, *args):
+		return self.z_rot_entry.get_text()
+
+	def opt_width(self, *args):
+		ie = self.get_ie()
+		w = ie.get_sigma_o()
+		self.width_entry.set_text(str(w))
+		self.get_image()
+
+	def opt_scale(self, *args):
+		ie = self.get_ie()
+		s = ie.get_scale_o()
+		self.scale_entry.set_text(str(s))
+		self.get_image()
+
+	def opt_x_trans(self, *args):
+		ie = self.get_ie()
+		x = ie.get_xt_o()
+		self.x_trans_entry.set_text(str(x))
+		self.get_image()
+
+	def opt_y_trans(self, *args):
+		ie = self.get_ie()
+		y = ie.get_yt_o()
+		self.y_trans_entry.set_text(str(y))
+		self.get_image()
+
+	def opt_x_rot(self, *args):
+		ie = self.get_ie()
+		x = ie.get_xr_o()
+		self.x_rot_entry.set_text(str(x))
+		self.get_image()
+
+	def opt_y_rot(self, *args):
+		ie = self.get_ie()
+		y = ie.get_yr_o()
+		self.y_rot_entry.set_text(str(y))
+		self.get_image()
+
+	def opt_z_rot(self, *args):
+		ie = self.get_ie()
+		z = ie.get_zr_o()
+		self.z_rot_entry.set_text(str(z))
+		self.get_image()
+
+	def opt_bgi(self, *args):
+		ie = self.get_ie()
+		alist = ie.get_bgi()
+		self.intensity_entry.set_text(str(alist[0]))
+		self.bg_entry.set_text(str(alist[1]))
+		self.get_image()
+
+	def optimize(self, *args):
+		ie = self.get_ie()
+		vector = [0,75,6.3,12,0,0,0,0,0]
+		print ie.get_gradient(vector)
+		#alist = ie.get_optimal_score()
+		#self.bg_entry.set_text(str(alist[0]))
+		#self.intensity_entry.set_text(str(alist[1]))
+		#self.width_entry.set_text(str(alist[2]))
+		#self.scale_entry.set_text(str(alist[3]))
+		#self.x_trans_entry.set_text(str(alist[4]))
+		#self.y_trans_entry.set_text(str(alist[5]))
+		#self.x_rot_entry.set_text(str(alist[6]))
+		#self.y_rot_entry.set_text(str(alist[7]))
+		#self.z_rot_entry.set_text(str(alist[8]))
+		#self.get_image()
+
+	def score(self, *args):
+		bg = float(self.get_bg())
+		i = float(self.get_intensity())
+		w = float(self.get_width())
+		s = float(self.get_scale())
+		xt = float(self.get_x_trans())
+		yt = float(self.get_y_trans())
+		xr = float(self.get_x_rot())
+		yr = float(self.get_y_rot())
+		zr = float(self.get_z_rot())
+		ie = self.get_ie()
+		score = ie.score(bg, i, w, s, xt, yt, xr, yr, zr)
+		self.score_entry.set_text(str(score))
+		self.get_image()
+
+	def get_ie(self, *args):
+		pfn = self.get_pFileName()
+		fn = self.get_fileName()
+		bg = float(self.get_bg())
+		i = float(self.get_intensity())
+		w = float(self.get_width())
+		s = float(self.get_scale())
+		xt = float(self.get_x_trans())
+		yt = float(self.get_y_trans())
+		xr = float(self.get_x_rot())
+		yr = float(self.get_y_rot())
+		zr = float(self.get_z_rot())
+		return tiv(pfn, fn, bg, i, w, s, xt, yt, xr, yr, zr)
+
+	def get_image(self, *args):
+		x, y, w, h = self.area.get_allocation()
+		gc = self.area.get_style().white_gc
+		gc2 = self.area.get_style().black_gc
+		pixmap = gdk.Pixmap(self.area.window, w, h)
+		pixmap.draw_rectangle(gc, True, 0, 0, w, h)
+
+		ie = self.get_ie()
+		im = ie.draw_image()
+		im_data = im.tostring()
+		pixbuf = gdk.pixbuf_new_from_data(im_data, gdk.COLORSPACE_RGB, True, 8, im.size[0], im.size[1], 4*im.size[0])
+		new_w = (w-im.size[0])/2
+		new_h = (h-im.size[1])/2
+		pixmap.draw_rectangle(gc2, False, new_w-1, new_h-1, im.size[0]+1, im.size[1]+1)
+		if self.tem_button.get_active():
+			pixbuf2 = gdk.pixbuf_new_from_file(self.get_fileName())
+			pixmap.draw_pixbuf(gc, pixbuf2, 0, 0, new_w, new_h, -1, -1, gdk.RGB_DITHER_NORMAL, 0, 0)
+		pixmap.draw_pixbuf(gc, pixbuf, 0, 0, new_w, new_h, -1, -1, gdk.RGB_DITHER_NORMAL, 0, 0)
+		self.area.window.draw_drawable(gc, pixmap, 0, 0, 0, 0, w, h)
+
+
+		
+
+
+if __name__ == "__main__":
+	q = xyz()
+	gtk.main()
