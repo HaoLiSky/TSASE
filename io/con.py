@@ -109,16 +109,17 @@ def write_con(filename, p, w = 'w'):
         printmasses.append(p[index].mass)
         index += atom_count[name_order[i]]
     print >> con, " ".join(["%12.6f"% i for i in printmasses])
-    index = 0
+    index=0
     for i in range(len(name_order)):
         print >> con, name_order[i]
         print >> con, "Coordinates of Component", i+1
-        for j in range(atom_count[name_order[i]]):
+        for j in range(p.get_number_of_atoms()):
             free = 0
             if len(p.constraints) > 0:
                 if index in p.constraints[0].index:
                     free = 1
-            con.write("%12.6f %12.6f %12.6f %d %d\n" % (p[index].position[0],
-                      p[index].position[1], p[index].position[2], free, index))
-            index += 1
+            if p[j].symbol==name_order[i]:
+                con.write("%12.6f %12.6f %12.6f %d %d\n" % (p[j].position[0],
+                          p[j].position[1], p[j].position[2], free, index))
+                index += 1
 
