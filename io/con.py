@@ -113,7 +113,7 @@ def write_con(filename, p, w = 'w'):
         for j in range(len(p)):
             free = 0
             if len(p.constraints) > 0:
-                if index in p.constraints[0].index:
+                if p.constraints[0].index[j]:
                     free = 1
             if p[j].symbol==name_order[i]:
                 con.write("%12.6f %12.6f %12.6f %d %d\n" % (p[j].position[0],
