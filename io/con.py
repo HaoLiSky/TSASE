@@ -113,8 +113,14 @@ def write_con(filename, p, w = 'w'):
         for j in range(len(p)):
             free = 0
             if len(p.constraints) > 0:
-                if p.constraints[0].index[j]:
-                    free = 1
+                #constraint defined by per atom mask
+                if p.constraints[0].index.dtype == numpy.dtype('bool'):
+                    if p.constraints[0].index[j]:
+                        free = 1
+                #constraint defined by indicies
+                else:
+                    if index in p.constraints[0].index:
+                        free = 1
             if p[j].symbol==name_order[i]:
                 con.write("%12.6f %12.6f %12.6f %d %d\n" % (p[j].position[0],
                           p[j].position[1], p[j].position[2], free, index))
