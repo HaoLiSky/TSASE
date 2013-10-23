@@ -15,9 +15,8 @@ from tsase import neb
 class SSDimer_atoms:
 
     def __init__(self, R0 = None, mode = None, maxStep = 0.2, dT = 0.1, dR = 0.001, 
-                 phi_tol = 5, rotationMax = 4, ss = True, express=np.zeros((3,3)), 
-                 estimateF1 = True, nebInitiate = False, originalRotation = False, 
-                 alpha = 0.6, alpha2 = 0.9, beta = 11, dTheta = 3.0, weight = 1):
+                 phi_tol = 5, rotationMax = 4, ss = False, express=np.zeros((3,3)), 
+                 rotationOpt = 'cg', weight = 1):
         """
         Parameters:
         force - the force to use
@@ -29,10 +28,7 @@ class SSDimer_atoms:
         phi_tol - rotation converging tolerence, degree
         rotationMax - max rotations per translational step
         ss - boolean, solid-state dimer or regular dimer. Default: ssdimer
-        alpha - the ratio of Fperp/Freal to switch to relaxation to keep 
-                the dimer away from the ridge region. If alpha > 1.0, relaxation
-                is turned off.
-        beta, A - parameters for the swith function
+        rotation_opt - how to update self.T: sd or cg or bfgs
                  
         """
         self.steps = 0
@@ -54,22 +50,24 @@ class SSDimer_atoms:
         self.R1.set_calculator(calc)
         self.R1_prime.set_calculator(calc)
         self.rotationMax = rotationMax
-        self.alpha    = alpha
-        self.alpha2   = alpha2
-        self.beta     = beta
-        self.A        = 1.0 / atan(self.beta * (1-self.alpha))
+        self.rotationOpt = rotationOpt
         self.ss       = ss
         self.express  = express
-        self.nebInitiate = nebInitiate
-        self.estimateF1  = estimateF1
-        self.originalRotation = originalRotation
-        self.dTheta   = dTheta / 180.0 * pi
    
         vol           = self.R0.get_volume()
         avglen        = (vol/self.natom)**(1.0/3.0)
         self.weight   = weight
         self.jacobian = avglen * self.natom**0.5 * self.weight
         self.V = np.zeros((self.natom+3,3))
+
+        if self.rotationOpt == 'bfgs':
+            ## BFGS for rotation: initial (inverse) Hessian
+            ndim = (self.natom + 3)*3
+            self.Binv0= np.eye(ndim) / 60
+            self.Binv = self.Binv0
+            self.B0   = np.eye(ndim) * 60
+            self.B    = self.B0
+
 
     # Pipe all the stuff from Atoms that is not overwritten.
     # Pipe all requests for get_original_* to self.atoms0.
@@ -110,8 +108,6 @@ class SSDimer_atoms:
             st[2][0] = stt[4] * vol
             st[1][0] = stt[5] * vol
             st  -= self.express * (-1)*vol
-        #print "original stress (no projecton applied):"
-        #print st
         Fc   = np.vstack((f, st/self.jacobian))
         return Fc
   
@@ -128,18 +124,7 @@ class SSDimer_atoms:
         Fperp     = F0-Fparallel
         alpha     = vmag(Fperp)/vmag(F0)
         print "alpha: ", alpha
-        ##turn off parallel force when alpha is high 
-        #gamma     = self.A * (atan(self.beta * (self.alpha - alpha))) 
-        ##another way to do that
-        #A          = 2
-        #beta1      = self.beta
-        #beta2      = 100
-        #gamma1     = 1.0 / (np.exp((alpha - self.alpha) * beta1) + 1.0) 
-        #gamma2     = A * ( 1.0 / (np.exp((alpha - self.alpha2) * beta2) + 1.0) - 1 )
-        #gamma      = gamma1 + gamma2
-        #gamma      = gamma1 
-        ##original dimer
-        gamma      = 1.0
+        gamma     = 1.0
 
         if self.curvature > 0:
             self.Ftrans = -1 * Fparallel
@@ -165,18 +150,66 @@ class SSDimer_atoms:
         F1    = self.update_general_forces(self.R1)
         return F1
         
-    def rotation_plane(self, Fperp, Fperp_old):
-        # determine self.T (big theta in the paper) with CG method
-        a = abs(np.vdot(Fperp, Fperp_old))
-        b = np.vdot(Fperp_old, Fperp_old)
-        if a <= 0.5*b and b != 0:  
-            gamma = np.vdot(Fperp, Fperp-Fperp_old) / b
-        else:
-            gamma = 0
-        Ttmp       = Fperp + gamma * self.T * self.Tnorm
-        Ttmp       = Ttmp - np.vdot(Ttmp, self.N) * self.N
-        self.Tnorm = np.linalg.norm(Ttmp)
-        self.T     = vunit(Ttmp)
+    def rotation_plane(self, Fperp, Fperp_old, Nold):
+        if self.rotationOpt == 'sd':
+            self.T     = vunit(Fperp)
+        elif self.rotationOpt == 'cg':
+            # determine self.T (big theta in the paper) with CG method
+            a = abs(np.vdot(Fperp, Fperp_old))
+            b = np.vdot(Fperp_old, Fperp_old)
+            if a <= 0.5*b and b != 0:  
+                gamma = np.vdot(Fperp, Fperp-Fperp_old) / b
+            else:
+                gamma = 0
+            try:    self.Tnorm 
+            except: self.Tnorm = 0.0
+            Ttmp       = Fperp + gamma * self.T * self.Tnorm
+            Ttmp       = Ttmp - np.vdot(Ttmp, self.N) * self.N
+            self.Tnorm = np.linalg.norm(Ttmp)
+            self.T     = vunit(Ttmp)
+        elif self.rotationOpt == 'bfgs':
+            ## BFGS from wiki
+            Binv    =  self.Binv
+            #s       =  (self.N - Nold).flatten()  * self.dR
+            #g1      =  -Fperp.flatten() 
+            #g0      =  -Fperp_old.flatten() 
+            s       =  (self.N - Nold).flatten() 
+            g1      =  -Fperp.flatten() / self.dR
+            g0      =  -Fperp_old.flatten() / self.dR
+            y       =  g1 - g0
+            '''
+            ## updating the inverse Hessian
+            a = np.dot(s, y)
+            b = np.dot(y, Binv.dot(y))
+            c = np.outer(s, s)
+            d = np.outer(y, s) 
+            print "a, b:", a, b
+            Binv      = Binv + (a+b) * c / a**2 - (Binv.dot(d) + d.T.dot(Binv)) / a
+            self.Binv = Binv
+            dr        = (Binv.dot(-g1)).reshape((-1, 3))
+            vd        = np.vdot(vunit(dr), vunit(Fperp))
+            if abs(vd) < 0.05:  
+                #print "////reset BFGS in rotation////"
+                dr = Fperp
+                self.Binv    = self.Binv0
+            dr -= np.vdot(dr, self.N) * self.N
+            self.T  = vunit(dr)
+            '''
+            ## updating Hessian rather than the inverse Hessian, see ase.optimize.BFGS
+            a  = np.dot(s, y)
+            dg = np.dot(self.B, s)
+            b  = np.dot(s, dg)
+            print "a, b", a, b
+            self.B  += np.outer(y, y) / a - np.outer(dg, dg) / b
+            omega, V = np.linalg.eigh(self.B)
+            dr       = np.dot(V, np.dot(-g1, V) / np.fabs(omega)).reshape((-1, 3))
+            vd       = np.vdot(vunit(dr), vunit(Fperp))
+            if abs(vd) < 0.05:  
+                #print "////reset BFGS in rotation////"
+                dr = Fperp
+                self.B    = self.B0
+            dr    -= np.vdot(dr, self.N) * self.N
+            self.T = vunit(dr)
         
     def minmodesearch(self):
         # rotate dimer to the minimum mode direction
@@ -192,67 +225,50 @@ class SSDimer_atoms:
         iteration = 0
         while abs(phi_min) > self.phi_tol and iteration < self.rotationMax:
 
-            F0perp    = F0 - np.vdot(F0, self.N) * self.N
-            F1perp    = F1 - np.vdot(F1, self.N) * self.N
-            Fperp_old = Fperp
-            Fperp     = 2.0 * (F1perp - F0perp)
             if iteration == 0: 
-                Fperp_old = Fperp
-                self.T    = self.N * 0.0
-                self.Tnorm= 0.0
-            # update self.T
-            self.rotation_plane(Fperp, Fperp_old)
+                F0perp    = F0 - np.vdot(F0, self.N) * self.N
+                F1perp    = F1 - np.vdot(F1, self.N) * self.N
+                Fperp     = 2.0 * (F1perp - F0perp)
+                self.T    = vunit(Fperp)
+
             # curvature and its derivative
             c0     = np.vdot(F0-F1, self.N) / self.dR
             c0d    = np.vdot(F0-F1, self.T) / self.dR * 2.0
             phi_1  = -0.5 * atan(c0d / (2.0 * abs(c0)))
             if abs(phi_1) <= self.phi_tol: break
 
-            if self.originalRotation:
-                N_prime       = vunit(self.N * cos(self.dTheta) + self.T * sin(self.dTheta))
-                self.iset_endpoint_pos(N_prime, self.R0, self.R1_prime)
-                F1_prime      = self.update_general_forces(self.R1_prime)
-                F1perp_prime  = F1_prime - np.vdot(F1_prime, N_prime) * N_prime
-                F0perp_prime  = F0 - np.vdot(F0, N_prime) * N_prime
-                Fperp_prime   = 2.0 * (F1perp_prime - F0perp_prime)
-                T_prime       = vunit(-self.N * sin(self.dTheta) + self.T * cos(self.dTheta))
-                Fmag_prime    = np.vdot(Fperp_prime, T_prime)
-                Fmag          = np.vdot(Fperp, self.T)
-                Fmag_avg      = (Fmag_prime + Fmag) * 0.5
-                dFmag_dTheta  = (Fmag_prime - Fmag) / self.dTheta 
-                phi_min       = -0.5 * atan(2.0 * Fmag_avg / dFmag_dTheta) + self.dTheta * 0.5
-                if dFmag_dTheta > 0:
-                    phi_min  += pi * 0.5
+            # calculate F_prime: force after rotating the dimer by phi_prime
+            N1_prime = vunit(self.N * cos(phi_1) + self.T * sin(phi_1))
+            self.iset_endpoint_pos(N1_prime, self.R0, self.R1_prime)
+            F1_prime = self.update_general_forces(self.R1_prime)
+            c0_prime = np.vdot(F0-F1_prime, N1_prime) / self.dR 
+            
+            # calculate phi_min
+            b1 = 0.5 * c0d
+            a1 = (c0 - c0_prime + b1 * sin(2 * phi_1)) / (1 - cos(2 * phi_1))
+            a0 = 2 * (c0 - a1)
+            phi_min = 0.5 * atan(b1 / a1)
+            c0_min  = 0.5 * a0 + a1 * cos(2.0 * phi_min) + b1 * sin(2 * phi_min)
 
-                self.N = vunit(self.N * cos(phi_min) + self.T * sin(phi_min))
-                F1     = self.rotation_update()
-            else:
-                # calculate F_prime: force after rotating the dimer by phi_prime
-                N1_prime = vunit(self.N * cos(phi_1) + self.T * sin(phi_1))
-                self.iset_endpoint_pos(N1_prime, self.R0, self.R1_prime)
-                F1_prime = self.update_general_forces(self.R1_prime)
-                c0_prime = np.vdot(F0-F1_prime, N1_prime) / self.dR 
-                
-                # calculate phi_min
-                b1 = 0.5 * c0d
-                a1 = (c0 - c0_prime + b1 * sin(2 * phi_1)) / (1 - cos(2 * phi_1))
-                a0 = 2 * (c0 - a1)
-                phi_min = 0.5 * atan(b1 / a1)
-                c0_min  = 0.5 * a0 + a1 * cos(2.0 * phi_min) + b1 * sin(2 * phi_min)
+            # check whether it is minimum or maximum
+            if c0_min > c0 :
+                phi_min += pi * 0.5
+                c0_min   = 0.5 * a0 + a1 * cos(2.0 * phi_min) + b1 * sin(2 * phi_min)
+                 
+            # update self.N
+            Nold   = self.N
+            self.N = vunit(self.N * cos(phi_min) + self.T * sin(phi_min))
+            # update F1 by linear extropolation
+            F1 = F1 * (sin(phi_1 - phi_min) / sin(phi_1)) + F1_prime * (sin(phi_min) / sin(phi_1)) \
+                 + F0 * (1.0 - cos(phi_min) - sin(phi_min) * tan(phi_1 * 0.5))
 
-                # check whether it is minimum or maximum
-                if c0_min > c0 :
-                    phi_min += pi * 0.5
-                    c0_min   = 0.5 * a0 + a1 * cos(2.0 * phi_min) + b1 * sin(2 * phi_min)
-                     
-                # update self.N
-                self.N = vunit(self.N * cos(phi_min) + self.T * sin(phi_min))
-                # update F1 by linear extropolation
-                if self.estimateF1:
-                    F1 = F1 * (sin(phi_1 - phi_min) / sin(phi_1)) + F1_prime * (sin(phi_min) / sin(phi_1)) \
-                         + F0 * (1.0 - cos(phi_min) - sin(phi_min) * tan(phi_1 * 0.5))
-                else: 
-                    F1    = self.rotation_update()
+            F0perp    = F0 - np.vdot(F0, self.N) * self.N
+            F1perp    = F1 - np.vdot(F1, self.N) * self.N
+            Fperp_old = Fperp
+            Fperp     = 2.0 * (F1perp - F0perp)
+            # update self.T
+            self.rotation_plane(Fperp, Fperp_old, Nold)
+
             iteration += 1
         self.curvature = c0
         return F0
@@ -312,27 +328,6 @@ class SSDimer_atoms:
                     print "%3i %13.6f %13.6f %13.6f %3i" % (ii,float(ff),float(cc),float(ee),nf)
                 else:
                     print "%3i %13.6f %13.6f %13.6f %3i" % (ii,float(ff),float(cc),float(ee),nf)
-
-            #######################needs to clean up######################
-            # when curvature < 0 for the first time, run finswing neb
-            if self.nebInitiate and self.curvature < 0: 
-                 calc   = self.R0.get_calculator()
-                 ini     = read_con("reactant.con")
-                 tags = [a.symbol == 'Ti' for a in ini]
-                 charges = [2.196+(i-1)*3.294 for i in tags]
-                 ini.set_charges(charges)
-                 ini.set_calculator(calc)
-                 fin     = self.R0.copy()
-                 fin.set_calculator(calc)
-                 nim    = 5
-                 band   = neb.ssneb_finswing(ini, fin, numImages = nim, finswing = True)
-                 optneb = neb.fire_ssneb_finswing(band, maxmove =0.1, dtmax = 0.1, dt=0.1)
-                 optneb.minimize(forceConverged=0.01, maxIterations = 1000)
-                 maxi   = band.Umaxi
-                 self.N = band.path[maxi].n
-                 self.R0= band.path[maxi]
-                 self.nebInitiate = False
-            #######################needs to clean up######################
 
         if self.getMaxAtomForce() <= minForce:
             self.converged = True
