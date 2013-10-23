@@ -187,13 +187,6 @@ class SSDimer_atoms:
             Binv      = Binv + (a+b) * c / a**2 - (Binv.dot(d) + d.T.dot(Binv)) / a
             self.Binv = Binv
             dr        = (Binv.dot(-g1)).reshape((-1, 3))
-            vd        = np.vdot(vunit(dr), vunit(Fperp))
-            if abs(vd) < 0.05:  
-                #print "////reset BFGS in rotation////"
-                dr = Fperp
-                self.Binv    = self.Binv0
-            dr -= np.vdot(dr, self.N) * self.N
-            self.T  = vunit(dr)
             '''
             ## updating Hessian rather than the inverse Hessian, see ase.optimize.BFGS
             a  = np.dot(s, y)
