@@ -247,10 +247,13 @@ class SSDimer_atoms:
             if c0_min > c0 :
                 phi_min += pi * 0.5
                 c0_min   = 0.5 * a0 + a1 * cos(2.0 * phi_min) + b1 * sin(2 * phi_min)
+            ## for accurate BFGS s  
+            if phi_min > pi * 0.5: phi_min -= pi
                  
             # update self.N
             Nold   = self.N
             self.N = vunit(self.N * cos(phi_min) + self.T * sin(phi_min))
+            c0     = c0_min
             # update F1 by linear extropolation
             F1 = F1 * (sin(phi_1 - phi_min) / sin(phi_1)) + F1_prime * (sin(phi_min) / sin(phi_1)) \
                  + F0 * (1.0 - cos(phi_min) - sin(phi_min) * tan(phi_1 * 0.5))
