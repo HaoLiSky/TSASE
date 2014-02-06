@@ -9,6 +9,7 @@ import structure
 import constraints
 import md
 import svm
+import optimize
 #import mc
 
 def interpolate(trajectory, intermediate_frames = 8):
