@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 import sys
 import numpy as np
-from ase.optimize.optimize import Optimizer
-from ase.utils.linesearch import LineSearch
+from tsase.optimize.optimize import Optimizer
 
 class SDLBFGS(Optimizer):
     """Limited memory BFGS optimizer.
@@ -30,7 +29,8 @@ class SDLBFGS(Optimizer):
             Pickle file used to store trajectory of atomic movement.
 
         maxstep: float
-            How far is a single atom allowed to move. Default is 0.2 Angstrom.
+            This parameter has been changed from ASEs implementation to a max total stepsize
+            Default is 0.2 Angstrom.
 
         memory: int
             Number of steps to be stored. Default value is 100. Three numpy
@@ -186,6 +186,19 @@ class SDLBFGS(Optimizer):
             dr *= self.maxstep / longest_step
 
         return dr
+
+
+#    def determine_step(self, dr):
+#        """Determine step to take according to maxstep
+#        
+#        Normalize all steps as the largest step. This way
+#        we still move along the eigendirection.
+#        """
+#	length = np.sqrt(np.vdot(dr,dr))
+#	if length > self.maxstep:
+#		dr *= self.maxstep/length
+#        
+#        return dr
 
     def update(self, r, f, r0, f0):
         """Update everything that is kept in memory
