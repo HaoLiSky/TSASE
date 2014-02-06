@@ -139,7 +139,7 @@ class Optimizer(Dynamics):
         return np.sqrt(np.vdot(forces,forces)) < self.fmax    
 
     def log(self, forces):
-        fmax = sqrt((forces**2).sum(axis=1).max())
+        fmax = np.sqrt(np.vdot(forces,forces))
         e = self.atoms.get_potential_energy()
         T = time.localtime()
         if self.logfile is not None:

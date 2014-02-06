@@ -10,6 +10,7 @@ import constraints
 import md
 import svm
 import optimize
+import bgsd
 #import mc
 
 def interpolate(trajectory, intermediate_frames = 8):
