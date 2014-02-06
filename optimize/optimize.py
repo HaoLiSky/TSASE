@@ -114,7 +114,7 @@ class Optimizer(Dynamics):
             f = self.atoms.get_forces()
             self.log(f)
             self.call_observers()
-            if self.converged_L2(f):
+            if self.converged_L2(f):  ## note convergence criteria changed to L2 norm of force from ASE's implementation
                 return
             self.step(f)
             self.nsteps += 1
@@ -134,10 +134,9 @@ class Optimizer(Dynamics):
         if forces is None:
             forces = self.atoms.get_forces()
         if hasattr(self.atoms, 'get_curvature'):
-            return (forces**2).sum(axis=1).max() < self.fmax**2 and \
+            return np.sqrt(np.vdot(forces,forces)) < self.fmax and \
                    self.atoms.get_curvature() < 0.0
-        return np.sqrt(np.vdot(forces,forces)) < self.fmax**2
-
+        return np.sqrt(np.vdot(forces,forces)) < self.fmax    
 
     def log(self, forces):
         fmax = sqrt((forces**2).sum(axis=1).max())
