@@ -101,7 +101,7 @@ class Optimizer(Dynamics):
     def initialize(self):
         pass
 
-    def run(self, fmax=0.05, steps=100000000):
+    def run(self, fmax=0.05, steps=100000000,optimizer='L2'):
         """Run structure optimization algorithm.
 
         This method will return when the forces on all individual
@@ -114,8 +114,15 @@ class Optimizer(Dynamics):
             f = self.atoms.get_forces()
             self.log(f)
             self.call_observers()
-            if self.converged_L2(f):  ## note convergence criteria changed to L2 norm of force from ASE's implementation
-                return
+	    if optimizer == 'L2':
+            	if self.converged_L2(f):
+                 return
+	    elif optimizer == 'maxatom':
+		if self.converged(f):  
+                 return
+	    elif optimizer == 'energy':
+		if self.converged_PE(f):   
+                 return
             self.step(f)
             self.nsteps += 1
             step += 1
@@ -137,6 +144,10 @@ class Optimizer(Dynamics):
             return np.sqrt(np.vdot(forces,forces)) < self.fmax and \
                    self.atoms.get_curvature() < 0.0
         return np.sqrt(np.vdot(forces,forces)) < self.fmax    
+
+    def converged_PE(self, forces=None):
+        """Did the optimization converge?"""
+        return self.atoms.get_potential_energy() < self.fmax
 
     def log(self, forces):
         fmax = np.sqrt(np.vdot(forces,forces))

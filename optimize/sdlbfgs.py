@@ -115,6 +115,7 @@ class SDLBFGS(Optimizer):
 	loopmax = len(y)
 	#### if we reset hessian because of negative curvature take maxstep in the direction of the force	
 	if C < 0:
+	        print 'reset:curvature < 0'
 		g = f*1000
 		dr = self.determine_step(g) * self.damping
 		self.atoms.set_positions(r+dr)
@@ -146,7 +147,8 @@ class SDLBFGS(Optimizer):
 	                self.rho = []
                         self.y = []
                         self.s = []
-			g = f *1000
+			g = f*1000 
+			print 'reset:angle > 90'
                 	dr = self.determine_step(g) * self.damping
                 	self.atoms.set_positions(r+dr)
        	 else:  ##### otherwise take lbfgs step
@@ -161,9 +163,8 @@ class SDLBFGS(Optimizer):
         self.dump((self.iteration, self.s, self.y, 
                    self.rho, self.r0, self.f0, self.e0, self.task))
 
-
     def get_curvature_via_FD(self):
-        dR = 1.0e-3
+        dR = 1.0e-5
         pos = self.atoms.get_positions()
         initforce = self.atoms.get_forces()
         Fnorm = initforce/np.sqrt(np.vdot(initforce,initforce))
