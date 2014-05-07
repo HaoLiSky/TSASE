@@ -3,6 +3,7 @@ from con import read_con, write_con
 from feff import read_feff, write_feff
 from bopfox import read_bopfox, write_bopfox
 from vasp import read_xdatcar
+from lammps import read_lammps, read_dump
 from socorro import read_socorro, write_socorro
 from aims import read_aims, write_aims
 from colors import read_colors
@@ -40,6 +41,14 @@ def read(filename):
         pass
     try:
         return read_vasp_multiframe(filename)
+    except:
+        pass
+    try:
+        return read_lammps(filename)
+    except:
+        pass
+    try: 
+        return read_dump(filename)
     except:
         pass
     try:
