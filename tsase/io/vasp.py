@@ -1,8 +1,8 @@
 import ase
 import numpy
 
-def read_xdatcar(fileName):
-    f = open(fileName, 'r')
+def read_xdatcar(filename, skip=0, every=1):
+    f = open(filename, 'r')
     lines = f.readlines()
     f.close()
     lattice_constant = float(lines[1].strip())
@@ -13,11 +13,12 @@ def read_xdatcar(fileName):
     natoms = [int(x) for x in lines[6].split()]
     nframes = (len(lines)-7)/(sum(natoms) + 1)
     trajectory = []
-    for i in range(nframes):
-        a = ase.Atoms('H'*sum(natoms))
+    for i in range(skip, nframes, every):
+        a = Atoms('H'*sum(natoms))
         a.masses = [1.0] * len(a)
         a.set_chemical_symbols(''.join([n*e for (n, e) in zip(natoms, elements)]))
         a.cell = cell.copy()
+        a.set_pbc((True, True, True))
         j = 0
         for N, e in zip(natoms, elements):
             for k in range(N):
