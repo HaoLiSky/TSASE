@@ -26,7 +26,6 @@
 import os 
 import shutil
 import shlex
-import time
 from subprocess import Popen, PIPE
 from threading import Thread
 from re import compile as re_compile, IGNORECASE
@@ -763,8 +762,7 @@ def write_lammps_data(fileobj, atoms, specorder=[], force_skew=False):
     for i, r in enumerate(map(p.pos_to_lammps_str,
                               atoms.get_positions())):
         s = species.index(symbols[i]) + 1
-        charge = atoms[i].get_charge()
-        f.write('%6d %3d %.4f %s %s %s\n' % ((i+1, s, charge)+tuple(r)))
+        f.write('%6d %3d %s %s %s\n' % ((i+1, s)+tuple(r)))
     
     if close_file:
         f.close()
