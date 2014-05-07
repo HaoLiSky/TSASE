@@ -11,6 +11,7 @@ class morse():
         self.atoms = None
         self.u = None
         self.f = None
+        self.force_calls = 0
 
     def calculate(self):
         ra = self.atoms.positions.ravel()
@@ -22,6 +23,7 @@ class morse():
         morse_.force(ra, fa, uRet, ax, ay, az, self.u0, self.alpha, self.r0, self.rc)
         self.f = numpy.resize(fa, (len(self.atoms),3))
         self.u = uRet[0]
+        self.force_calls += 1
         
     def get_potential_energy(self, atoms=None, force_consistent=False):
         if self.calculation_required(atoms, "energy"):

@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 
 import os
-import sys
 import math
 import time
-from multiprocessing import Queue, Process
- 
+
 import gtk
 import gtk.glade
 import gtk.gdk as gdk
@@ -153,7 +151,7 @@ class xyz(gtk.Window):
 
     def gui_key_on(self, key):
         return key in self.keys
-        
+
 #
 # EVENT -----------------------------------------------------------------------------------------
 #
@@ -162,7 +160,7 @@ class xyz(gtk.Window):
     def event_configure(self, *args):
         """ Called when the window is resized and created. """
         x, y, self.width, self.height = self.area.get_allocation()
-        self.pixmap = gdk.Pixmap(self.area.window, self.width, self.height)     
+        self.pixmap = gdk.Pixmap(self.area.window, self.width, self.height)
         return True
 
 
@@ -189,8 +187,8 @@ class xyz(gtk.Window):
         if self.button1:
             if self.gui_key_on("m") or (self.movebutton.get_active() and self.grabbedatom is not None):
                 if self.grabbedatom is not None:
-                    r = self.get_frame_atoms().get_positions() 
-                    r[self.grabbedatom] += np.dot(np.linalg.inv(self.rotation), 
+                    r = self.get_frame_atoms().get_positions()
+                    r[self.grabbedatom] += np.dot(np.linalg.inv(self.rotation),
                                                   np.array([dx, -dy, 0]) / \
                                                   self.zoombutton.get_value() / 2.0)
                     self.get_frame_atoms().positions = r
@@ -205,15 +203,15 @@ class xyz(gtk.Window):
             self.translate += np.array([dx, -dy, 0]) / self.zoombutton.get_value() / 2
             self.gfx_render()
         atomid = self.get_mouse_atom()
-        if atomid is not None:     
+        if atomid is not None:
             atom = self.get_frame_atoms()[atomid]
             r = atom.position
-            self.statusbar.set_text("Atom %d, %s (%.3fx %.3fy %.3fz)" % 
+            self.statusbar.set_text("Atom %d, %s (%.3fx %.3fy %.3fz)" %
                                      (atomid, atom.symbol, r[0], r[1], r[2]))
         else:
             self.statusbar.set_text("")
         return True
-    
+
 
     def get_mouse_atom(self):
         mx, my = self.mouselast
@@ -245,15 +243,15 @@ class xyz(gtk.Window):
         if event.button == 3:
             self.button3 = False
         return True
-            
+
 
     def event_scroll(self, widget, event):
-        if self.gui_key_on("r"): 
+        if self.gui_key_on("r"):
             if event.direction == gdk.SCROLL_UP:
                 self.radiusbutton.set_value(self.radiusbutton.get_value() * 1.1)
             elif event.direction == gdk.SCROLL_DOWN:
                 self.radiusbutton.set_value(self.radiusbutton.get_value() * 0.9)
-        elif self.gui_key_on("b"): 
+        elif self.gui_key_on("b"):
             if event.direction == gdk.SCROLL_UP:
                 self.bond_width = min(self.bond_width + 1, 32)
             elif event.direction == gdk.SCROLL_DOWN:
@@ -265,7 +263,7 @@ class xyz(gtk.Window):
             elif event.direction == gdk.SCROLL_DOWN:
                 self.zoombutton.set_value(self.zoombutton.get_value() * 0.9)
         return True
-                                                    
+
 
     def get_frame_atoms(self):
         if self.trajectory is None:
@@ -274,7 +272,7 @@ class xyz(gtk.Window):
         if len(self.trajectory) > 1:
             drawpoint = self.trajectory[int(self.moviescale.get_value())]
         return drawpoint
-        
+
     def get_frame_colors(self):
         if self.trajectoryColors is None:
             return None
@@ -290,8 +288,8 @@ class xyz(gtk.Window):
             self.playimage.set_from_stock(gtk.STOCK_MEDIA_PAUSE, gtk.ICON_SIZE_BUTTON)
         else:
             self.playimage.set_from_stock(gtk.STOCK_MEDIA_PLAY, gtk.ICON_SIZE_BUTTON)
-                        
-            
+
+
     def event_timeout(self):
         if self.qin is not None:
             while not self.qin.empty():
@@ -321,11 +319,11 @@ class xyz(gtk.Window):
                     nextframe = 0
                 self.moviescale.set_value(nextframe)
         return True
-    
+
 
     def event_close(self, *args):
         gtk.main_quit()
-        
+
 
     def getFilenameOpen(self):
         buttons = (gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OPEN,gtk.RESPONSE_OK)
@@ -334,7 +332,7 @@ class xyz(gtk.Window):
         response = chooser.run()
         filename = chooser.get_filename()
         chooser.destroy()
-        return response, filename    
+        return response, filename
 
     def getFilenameSave(self):
         buttons = (gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_SAVE,gtk.RESPONSE_OK)
@@ -343,8 +341,8 @@ class xyz(gtk.Window):
         response = chooser.run()
         filename = chooser.get_filename()
         chooser.destroy()
-        return response, filename    
-        
+        return response, filename
+
     def event_menuFileOpen(self, *args):
         response, filename = self.getFilenameOpen()
         if response == gtk.RESPONSE_OK:
@@ -388,12 +386,12 @@ class xyz(gtk.Window):
         response, filename = self.getFilenameSave()
         if response == gtk.RESPONSE_OK:
             self.pwd = os.path.dirname(filename)
-            repeat = (int(self.repeatx.get_value()), 
-                      int(self.repeaty.get_value()), 
+            repeat = (int(self.repeatx.get_value()),
+                      int(self.repeaty.get_value()),
                       int(self.repeatz.get_value()))
-            view = repr({'radius':    self.radiusbutton.get_value(), 
-                         'zoom':      self.zoombutton.get_value(), 
-                         'rotation':  self.rotation.tolist(), 
+            view = repr({'radius':    self.radiusbutton.get_value(),
+                         'zoom':      self.zoombutton.get_value(),
+                         'rotation':  self.rotation.tolist(),
                          'translate': self.translate.tolist(),
                          'repeat':    repeat})
             f = open(filename, 'w')
@@ -458,15 +456,15 @@ class xyz(gtk.Window):
             gc = self.area.window.new_gc()
             gc.set_rgb_fg_color(gdk.Color(rgb[0], rgb[1], rgb[2]))
             self.color_memo[(r,g,b)] = gc
-        return self.color_memo[(r,g,b)]    
-        
+        return self.color_memo[(r,g,b)]
+
     def gfx_reset_transform(self):
         self.radiusbutton.set_value(1.5)
         self.zoombutton.set_value(8.0)
         self.rotation = np.identity(3)
         self.translate = np.array([0.0, 0.0, 16.0])
         self.queue_draw()
-    
+
     def gfx_queue_line(self, r1, r2, color, width = 1):
         line = queueitem("line")
         line.r1 = np.copy(r1)
@@ -478,8 +476,8 @@ class xyz(gtk.Window):
 
     def gfx_queue_bonds(self):
         fa = self.get_frame_atoms()
-        ra = fa.repeat((int(self.repeatx.get_value()), 
-                        int(self.repeaty.get_value()), 
+        ra = fa.repeat((int(self.repeatx.get_value()),
+                        int(self.repeaty.get_value()),
                         int(self.repeatz.get_value())))
         if not 'nlist' in fa.__dict__:
             cutoffs = [1.5 * elements[i.symbol]['radius'] for i in ra]
@@ -500,11 +498,11 @@ class xyz(gtk.Window):
                 p1 = ra.positions[a] + vunit * rad
                 p2 = ra.positions[a] + v * 0.5
                 self.gfx_queue_line(p1, p2, [c*0.85 for c in element['color']], width=self.bond_width)
-        
+
     def gfx_queue_atoms(self):
         try:
-            ra = self.get_frame_atoms().repeat((int(self.repeatx.get_value()), 
-                                                int(self.repeaty.get_value()), 
+            ra = self.get_frame_atoms().repeat((int(self.repeatx.get_value()),
+                                                int(self.repeaty.get_value()),
                                                 int(self.repeatz.get_value())))
         except:
             ra = self.get_frame_atoms()
@@ -554,26 +552,26 @@ class xyz(gtk.Window):
                 self.gfx_queue_line(r1 + (r2 - r1) * float(l) / boxsteps,
                                     r1 + (r2 - r1) * float(l + 1) /
                                     boxsteps, [0, 0, 0])
-            
+
     def gfx_center_atoms(self):
         if self.trajectory is None:
             return
         try:
-            ra = self.trajectory[0].repeat((int(self.repeatx.get_value()), 
-                                            int(self.repeaty.get_value()), 
+            ra = self.trajectory[0].repeat((int(self.repeatx.get_value()),
+                                            int(self.repeaty.get_value()),
                                             int(self.repeatz.get_value())))
         except:
             ra = self.trajectory[0]
         r = ra.get_positions()
-        minx = min(r[:, 0])                         
-        miny = min(r[:, 1])                         
+        minx = min(r[:, 0])
+        miny = min(r[:, 1])
         minz = min(r[:, 2])
         maxx = max(r[:, 0])
         maxy = max(r[:, 1])
         maxz = max(r[:, 2])
         midx = minx + (maxx - minx) / 2
         midy = miny + (maxy - miny) / 2
-        midz = minz + (maxz - minz) / 2            
+        midz = minz + (maxz - minz) / 2
         self.center = np.array([midx, midy, midz])
         self.queue_draw()
 
@@ -600,17 +598,17 @@ class xyz(gtk.Window):
         X.set_font_description(font)
         Y.set_font_description(font)
         Z.set_font_description(font)
-        X.set_attributes(attr)        
-        Y.set_attributes(attr)        
-        Z.set_attributes(attr)        
-        self.pixmap.draw_layout(self.black_gc, int(x0 + axes[0][0]) - X.get_pixel_size()[0] / 2, 
+        X.set_attributes(attr)
+        Y.set_attributes(attr)
+        Z.set_attributes(attr)
+        self.pixmap.draw_layout(self.black_gc, int(x0 + axes[0][0]) - X.get_pixel_size()[0] / 2,
                                 int(y0 - axes[0][1]) - X.get_pixel_size()[1], X)
-        self.pixmap.draw_layout(self.black_gc, int(x0 + axes[1][0]) - Y.get_pixel_size()[0] / 2, 
+        self.pixmap.draw_layout(self.black_gc, int(x0 + axes[1][0]) - Y.get_pixel_size()[0] / 2,
                                 int(y0 - axes[1][1]) - Y.get_pixel_size()[1], Y)
-        self.pixmap.draw_layout(self.black_gc, int(x0 + axes[2][0]) - Z.get_pixel_size()[0] / 2, 
-                                int(y0 - axes[2][1]) - Z.get_pixel_size()[1], Z)        
-        
-            
+        self.pixmap.draw_layout(self.black_gc, int(x0 + axes[2][0]) - Z.get_pixel_size()[0] / 2,
+                                int(y0 - axes[2][1]) - Z.get_pixel_size()[1], Z)
+
+
     def gfx_transform_queue(self):
         for i in range(len(self.queue)):
             q = self.queue[i]
@@ -619,7 +617,7 @@ class xyz(gtk.Window):
                 q.r = np.dot(self.rotation, q.r)
                 q.r += self.translate
                 q.depth = q.r[2]
-            else:                                   
+            else:
                 q.r1 -= self.center
                 q.r2 -= self.center
                 q.depth -= self.center
@@ -639,7 +637,7 @@ class xyz(gtk.Window):
             else:
                 return -1
         self.queue = sorted(self.queue, cmp_queue)
-        
+
 
     def gfx_draw_queue(self):
         self.screenatoms = []
@@ -659,7 +657,7 @@ class xyz(gtk.Window):
                         self.gfx_draw_line(x-rad*dr, y-rad*dr, x+rad*dr, y+rad*dr)
                         self.gfx_draw_line(x-rad*dr, y+rad*dr, x+rad*dr, y-rad*dr)
                 self.screenatoms.append([x, y, rad, q.id])
-            else:   
+            else:
                 q.r1[0] = q.r1[0] * s2 + w2
                 q.r1[1] = -q.r1[1] * s2 + h2
                 q.r2[0] = q.r2[0] * s2 + w2
@@ -672,27 +670,27 @@ class xyz(gtk.Window):
         st = math.sin(theta)
         m = np.array([[1, 0, 0], [0, ct, -st], [0, st, ct]])
         self.rotation = np.dot(m, self.rotation)
-    
-    
+
+
     def gfx_rot_y(self, theta):
         ct = math.cos(theta)
         st = math.sin(theta)
         m = np.array([[ct, 0, st], [0, 1, 0], [-st, 0, ct]])
         self.rotation = np.dot(m, self.rotation)
-    
-    
+
+
     def gfx_rot_z(self, theta):
         ct = math.cos(theta)
         st = math.sin(theta)
         m = np.array([[ct, -st, 0], [st, ct, 0], [0, 0, 1]])
         self.rotation = np.dot(m, self.rotation)
-        
+
 
     def gfx_clear(self):
         if self.render_cairo:
             self.cairo_context.set_source_rgb(self.background[0], self.background[1], self.background[2])
             self.cairo_context.rectangle(0, 0, self.width, self.height)
-            self.cairo_context.fill()            
+            self.cairo_context.fill()
         else:
             self.pixmap.draw_rectangle(self.background_gc, True, 0, 0, self.width, self.height)
 
@@ -700,9 +698,13 @@ class xyz(gtk.Window):
         r = max(1,r)
         if self.render_cairo:
             self.cairo_context.arc(x, y, r, 0, math.pi * 2.0)
-            self.cairo_context.set_source_rgb(color[0], color[1], color[2])
+            if len(color) == 4:
+                alpha = color[3]
+            else:
+                alpha = 1.0
+            self.cairo_context.set_source_rgba(color[0], color[1], color[2], alpha)
             self.cairo_context.fill()
-            self.cairo_context.set_source_rgb(0, 0, 0)
+            self.cairo_context.set_source_rgba(0, 0, 0, alpha)
             self.cairo_context.arc(x, y, r, 0, math.pi * 2.0)
             self.cairo_context.set_line_width(0.5)
             self.cairo_context.stroke()
@@ -720,7 +722,7 @@ class xyz(gtk.Window):
         else:
             gc = self.gfx_get_color_gc(color)
             gc.set_line_attributes(width, gtk.gdk.LINE_SOLID, gtk.gdk.CAP_ROUND, gtk.gdk.JOIN_MITER)
-            self.pixmap.draw_line(gc, int(x1), int(y1), int(x2), int(y2))        
+            self.pixmap.draw_line(gc, int(x1), int(y1), int(x2), int(y2))
             gc.set_line_attributes(1, gtk.gdk.LINE_SOLID, gtk.gdk.CAP_ROUND, gtk.gdk.JOIN_MITER)
 
 #
@@ -764,7 +766,7 @@ class xyz(gtk.Window):
             else:
                 ase.io.write(filename, self.get_frame_atoms())
         self.set_title(os.path.abspath(filename))
-        
+
 #
 # MAIN ------------------------------------------------------------------------------------------
 #

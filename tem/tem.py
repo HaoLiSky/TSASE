@@ -6,7 +6,8 @@ from PIL import Image, ImageDraw
 import numpy as np
 import tsase
 from tsase.data import *
-
+from time import time
+import numexpr as ne
 
 class TEM_image_comparison:
     def __init__(self, *args):
@@ -111,14 +112,68 @@ class TEM_image_comparison:
         midz = (minz + maxz)/2
 
         #matrix creation function defenitions, all but fake_tem are used for finding slopes
-        fake_tem = lambda index_array, x, y: (intensity*(np.e**(-(((index_array[0]- x)**2 + (index_array[1]-y)**2)/c1))))
-        scale_helper = lambda index_array, x, y: c4 * (np.e**(-(((index_array[0]- x)**2 + (index_array[1]-y)**2)/c1))) * (((x/scale)*(index_array[0]-x)) + ((y/scale)*(index_array[1]-y)))
-        sigma_helper = lambda index_array, x, y: intensity*(np.e**(-(((index_array[0]- x)**2 + (index_array[1]-y)**2)/c1)))*(((index_array[0]- x)**2 + (index_array[1]-y)**2)/c3)
-        x_trans_helper = lambda index_array, x, y: (c4*((index_array[0] - x))*(np.e**(-(((index_array[0]- x)**2 + (index_array[1]-y)**2)/c1))))
-        y_trans_helper = lambda index_array, x, y: (c4*((index_array[1] - y))*(np.e**(-(((index_array[0]- x)**2 + (index_array[1]-y)**2)/c1))))
-        x_rot_helper = lambda index_array, x, y, x_o, z_o: c4 * (np.e**(-(((index_array[0]- x)**2 + (index_array[1]-y)**2)/c1))) * ((index_array[1] - y)*(scale*(-(y_o-midy)*np.sin(x_rot) + (z_o-midz)*np.cos(x_rot))))
-        y_rot_helper = lambda index_array, x, y, y_o, z_o: -c4 * (np.e**(-(((index_array[0]- x)**2 + (index_array[1]-y)**2)/c1))) * ((index_array[0] - x)*(scale*( (x_o-midx)*np.sin(y_rot) + (z_o-midz)*np.cos(y_rot))))
-        z_rot_helper = lambda index_array, x, y, x_o, y_o: -c6 * (np.e**(-(((index_array[0]- x)**2 + (index_array[1]-y)**2)/c1))) * ((2*(index_array[0] - x) * -scale*(-np.sin(z_rot)*(x_o-midx) + np.cos(z_rot)*(y_o-midy))) + (2*(index_array[1] - y) * -scale*(-np.cos(z_rot)*(x_o-midx) - np.sin(z_rot)*(y_o-midy))))
+        def fake_tem(index_array, x, y): 
+            xs = index_array[0]
+            ys = index_array[1]
+            expr = "intensity*(exp(-(((xs - x)**2 + (ys-y)**2)/c1)))"
+            d = {'c1':c1, 'intensity':intensity}
+            return ne.evaluate(expr, global_dict=d)
+
+        def scale_helper(index_array, x, y): 
+            xs = index_array[0]
+            ys = index_array[1]
+            d = {'c1':c1, 'c4':c4, 'scale':scale}
+            expr = 'c4 * (exp(-(((xs-x)**2 + (ys-y)**2)/c1))) * (((x/scale)*(xs-x)) + ((y/scale)*(ys-y)))'
+            return ne.evaluate(expr, global_dict=d)
+
+        def sigma_helper(index_array, x, y): 
+            xs = index_array[0]
+            ys = index_array[1]
+            d = {'c1':c1, 'c3':c3, 'scale':scale, 'intensity':intensity}
+            expr = 'intensity*(exp(-(((xs- x)**2 + (ys-y)**2)/c1)))*(((xs- x)**2 + (ys-y)**2)/c3)'
+            return ne.evaluate(expr, global_dict=d)
+
+        def x_trans_helper(index_array, x, y): 
+            xs = index_array[0]
+            ys = index_array[1]
+            d = {'c1':c1, 'c4':c1}
+            expr = '(c4*((xs - x))*(exp(-(((xs- x)**2 + (ys-y)**2)/c1))))'
+            return ne.evaluate(expr, global_dict=d)
+
+        def y_trans_helper(index_array, x, y): 
+            xs = index_array[0]
+            ys = index_array[1]
+            d = {'c1':c1, 'c4':c1}
+            expr = '(c4*((ys - y))*(exp(-(((xs- x)**2 + (ys-y)**2)/c1))))'
+            return ne.evaluate(expr, global_dict=d)
+
+        def x_rot_helper(index_array, x, y, x_o, z_o): 
+            xs = index_array[0]
+            ys = index_array[1]
+            d = { 'c1':c1, 'c4':c1, 'scale':scale, 'midy':midy, 'midz':midz,
+                    'x_rot':x_rot, 'y_o': y_o, 'z_o': z_o }
+            expr = 'c4 * (exp(-(((xs- x)**2 + (ys-y)**2)/c1))) * ((ys - y)*(scale*(-(y_o-midy)*sin(x_rot) + (z_o-midz)*cos(x_rot))))'
+            return ne.evaluate(expr, global_dict=d)
+
+
+        def y_rot_helper(index_array, x, y, y_o, z_o): 
+            xs = index_array[0]
+            ys = index_array[1]
+            d = { 'c1':c1, 'c4':c1, 'scale':scale, 'midx':midx, 
+                    'midy':midy, 'midz':midz,
+                    'y_rot':y_rot, 'x_o':x_o, 'y_o': y_o, 'z_o': z_o }
+            expr = '-c4 * (exp(-(((xs- x)**2 + (ys-y)**2)/c1))) * ((xs - x)*(scale*( (x_o-midx)*sin(y_rot) + (z_o-midz)*cos(y_rot))))'
+            return ne.evaluate(expr, global_dict=d)
+
+
+        def z_rot_helper(index_array, x, y, x_o, y_o): 
+            xs = index_array[0]
+            ys = index_array[1]
+            d = { 'c6':c6, 'c1':c1, 'c4':c1, 'scale':scale, 'midx':midx, 
+                    'midy':midy, 'midz':midz,
+                    'z_rot':y_rot, 'x_o':x_o, 'y_o': y_o, 'z_o': z_o }
+            expr = '-c6 * (exp(-(((xs- x)**2 + (ys-y)**2)/c1))) * ((2*(xs - x) * -scale*(-sin(z_rot)*(x_o-midx) + cos(z_rot)*(y_o-midy))) + (2*(ys - y) * -scale*(-cos(z_rot)*(x_o-midx) - sin(z_rot)*(y_o-midy))))'
+            return ne.evaluate(expr, global_dict=d)
 
         #apply rotations
         atoms_original = np.array(atoms)
@@ -515,16 +570,47 @@ class TEM_image_comparison:
         self.y_rot_bool     = False
         self.z_rot_bool     = False
 
-        return [self.bg_slope, self.intensity_slope, self.sigma_slope, self.scale_slope, self.x_trans_slope, self.y_trans_slope, self.x_rot_slope, self.y_rot_slope, self.z_rot_slope]
+        g = np.array([0.0, self.intensity_slope, self.sigma_slope,
+            self.scale_slope, self.x_trans_slope, self.y_trans_slope,
+            self.x_rot_slope, self.y_rot_slope, self.z_rot_slope])
+        return g
+        #return np.array([self.bg_slope, self.intensity_slope, self.sigma_slope,
+        #    self.scale_slope, self.x_trans_slope, self.y_trans_slope,
+        #    self.x_rot_slope, self.y_rot_slope, self.z_rot_slope])
+
+def opt_step(tem, x, alpha=0.001):
+    from scipy.optimize import line_search
+    from scipy.optimize import minimize
+    #g = tem.get_gradient(x)
+
+    res = minimize(fun=lambda x:-tem.get_score(x), x0=x)
+    xnew = res.x
+    #alpha = stuff[0]
+    #print stuff
+    #print 'alpha: ', alpha
+
+    #xnew = x + alpha*g
+
+    return xnew
 
 
 
-###################################################################################################
-# Main
-###################################################################################################
 if __name__ == "__main__":
-    print len(sys.argv)
     if len(sys.argv) == 3:
-        TEM_image_comparison(sys.argv[1], sys.argv[2])
+        tem = TEM_image_comparison(sys.argv[1], sys.argv[2])
+        t0 = time()
+        x0 = [ 0.0, 6.0, 6.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0 ]
+        score = tem.get_score(x0)
+        t1 = time()
+        print 'score: %.4f' % score
+        print 'elapsed time: %.3f' % (t1-t0)
+        t0 = time()
+        gradient = tem.get_gradient(x0)
+        t1 = time()
+        print 'gradient: ', gradient
+        print 'elapsed time: %.3f' % (t1-t0)
+
+        from scipy.optimize import check_grad
+        print check_grad(tem.get_score, tem.get_gradient, x0)
     else:
-        print "imageEval.py needs a POSCAR file and a TEM image."
+        print "tem.py needs a POSCAR file and a TEM image."
