@@ -58,7 +58,7 @@ class BGSD_potential:
     def u1d(self):
         self.pot.set_positions(self.atoms.get_positions())
         f = self.pot.get_forces()
-        g2 = np.vdot(f,f)
+        g2 = numpy.vdot(f,f)
         u = self.pot.get_potential_energy()
         har = self.alpha * (u - self.beta) * (u - self.beta)
         toteng = g2 + har
