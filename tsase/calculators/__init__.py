@@ -57,7 +57,12 @@ try:
     from socorro import Socorro
 except:
     pass
-	
+
+try:
+    from gauss3 import gauss3
+except:
+    pass
+
 
 from push import push
 
