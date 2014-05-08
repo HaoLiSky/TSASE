@@ -42,7 +42,7 @@ def readxyzatoms(filename):
 	dataYa = numpy.array(dataY)
 	return dataXa, dataYa
 	
-def learn(parameters,datapoints,datalabels,datapointstest,datalabelstest,kval=2): # Returns selSVM
+def learn_svm(parameters,datapoints,datalabels,datapointstest,datalabelstest,kval=2): # Returns selSVM
 	selSVM = selectmodel(parameters,datapoints,datalabels,kval)
 	outValue = selSVM.decision_function(datapointstest) # don't forget that outValue is for the test set!
 	out = selSVM.predict(datapointstest)
@@ -52,6 +52,12 @@ def learn(parameters,datapoints,datalabels,datapointstest,datalabelstest,kval=2)
 		from scikits.learn import metrics as me
 	print me.classification_report(datalabelstest,out)
 	return selSVM
+
+def learn_ocsvm(datapoints,gam,nu):
+        from scikits.learn import svm
+        clf = svm.OneClassSVM(nu=nu, kernel="rbf", gamma=gam)
+        clf.fit(datapoints)
+        return clf
 
 def selectmodel(parameters,xtrain,ytrain,kval):
 	try:
