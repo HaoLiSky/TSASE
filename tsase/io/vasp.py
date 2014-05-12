@@ -14,7 +14,7 @@ def read_xdatcar(filename, skip=0, every=1):
     nframes = (len(lines)-7)/(sum(natoms) + 1)
     trajectory = []
     for i in range(skip, nframes, every):
-        a = Atoms('H'*sum(natoms))
+        a = ase.Atoms('H'*sum(natoms))
         a.masses = [1.0] * len(a)
         a.set_chemical_symbols(''.join([n*e for (n, e) in zip(natoms, elements)]))
         a.cell = cell.copy()
@@ -27,6 +27,7 @@ def read_xdatcar(filename, skip=0, every=1):
                 j += 1
         a.positions = numpy.dot(a.positions, cell)
         trajectory.append(a)
+
     return trajectory
 
 

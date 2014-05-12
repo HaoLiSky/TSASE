@@ -745,12 +745,13 @@ class xyz(gtk.Window):
     def data_read(self, filename):
         data = None
         try:
-            data = tsase.io.read(filename)
+            data = tsase.io.read(filename, skip =0, every=1)
         except:
             print "Failed to load", filename
             return
         if type(data) is not list:
             data = [data]
+            print "not a list of trj"
         self.data_set(data)
         self.set_title(os.path.abspath(filename))
 

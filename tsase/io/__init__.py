@@ -8,9 +8,9 @@ from socorro import read_socorro, write_socorro
 from aims import read_aims, write_aims
 from colors import read_colors
 
-def read_vasp_multiframe(filename):
+def read_vasp_multiframe(filename, skip, every):
     try:
-        xdat = read_xdatcar(filename)
+        xdat = read_xdatcar(filename, skip, every)
         if type(xdat) == list and len(xdat) > 1:
             return xdat
     except:
@@ -30,7 +30,8 @@ def read_vasp_multiframe(filename):
     return data
             
 
-def read(filename):
+def read(filename, skip, every):
+
     try:
         return read_con(filename)
     except:
@@ -40,7 +41,7 @@ def read(filename):
     except:
         pass
     try:
-        return read_vasp_multiframe(filename)
+       return read_vasp_multiframe(filename, skip, every)
     except:
         pass
     try:
