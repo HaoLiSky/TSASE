@@ -1,6 +1,7 @@
 import numpy
 
 import ase
+import tsase
 from ase.data import *
 
 def get_sym(tempmass):
@@ -82,6 +83,13 @@ def read_lammps(filename):
                     atoms[idn].position[1] = float(data[3])                            
                     atoms[idn].position[2] = float(data[4])                            
                     index += 1                            
+        if index >= len(lines):
+            continue
+        else:
+            index += 1                            
+            if 'Velocities' in lines[index]:                   
+                index = len(lines)+1 
+
     return atoms
 
 def read_dump(filename):

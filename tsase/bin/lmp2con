@@ -1,0 +1,26 @@
+#!/usr/bin/env python
+from sys import argv
+from tsase.io.con import read_con, write_con
+from tsase.io.lammps import read_lammps, write_lammps
+
+eoncon = True
+if argv[1].endswith('.con'):
+    atoms = read_con(argv[1])  
+else:
+    atoms = read_lammps(argv[1])
+    eoncon = False
+
+if len(argv) == 3:
+    outname=argv[2]
+else:
+    if eoncon:
+        outname='lmps_pos'
+    else:
+        outname='pos.con'
+
+if eoncon:
+    write_lammps(outname, atoms)
+else:
+    write_con(outname, atoms)
+
+

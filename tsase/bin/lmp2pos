@@ -1,0 +1,28 @@
+#!/usr/bin/env python
+from sys import argv
+import ase.io
+from tsase.io.lammps import read_lammps, write_lammps
+
+###add usage help
+
+poscar = True
+if argv[1].startswith('POSCAR') or argv[1].startswith('CONTCAR'):
+    atoms = ase.io.read(argv[1])  
+else:
+    atoms = read_lammps(argv[1])
+    poscar = False
+
+if len(argv) == 3:
+    outname=argv[2]
+else:
+    if poscar:
+        outname='lmps_pos'
+    else:
+        outname='POSCAR'
+
+if poscar:
+    write_lammps(outname, atoms)
+else:
+    ase.io.write(outname, atoms)
+
+

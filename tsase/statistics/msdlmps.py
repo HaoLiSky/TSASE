@@ -50,7 +50,7 @@ def snapshots_command(args):
             trajectory += read_xdatcar(filename, args.skip, args.every)
 
     ### Set variables and array sizes
-    df= args.timestep
+    df= args.timestep*args.every
     tmax=len(trajectory)*df
     cnt = np.zeros(len(trajectory))
     ldt = np.zeros(len(trajectory))

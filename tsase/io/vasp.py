@@ -28,3 +28,5 @@ def read_xdatcar(filename, skip=0, every=1):
         a.positions = numpy.dot(a.positions, cell)
         trajectory.append(a)
     return trajectory
+
+
