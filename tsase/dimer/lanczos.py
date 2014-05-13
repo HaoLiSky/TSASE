@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+#lanczos algorithm for min-mode searching
 
 import time
 import copy
@@ -59,9 +60,9 @@ class lanczos_atoms:
         self.V = np.zeros((self.natom+3,3))
         # for comparison
         self.lowestmode = lowestmode
-        if lowestmode == None:
-            print 'please provide the true lowest mode for comparison'
-            sys.exit()
+        #if lowestmode == None:
+        #    print 'please provide the true lowest mode for comparison'
+        #    sys.exit()
         self.record = [[], [], []]
 
     # Pipe all the stuff from Atoms that is not overwritten.
@@ -193,9 +194,6 @@ class lanczos_atoms:
             beta    = vmag(u)
 
             newN    = np.reshape(u/beta, (-1, 3))
-            ## check with pi/2
-            dphi    = np.arccos(np.vdot(newN, self.N[:-3])) 
-            if dphi > np.pi/2.0: dphi = np.pi - dphi
             self.N[:-3] = newN
             F1      = self.rotation_update()
 
@@ -208,12 +206,19 @@ class lanczos_atoms:
                 ##Convert eigenvector of T matrix to eigenvector of full Hessian
                 evEst = Q[:, :i+1].dot(evT)
                 evEst = vunit(evEst)
+                evAtom_old = copy.copy(evAtom)
                 evAtom  = np.reshape(evEst, (-1, 3))
                 c0      = ew
-                theta2true = np.arccos(np.vdot(evAtom, self.lowestmode[:-3]))
-                if theta2true > np.pi/2.0: theta2true = np.pi - theta2true
-                self.record[0].append(i)
-                self.record[1].append(theta2true)
+                ## check with pi/2
+                dphi    = np.arccos(np.vdot(evAtom, evAtom_old)) 
+                if dphi > np.pi/2.0: dphi = np.pi - dphi
+
+                ### for benchmark only
+                #theta2true = np.arccos(np.vdot(evAtom, self.lowestmode[:-3]))
+                #if theta2true > np.pi/2.0: theta2true = np.pi - theta2true
+                #self.record[0].append(i)
+                #self.record[1].append(theta2true)
+                #self.record[2].append(c0)
                 '''
                 ##check orthonality
                 nonorth = 0
@@ -223,23 +228,20 @@ class lanczos_atoms:
                 print nonorth
                 #self.record[2].append(nonorth)
                 '''
-                self.record[2].append(c0)
                 ##only for comparison
-                if theta2true < self.phi_tol: 
-                    break
+                #if theta2true < self.phi_tol: 
+                #    break
 
             else:
                 evAtom  = self.N[:-3]
                 c0      = np.vdot(Hv[:-3], evAtom)
-            #print "i, Curvature:", i, c0
-            '''
+            print "i, Curvature, dphi:", i, c0, dphi
             if dphi < self.phi_tol or i == size-1:
                 self.N[:-3] = evAtom
                 break
-            '''
 
         self.curvature = c0
-        print "Lanczos nstpes:", self.forceCalls
+        print "Lanczos nsteps:", self.forceCalls
         return F0
         
 
