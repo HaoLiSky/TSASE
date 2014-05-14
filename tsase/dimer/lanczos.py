@@ -118,8 +118,8 @@ class lanczos_atoms:
 
     def get_forces(self):
         F0 = self.minmodesearch()
+        self.F0   = F0
         Fparallel = np.vdot(F0, self.N) * self.N
-        #if self.curvature > 0 and self.steps < 50:
         if self.curvature > 0:
             self.Ftrans = -Fparallel
             print "drag up directly"
@@ -144,19 +144,6 @@ class lanczos_atoms:
         # force of R1
         F1    = self.update_general_forces(self.R1)
         return F1
-        
-    def rotation_plane(self, Fperp, Fperp_old):
-        # determine self.T (big theta in the paper) with CG method
-        a = abs(np.vdot(Fperp, Fperp_old))
-        b = np.vdot(Fperp_old, Fperp_old)
-        if a <= 0.5*b and b != 0:  
-            gamma = np.vdot(Fperp, Fperp-Fperp_old) / b
-        else:
-            gamma = 0
-        Ttmp       = Fperp + gamma * self.T * self.Tnorm
-        Ttmp       = Ttmp - np.vdot(Ttmp, self.N) * self.N
-        self.Tnorm = np.linalg.norm(Ttmp)
-        self.T     = vunit(Ttmp)
         
     def minmodesearch(self):
         # rotate dimer to the minimum mode direction
@@ -235,13 +222,13 @@ class lanczos_atoms:
             else:
                 evAtom  = self.N[:-3]
                 c0      = np.vdot(Hv[:-3], evAtom)
-            print "i, Curvature, dphi:", i, c0, dphi
+            #print "i, Curvature, dphi:", i, c0, dphi
             if dphi < self.phi_tol or i == size-1:
                 self.N[:-3] = evAtom
                 break
 
         self.curvature = c0
-        print "Lanczos nsteps:", self.forceCalls
+        #print "Lanczos nsteps:", self.forceCalls
         return F0
         
 
