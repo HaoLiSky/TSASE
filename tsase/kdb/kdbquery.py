@@ -46,7 +46,7 @@ def clump(c, atoms, nf):
     # Remove PBC's.
     temp = c.copy()
     undone = atoms[:]
-    working = [undone.pop()]        
+    working = [undone.pop()]
     while len(undone) > 0:
         if len(working) == 0:
             print "Dissociated reactant, or neighbor_fudge too small."
@@ -60,7 +60,7 @@ def clump(c, atoms, nf):
                 working.append(i)
                 undone.remove(i)
     return temp
-    
+
 
 def namePermutations(nameList):
     perms = [nameList[-1]]
@@ -87,22 +87,22 @@ def getKDBentries(kdbdir, reactant):
                      "product": os.path.join(procDir, "min2.xyz"),
                      "mirror": False}
             entries.append(entry)
-            entry = {"minimum": os.path.join(procDir, "min1.xyz"), 
-                     "saddle": os.path.join(procDir, "saddle.xyz"), 
+            entry = {"minimum": os.path.join(procDir, "min1.xyz"),
+                     "saddle": os.path.join(procDir, "saddle.xyz"),
                      "mode": os.path.join(procDir, "mode"),
                      "mobile": os.path.join(procDir, "mobile"),
                      "product": os.path.join(procDir, "min2.xyz"),
                      "mirror": True}
             entries.append(entry)
-            entry = {"minimum": os.path.join(procDir, "min2.xyz"), 
-                     "saddle": os.path.join(procDir, "saddle.xyz"), 
+            entry = {"minimum": os.path.join(procDir, "min2.xyz"),
+                     "saddle": os.path.join(procDir, "saddle.xyz"),
                      "mode": os.path.join(procDir, "mode"),
                      "mobile": os.path.join(procDir, "mobile"),
                      "product": os.path.join(procDir, "min1.xyz"),
                      "mirror": False}
             entries.append(entry)
-            entry = {"minimum": os.path.join(procDir, "min2.xyz"), 
-                     "saddle": os.path.join(procDir, "saddle.xyz"), 
+            entry = {"minimum": os.path.join(procDir, "min2.xyz"),
+                     "saddle": os.path.join(procDir, "saddle.xyz"),
                      "mode": os.path.join(procDir, "mode"),
                      "mobile": os.path.join(procDir, "mobile"),
                      "product": os.path.join(procDir, "min1.xyz"),
@@ -168,10 +168,10 @@ def query(reactant, kdbdir, outputdir = "./kdbmatches", nf=0.2, dc=0.3, nodupes 
         mirrored = "not mirrored"
         if entry["mirror"]:
             mirrored = "mirrored"
-        print "checking %32s %16s" % (entry["minimum"], mirrored), 
+        print "checking %32s %16s" % (entry["minimum"], mirrored),
         
         # Load the minimum.
-        kdbmin = read_xyz(entry["minimum"])        
+        kdbmin = read_xyz(entry["minimum"])
 
         # Make sure the reactant has at least as many atoms of each type as the
         # kdb configuration.
@@ -189,7 +189,7 @@ def query(reactant, kdbdir, outputdir = "./kdbmatches", nf=0.2, dc=0.3, nodupes 
             continue
 
         # Load the mobile atoms list.
-        kdbmobile = [int(i.strip()) for i in open(entry["mobile"]).readlines()]        
+        kdbmobile = [int(i.strip()) for i in open(entry["mobile"]).readlines()]
         
         # Mirror the minimum if the mirror flag is set for this entry.
         if entry["mirror"]:
@@ -421,7 +421,7 @@ def query(reactant, kdbdir, outputdir = "./kdbmatches", nf=0.2, dc=0.3, nodupes 
                         break
                 if isdupe:
                     continue
-                uniques.append(suggestion.copy())     
+                uniques.append(suggestion.copy())
             
             # Rebox.
             if REBOX_SUGGESTIONS:
@@ -433,7 +433,7 @@ def query(reactant, kdbdir, outputdir = "./kdbmatches", nf=0.2, dc=0.3, nodupes 
             write_vasp(outputdir + "/PRODUCT_%d" % numMatches, sugproduct)
             if mode is not None:
                 save_mode(outputdir + "/MODE_%d" % numMatches, modeTemp)
-            os.system("touch %s/.done_%d" % (outputdir, numMatches))                        
+            os.system("touch %s/.done_%d" % (outputdir, numMatches))
             
             entryMatches += 1
             numMatches += 1

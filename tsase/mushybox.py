@@ -17,7 +17,7 @@ class mushybox(Atoms):
         """box relaxation
         atomsx: an Atoms object
         express: external pressure, a 3*3 lower triangular matrix in the unit of GPa
-                 define positive values as compressing
+                 define positive values as compression
         """
         Atoms.__init__(self,atomsx)
         self.atomsx = atomsx 
@@ -42,7 +42,7 @@ class mushybox(Atoms):
         self.atomsx.set_cell(rcell, scale_atoms=True)
         ratom  = self.atomsx.get_positions() + dr[:-3]
         self.atomsx.set_positions(ratom)
-    
+
     def __len__(self):
         return self.natom+3
 
@@ -52,8 +52,8 @@ class mushybox(Atoms):
         stt  = self.atomsx.get_stress()
         vol  = self.atomsx.get_volume()*(-1)
         st   = np.zeros((3,3))
-        #following the order of get_stress in vasp.py
-        #(the order of stress in ase are the same for all calculators)
+        # following the order of get_stress in vasp.py
+        # (the order of stress in ase are the same for all calculators)
         st[0][0] = stt[0] * vol  
         st[1][1] = stt[1] * vol
         st[2][2] = stt[2] * vol

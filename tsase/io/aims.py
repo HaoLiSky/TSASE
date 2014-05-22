@@ -14,7 +14,6 @@ def read_aims(filename):
         if len(line) == 0: continue
         fields = line.split()
 
-
         if fields[0] == 'lattice_vector':
             cell[l,0] = float(fields[1])
             cell[l,1] = float(fields[2])

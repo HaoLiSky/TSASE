@@ -20,7 +20,7 @@ def read_colors(filename):
                 raise IOError, "Could not read con file." + "\n" + str(e)
             break
     return colors
-    
+
 if __name__ == "__main__":
     print read_colors('test.colors')
-    
+

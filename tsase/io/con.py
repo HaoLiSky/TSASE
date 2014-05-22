@@ -27,8 +27,7 @@ def box_to_length_angle(box):
     angles[2] = numpy.arccos(numpy.dot(box[1,:]/lengths[1],box[2,:]/lengths[2]))
     angles_deg = angles * 180.0/numpy.pi
     return lengths, angles_deg
-    
-    
+
 def read_con(filename):
     f = open(filename, 'r')
     lines = f.readlines()
@@ -75,9 +74,8 @@ def read_con(filename):
             if len(trajectory) == 0:
                 raise IOError, "Could not read con file." + "\n" + str(e)
             return trajectory
-        trajectory.append(a)        
-            
-            
+        trajectory.append(a)
+
 def write_con(filename, p, w = 'w', sort=False):
     p = p.copy()
     con = open(filename, w)

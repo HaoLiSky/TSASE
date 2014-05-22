@@ -12,7 +12,7 @@ import numexpr as ne
 class TEM_image_comparison:
     def __init__(self, *args):
         np.seterr(all='ignore')
-        #POSCAR file
+        # POSCAR file
         data = None
         try:
             data = tsase.io.read(args[0])
@@ -22,7 +22,7 @@ class TEM_image_comparison:
             print "failed to load", args[0]
             return
 
-        #TEM image
+        # TEM image
         tem_image = None
         try:
             tem_image = Image.open(args[1])
@@ -33,7 +33,7 @@ class TEM_image_comparison:
         tem = 1-(np.array(tem_image.getdata())/255.0)
         self.tem_data = tem[:,0]
 
-        #variable setup
+        # variable setup
         self.atoms     = data.get_positions()
         self.w, self.h = tem_image.size
 
@@ -47,7 +47,7 @@ class TEM_image_comparison:
             self.x_rot     = 0
             self.y_rot     = 0
             self.z_rot     = 0
-        else: #only used in GUI, needed to follow gradient for a single variable. 
+        else: # only used in GUI, needed to follow gradient for a single variable.
             self.bg        = args[2]
             self.intensity = args[3]
             self.sigma     = args[4]
@@ -94,7 +94,7 @@ class TEM_image_comparison:
         h = self.h
         atoms = np.array(self.atoms)
 
-        #constants that do not need to be caclulated for every pixel (used in matrix creation functions)
+        #constants that do not need to be calculated for every pixel (used in matrix creation functions)
         c1 = 2*sigma**2
         c2 = sigma**2
         c3 = sigma**3
@@ -111,7 +111,7 @@ class TEM_image_comparison:
         midy = (miny + maxy)/2
         midz = (minz + maxz)/2
 
-        #matrix creation function defenitions, all but fake_tem are used for finding slopes
+        #matrix creation function defenitions, all but fake_tem are used for finding derivatives
         def fake_tem(index_array, x, y): 
             xs = index_array[0]
             ys = index_array[1]
@@ -155,7 +155,6 @@ class TEM_image_comparison:
             expr = 'c4 * (exp(-(((xs- x)**2 + (ys-y)**2)/c1))) * ((ys - y)*(scale*(-(y_o-midy)*sin(x_rot) + (z_o-midz)*cos(x_rot))))'
             return ne.evaluate(expr, global_dict=d)
 
-
         def y_rot_helper(index_array, x, y, y_o, z_o): 
             xs = index_array[0]
             ys = index_array[1]
@@ -164,7 +163,6 @@ class TEM_image_comparison:
                     'y_rot':y_rot, 'x_o':x_o, 'y_o': y_o, 'z_o': z_o }
             expr = '-c4 * (exp(-(((xs- x)**2 + (ys-y)**2)/c1))) * ((xs - x)*(scale*( (x_o-midx)*sin(y_rot) + (z_o-midz)*cos(y_rot))))'
             return ne.evaluate(expr, global_dict=d)
-
 
         def z_rot_helper(index_array, x, y, x_o, y_o): 
             xs = index_array[0]
@@ -175,13 +173,13 @@ class TEM_image_comparison:
             expr = '-c6 * (exp(-(((xs- x)**2 + (ys-y)**2)/c1))) * ((2*(xs - x) * -scale*(-sin(z_rot)*(x_o-midx) + cos(z_rot)*(y_o-midy))) + (2*(ys - y) * -scale*(-cos(z_rot)*(x_o-midx) - sin(z_rot)*(y_o-midy))))'
             return ne.evaluate(expr, global_dict=d)
 
-        #apply rotations
+        # apply rotations
         atoms_original = np.array(atoms)
         atoms = self.rotate(atoms, x_rot, "x")
         atoms = self.rotate(atoms, y_rot, "y")
         atoms = self.rotate(atoms, z_rot, "z")
 
-        #apply matrix creation functions to all atoms
+        # apply matrix creation functions to all atoms
         indices = np.indices((w,h))
         xyz = None
 
@@ -225,9 +223,9 @@ class TEM_image_comparison:
                 if self.z_rot_bool:
                     z_rot_matrix = z_rot_matrix + z_rot_helper(indices, x, y, x_o, y_o)
 
-        #score 
+        # score
         tem = self.tem_data
-        self.xyz = xyz #self.xyz is used to create the PIL image
+        self.xyz = xyz # self.xyz is used to create the PIL image
         xyz = xyz.reshape(w*h)
         N = float(len(tem))
         newarray = (tem - (xyz/255.0))**2
@@ -235,11 +233,11 @@ class TEM_image_comparison:
         print "score:", score
         self.xyz_data = xyz
 
-        #gradients
+        # gradients
         x = xyz/255.0
         t = tem
 
-        if self.bgi_bool: #background and intensity (analytically solved for hence no slope)
+        if self.bgi_bool: # background and intensity (analytically solved for hence no derivative)
             g = (N*np.sum(x*t) - np.sum(x)*np.sum(t))/(N*np.sum(x*x) - np.sum(x)*np.sum(x))
             b = np.sum(t-(g*x))/N
             self.bgi_o = [g, b]
@@ -283,7 +281,7 @@ class TEM_image_comparison:
 
 
 ###################################################################################################
-# slopes
+# derivatives
 ###################################################################################################
 
     def slope_sigma(self, sigma): #working
@@ -343,8 +341,7 @@ class TEM_image_comparison:
         return self.bgi_o
 
 
-
-    def get_scale_o(self, *args):#working
+    def get_scale_o(self, *args): #working
         s = self.scale
         a = 5
         slope = 1
@@ -354,7 +351,6 @@ class TEM_image_comparison:
             print ""
             s = s + (slope*a)
         return s
-
 
 
     def get_sigma_o(self, *args): #working
@@ -367,7 +363,6 @@ class TEM_image_comparison:
         return w
 
 
-
     def get_xt_o(self, *args): #working
         x = self.x_trans
         a = 250
@@ -378,8 +373,7 @@ class TEM_image_comparison:
         return x
 
 
-
-    def get_yt_o(self, *args): #working, stop if translation is less than 1 pixel. 
+    def get_yt_o(self, *args): #working, stop if translation is less than 1 pixel.
         y = self.y_trans
         a = 250
         prev = -100
@@ -393,7 +387,6 @@ class TEM_image_comparison:
         return y
 
 
-
     def get_xr_o(self, *args): #working, might want to play with 'a' however
         xr = self.x_rot
         a = .1
@@ -402,7 +395,6 @@ class TEM_image_comparison:
             slope = self.slope_xr(xr)
             xr = xr + (slope*a)
         return xr
-
 
 
     def get_yr_o(self, *args): #working, might want to play with 'a' aswell.
@@ -420,7 +412,6 @@ class TEM_image_comparison:
         return yr
 
 
-
     def get_zr_o(self, *args): #working, again 'a' needs to be tinkered with
         zr = self.z_rot
         prev = -100
@@ -433,8 +424,7 @@ class TEM_image_comparison:
         return zr
 
 
-
-    def get_optimal_score(self, *args): #sigma always wants to 0 if initial guess is far from optimal position, NOTE: takes a very long time. 
+    def get_optimal_score(self, *args): # sigma always tends to 0 if the initial guess is far from the optimal position, NOTE: takes a very long time.
         #while(True):
         for i in range(10):
             nums = self.get_bgi()
@@ -465,11 +455,9 @@ class TEM_image_comparison:
 
 
 
-
-
 ###################################################################################################
 # extras
-###################################################################################################		
+###################################################################################################
     def draw_image(self, *args): #creates image of the current state of the fake TEM image. 
         im = Image.new("RGBA", (self.w, self.h), (0, 0, 0, 0))
         draw = ImageDraw.Draw(im)
@@ -480,7 +468,6 @@ class TEM_image_comparison:
                 value = int(matrix[i,j])
                 draw.point((i,j), fill=(0,0,0, value))
         return im
-
 
 
     def rotate(self, atoms, theta, string):
@@ -494,7 +481,7 @@ class TEM_image_comparison:
         if string == "z":
             rot = np.array([[ct, -st, 0], [st, ct, 0], [0, 0, 1]])
 
-        minx = min(atoms[:, 0])   
+        minx = min(atoms[:, 0])
         miny = min(atoms[:, 1])
         minz = min(atoms[:, 2])
         maxx = max(atoms[:, 0])
@@ -519,7 +506,6 @@ class TEM_image_comparison:
         return atoms
 
 
-
     def get_score(self, vector):
         b  = vector[0]
         i  = vector[1]
@@ -532,7 +518,6 @@ class TEM_image_comparison:
         zr = vector[8]
 
         return self.score(b, i, w, s, xt, yt, xr, yr, zr)
-
 
 
     def get_gradient(self, vector):
@@ -594,7 +579,6 @@ def opt_step(tem, x, alpha=0.001):
     return xnew
 
 
-
 if __name__ == "__main__":
     if len(sys.argv) == 3:
         tem = TEM_image_comparison(sys.argv[1], sys.argv[2])
@@ -614,3 +598,4 @@ if __name__ == "__main__":
         print check_grad(tem.get_score, tem.get_gradient, x0)
     else:
         print "tem.py needs a POSCAR file and a TEM image."
+

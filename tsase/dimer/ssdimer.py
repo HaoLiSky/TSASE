@@ -90,16 +90,16 @@ class SSDimer_atoms:
         self.R0.set_cell(rcell, scale_atoms=True)
         ratom  = self.R0.get_positions() + dr[:-3]
         self.R0.set_positions(ratom)
-    
+
     def update_general_forces(self, Ri):
-        #update the generalized forces (f, st)
+        # update the generalized forces (f, st)
         self.forceCalls += 1
         f    = Ri.get_forces()
         if self.ss: stt  = Ri.get_stress()
         vol  = Ri.get_volume()*(-1)
         st   = np.zeros((3,3))
-        #following the order of get_stress in vasp.py
-        #(the order of stress in ase are the same for all calculators)
+        # following the order of get_stress in vasp.py
+        # (the order of stress in ase are the same for all calculators)
         if self.ss:
             st[0][0] = stt[0] * vol  
             st[1][1] = stt[1] * vol
@@ -110,7 +110,7 @@ class SSDimer_atoms:
             st  -= self.express * (-1)*vol
         Fc   = np.vstack((f, st/self.jacobian))
         return Fc
-  
+
     def get_curvature(self):
         return self.curvature
 
@@ -209,7 +209,6 @@ class SSDimer_atoms:
         # self.N, the dimer direction; 
         # self.T, the rotation direction, spans the rotation plane with self.N.
 
-
         F0    = self.update_general_forces(self.R0)
         F1    = self.rotation_update()
 
@@ -268,7 +267,7 @@ class SSDimer_atoms:
             iteration += 1
         self.curvature = c0
         return F0
-        
+
 
 #######################################################################################################
 # The following part can be replaced by FIRE or MDMin optimizer in ase, see the ssdimer.py in examples
@@ -285,11 +284,11 @@ class SSDimer_atoms:
         step = self.V * self.dT
         if vmag(step) > self.maxStep:
             step = self.maxStep * vunit(step)
- 
+
         self.set_positions(step)
         self.E = self.get_potential_energy()
-        
-    
+
+
     def getMaxAtomForce(self):
         if self.Ftrans is None:
             return 1000
@@ -298,7 +297,7 @@ class SSDimer_atoms:
             maxForce = max(maxForce, vmag(self.Ftrans[i]))
         #maxForce = vmag(self.Ftrans)
         return maxForce
-            
+
     def search(self, minForce = 0.01, quiet = False, maxForceCalls = 100000, movie = None, interval = 50):
         self.converged = False
         if movie:
@@ -327,4 +326,4 @@ class SSDimer_atoms:
 
         if self.getMaxAtomForce() <= minForce:
             self.converged = True
-                                   
+

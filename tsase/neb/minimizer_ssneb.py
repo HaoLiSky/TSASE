@@ -83,10 +83,3 @@ class minimizer_ssneb:
 
         feout.close()
 
-
-
-
-
-
-
-

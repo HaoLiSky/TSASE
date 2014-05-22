@@ -148,7 +148,6 @@ class xyz(gtk.Window):
         self.pwd = os.getcwd()
         self.bond_width = 4
 
-
     def gui_key_on(self, key):
         return key in self.keys
 
@@ -169,6 +168,7 @@ class xyz(gtk.Window):
         self.keys[key] = True
         if key == "space" and self.trajectory is not None and len(self.trajectory) > 1:
             self.event_toggle_play()
+
 
     def event_key_released(self, widget, event):
         key = gdk.keyval_name(event.keyval)
@@ -273,10 +273,12 @@ class xyz(gtk.Window):
             drawpoint = self.trajectory[int(self.moviescale.get_value())]
         return drawpoint
 
+
     def get_frame_colors(self):
         if self.trajectoryColors is None:
             return None
         return self.trajectoryColors[int(self.moviescale.get_value())]
+
 
     def event_exposed(self, *args):
         self.gfx_render()
@@ -334,6 +336,7 @@ class xyz(gtk.Window):
         chooser.destroy()
         return response, filename
 
+
     def getFilenameSave(self):
         buttons = (gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_SAVE,gtk.RESPONSE_OK)
         chooser = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_SAVE,buttons=buttons)
@@ -343,12 +346,14 @@ class xyz(gtk.Window):
         chooser.destroy()
         return response, filename
 
+
     def event_menuFileOpen(self, *args):
         response, filename = self.getFilenameOpen()
         if response == gtk.RESPONSE_OK:
             self.pwd = os.path.dirname(filename)
             self.data_read(filename)
         return True
+
 
     def event_menuFileOpenView(self, *args):
         response, filename = self.getFilenameOpen()
@@ -365,6 +370,7 @@ class xyz(gtk.Window):
             self.queue_draw()
         return True
 
+
     def event_menuFileOpenColors(self, *args):
         response, filename = self.getFilenameOpen()
         if response == gtk.RESPONSE_OK:
@@ -372,6 +378,7 @@ class xyz(gtk.Window):
             self.trajectoryColors = tsase.io.read_colors(filename)
             self.queue_draw()
         return True
+
 
     def event_menuFileSaveAs(self, *args):
         if self.trajectory is None:
@@ -381,6 +388,7 @@ class xyz(gtk.Window):
             self.pwd = os.path.dirname(filename)
             self.data_write(filename)
         return True
+
 
     def event_menuFileSaveView(self, *args):
         response, filename = self.getFilenameSave()
@@ -398,6 +406,7 @@ class xyz(gtk.Window):
             f.write(view)
             f.close()
         return True
+
 
     def event_menuFileExport(self, *args):
         response, filename = self.getFilenameSave()
@@ -424,7 +433,6 @@ class xyz(gtk.Window):
             csurf.finish()
         return True
 
-
 #
 # GRAPHICS --------------------------------------------------------------------------------------
 #
@@ -447,6 +455,7 @@ class xyz(gtk.Window):
         self.area.window.draw_drawable(self.white_gc, self.pixmap, 0, 0, 0, 0, self.width, self.height)
         self.last_draw = time.time()
 
+
     def gfx_get_color_gc(self, color):
         r = color[0]
         g = color[1]
@@ -458,12 +467,14 @@ class xyz(gtk.Window):
             self.color_memo[(r,g,b)] = gc
         return self.color_memo[(r,g,b)]
 
+
     def gfx_reset_transform(self):
         self.radiusbutton.set_value(1.5)
         self.zoombutton.set_value(8.0)
         self.rotation = np.identity(3)
         self.translate = np.array([0.0, 0.0, 16.0])
         self.queue_draw()
+
 
     def gfx_queue_line(self, r1, r2, color, width = 1):
         line = queueitem("line")
@@ -473,6 +484,7 @@ class xyz(gtk.Window):
         line.depth = (r1 + r2) / 2.0
         line.width = width
         self.queue.append(line)
+
 
     def gfx_queue_bonds(self):
         fa = self.get_frame_atoms()
@@ -498,6 +510,7 @@ class xyz(gtk.Window):
                 p1 = ra.positions[a] + vunit * rad
                 p2 = ra.positions[a] + v * 0.5
                 self.gfx_queue_line(p1, p2, [c*0.85 for c in element['color']], width=self.bond_width)
+
 
     def gfx_queue_atoms(self):
         try:
@@ -528,6 +541,7 @@ class xyz(gtk.Window):
                 pass
             self.queue.append(atom)
 
+
     def gfx_queue_box(self):
         try:
             self.get_frame_atoms().cell
@@ -553,6 +567,7 @@ class xyz(gtk.Window):
                                     r1 + (r2 - r1) * float(l + 1) /
                                     boxsteps, [0, 0, 0])
 
+
     def gfx_center_atoms(self):
         if self.trajectory is None:
             return
@@ -574,6 +589,7 @@ class xyz(gtk.Window):
         midz = minz + (maxz - minz) / 2
         self.center = np.array([midx, midy, midz])
         self.queue_draw()
+
 
     def gfx_draw_axes(self):
         axes = np.identity(3) * 32
@@ -694,6 +710,7 @@ class xyz(gtk.Window):
         else:
             self.pixmap.draw_rectangle(self.background_gc, True, 0, 0, self.width, self.height)
 
+
     def gfx_draw_circle(self, x, y, r, color):
         r = max(1,r)
         if self.render_cairo:
@@ -711,6 +728,7 @@ class xyz(gtk.Window):
         else:
             self.pixmap.draw_arc(self.gfx_get_color_gc(color), True, x - r, y - r, r * 2, r * 2, 0, 64 * 360)
             self.pixmap.draw_arc(self.black_gc, False, x - r, y - r, r * 2, r * 2, 0, 64 * 360)
+
 
     def gfx_draw_line(self, x1, y1, x2, y2, width=1, color=[0,0,0]):
         if self.render_cairo:
@@ -775,29 +793,6 @@ class xyz(gtk.Window):
 if __name__ == "__main__":
     q = xyz()
     gtk.main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

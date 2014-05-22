@@ -105,18 +105,17 @@ def browse():
 
 @b.route('/static/<filename>')
 def static(filename):
-    return b.static_file(filename, os.path.join(PATH, 'static'))    
+    return b.static_file(filename, os.path.join(PATH, 'static'))
 
 @b.route('/www/<filename>')
 def www(filename):
-    return b.static_file(filename, WWW_PATH)    
+    return b.static_file(filename, WWW_PATH)
 
 @b.route('/kdb/<combo>/<number>/<filename>')
 def kdbpath(combo, number, filename):
-    return b.static_file(os.path.join(combo, number, filename), KDB_PATH)    
+    return b.static_file(os.path.join(combo, number, filename), KDB_PATH)
 
 
-    
 
 if __name__ == "__main__":
     # Parse command line options.
@@ -140,8 +139,4 @@ if __name__ == "__main__":
     MOBILE_ATOM_CUTOFF = options.mac
     DISTANCE_CUTOFF = options.dc
     b.run(host=options.host, port=options.port, reloader=True)
-    
-    
-    
-    
-    
+

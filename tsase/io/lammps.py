@@ -5,7 +5,7 @@ import tsase
 from ase.data import *
 
 def get_sym(tempmass):
-    for i, d in enumerate(atomic_masses):   
+    for i, d in enumerate(atomic_masses):
         if tempmass == atomic_masses[i]:
             return i
         else:
@@ -54,15 +54,15 @@ def read_lammps(filename):
                 natoms = int(lines[index].strip().split()[0])
                 atoms = ase.Atoms(str(natoms)+'H')
                 lenatomtypes = int(lines[index+1].strip().split()[0])
-                index += 3               
+                index += 3
 
         if 'xlo xhi' in lines[index]:
                 atoms.cell[0][0] = float(lines[index].split()[1])-float(lines[index].split()[0])
-                atoms.cell[1][1] = float(lines[index+1].split()[1])-float(lines[index+1].split()[0])                   
-                atoms.cell[2][2] = float(lines[index+2].split()[1])-float(lines[index+2].split()[0])                    
-                index += 4                    
-        if 'Masses' in lines[index]:                    
-                index +=2 
+                atoms.cell[1][1] = float(lines[index+1].split()[1])-float(lines[index+1].split()[0])
+                atoms.cell[2][2] = float(lines[index+2].split()[1])-float(lines[index+2].split()[0])
+                index += 4
+        if 'Masses' in lines[index]:
+                index += 2
                 idpoint={}
                 for i in range(lenatomtypes):
                     typeid = int(lines[index].strip().split()[0])
@@ -71,24 +71,24 @@ def read_lammps(filename):
                     idpoint[typeid] = elnum
                     index += 1
         index += 1
-        if 'Atoms' in lines[index]:                    
-                index +=2 
+        if 'Atoms' in lines[index]:
+                index += 2
                 for i in range(natoms):
-                    data = lines[index].strip().split()                            
-                    #yypa = atoms[int(data[0])-1]                            
-                    idn = int(data[0])-1                            
+                    data = lines[index].strip().split()
+                    #yypa = atoms[int(data[0])-1]
+                    idn = int(data[0])-1
                     idt = int(data[1])
                     atoms[idn].number = idpoint[idt]
-                    atoms[idn].position[0] = float(data[2])                            
-                    atoms[idn].position[1] = float(data[3])                            
-                    atoms[idn].position[2] = float(data[4])                            
-                    index += 1                            
+                    atoms[idn].position[0] = float(data[2])
+                    atoms[idn].position[1] = float(data[3])
+                    atoms[idn].position[2] = float(data[4])
+                    index += 1
         if index >= len(lines):
             continue
         else:
-            index += 1                            
-            if 'Velocities' in lines[index]:                   
-                index = len(lines)+1 
+            index += 1
+            if 'Velocities' in lines[index]:
+                index = len(lines)+1
 
     return atoms
 
@@ -119,9 +119,9 @@ def read_dump(filename):
                 a.position[1] = float(data[3])
                 a.position[2] = float(data[4])
                 index += 1
-    return traj         
-                
-    
+    return traj
+
+
 if __name__ == '__main__':
     import sys
     read_lammps(sys.argv[1])
@@ -129,7 +129,4 @@ if __name__ == '__main__':
 #    tsase.io.write_con(sys.argv[1] + '.con', traj[0], 'w')
 #    for t in traj[1:]:
 #        tsase.io.write_con(sys.argv[1] + '.con', t, 'a')
-    
-    
-    
-    
+

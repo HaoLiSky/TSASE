@@ -298,4 +298,4 @@ class lanczos_atoms:
 
         if self.getMaxAtomForce() <= minForce:
             self.converged = True
-                                   
+

@@ -25,7 +25,7 @@ class SnO2rutFactory(SimpleTetragonalFactory):
     element_basis=(0,0, 1, 1, 1, 1)
 SnO2rut = SnO2rutFactory()
 
- 
+
 def Octahedron(symbol, length, cutoff, latticeconstant, alloy=False):
     # Check length and cutoff 
     if length < 2: 

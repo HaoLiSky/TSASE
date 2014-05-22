@@ -71,9 +71,8 @@ def fastRandomCluster(n, gridSize=1.0, rattle=0.1):
     dr *= rattle
     atoms.positions += dr
     return atoms
-        
-        
-    
+
+
 if __name__ == "__main__":
     from ase.optimize import FIRE
     import ase.io
@@ -84,7 +83,5 @@ if __name__ == "__main__":
     p.set_calculator(lj)
     dyn = FIRE(p, trajectory='relax.traj')
     dyn.run(fmax=0.05)
-    
-    
-    
-        
+
+

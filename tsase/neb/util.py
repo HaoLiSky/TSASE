@@ -36,11 +36,12 @@ def create_box(p, padding = 0.0):
     y = max(p.r[:,1]) - min(p.r[:,1])
     z = max(p.r[:,2]) - min(p.r[:,2])
     box *= [x, y, z]
-    box[0][0] += padding * 2.0    
-    box[1][1] += padding * 2.0    
+    box[0][0] += padding * 2.0
+    box[1][1] += padding * 2.0
     box[2][2] += padding * 2.0
     return box
-    
+
+
 def center_box(p):
     x = ((max(p.r[:,0]) - min(p.r[:,0])) / 2.0) + min(p.r[:,0])
     y = ((max(p.r[:,1]) - min(p.r[:,1])) / 2.0) + min(p.r[:,1])
@@ -52,6 +53,7 @@ def center_box(p):
     sy = by - y
     sz = bz - z
     p.r += numpy.array([sx, sy, sz])
+
 
 def vproj(v1, v2):
     """
@@ -111,7 +113,7 @@ def vrand(v):
 
 def randflux():
     """
-    Return a flux weighted number
+    Return a flux weighted random number
     """
     return sqrt(-2.0 * log(1.0 - random()))
 
@@ -136,7 +138,7 @@ def v2rotate(V1, V2, tTh):
 
 def floatStr(n, l):
     """    
-    Return a string representing the number n in a maximum of l characters, 
+    Return a string representing the number n in a maximum of l characters,
     left-padded with spaces.
     """    
     s = str(n)
@@ -207,7 +209,7 @@ def hessian(p, f, dr=.0005):
             
             hess.append((fleft-fright)/(2*dr))
             p[i].r[j]+=dr
-    for i in range(3*len(p)-1):        #clean up asymmetry
+    for i in range(3*len(p)-1):        # clean up asymmetry
         for j in range(i+1, 3*len(p)):
             avg = (hess[i][j]+hess[j][i])/2.0
             hess[i][j]=avg
@@ -222,11 +224,11 @@ def modes(p, f,dr=.0005):
     for i in evals:
         modes.append(i.real)
     modes.sort(cmp=compare_magnitude)
-    modes = modes[6:]  #Trim the rotational and translational modes (which are non-zero only because of error)
+    modes = modes[6:]  # trim the rotational and translational modes (which are non-zero only because of error)
     for i in range(len(modes)):
         modes[i] = sqrt(modes[i])/(2*pi)
     return modes
-    
+
 
 def compare_magnitude(x,y):
     if abs(x)>abs(y):
@@ -270,7 +272,6 @@ def rotm(axis, theta):
         [u*v*(1-ct)+w*mag*st, v2 +(u2 +w2)*ct, v*w*(1-ct)-u*mag*st],
         [u*w*(1-ct)-v*mag*st, v*w*(1-ct)+u*mag*st, w2 +(v2 +u2)*ct]
         ])/(mag*mag)
-
 
 
 #    return numpy.dot(rxz.transpose(), 

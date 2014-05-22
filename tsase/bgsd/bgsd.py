@@ -354,4 +354,3 @@ class BGSD:
     return False,FC
 
 
-

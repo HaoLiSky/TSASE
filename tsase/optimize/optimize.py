@@ -102,7 +102,7 @@ class Optimizer(Dynamics):
         pass
 
 ###############################################################
-    def run(self, fmax=0.05, emax= 0.001, steps=100000000,optimizer='L2',maximize=False):  
+    def run(self, fmax=0.05, emax= 0.001, steps=100000000,optimizer='L2',maximize=False):
         """Run structure optimization algorithm.
 
         This method will return when the forces on all individual
@@ -114,23 +114,23 @@ class Optimizer(Dynamics):
         step = 0
         while step < steps:
             if self.maximize == False:
-             f = self.atoms.get_forces()
+                f = self.atoms.get_forces()
             else:
-             f = - self.atoms.get_forces()
+                f = - self.atoms.get_forces()
             self.log(f)
             self.call_observers()
-	    if optimizer == 'L2':
-            	if self.converged_L2(f):
-                 return
-	    elif optimizer == 'maxatom':
-		if self.converged(f):  
-                 return
-	    elif optimizer == 'energy':
-		if self.converged_PE(f):   
-                 return
-	    elif optimizer == 'bgsd':
-		if self.bgsd_check(f):
-		 return
+        if optimizer == 'L2':
+            if self.converged_L2(f):
+                return
+        elif optimizer == 'maxatom':
+        if self.converged(f):
+            return
+        elif optimizer == 'energy':
+        if self.converged_PE(f):
+            return
+        elif optimizer == 'bgsd':
+            if self.bgsd_check(f):
+                return
             self.step(f)
             self.nsteps += 1
             step += 1

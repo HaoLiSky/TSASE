@@ -34,7 +34,7 @@ class ssneb:
                          normal NEB method 
             ss - boolean, solid-state dimer or regular dimer. Default: ssdimer
         """
-        
+
         self.numImages = numImages
         self.k         = k * numImages
         self.tangent   = tangent
@@ -52,14 +52,14 @@ class ssneb:
            express[1][2] = 0
            print "warning: xy, xz, yz components of the external pressure will be set to zero"
 
-        #check the orientation of the cell, make sure a is along x, b is on xoy plane
+        # check the orientation of the cell, make sure a is along x, b is on xoy plane
         for p in [p1,p2]:
             cr = p.get_cell()
             if cr[0][1]**2+cr[0][2]**2+cr[1][2]**2 > 1e-3: 
-                print "check the orientation of the cell, make sure a is along x, b is on xoy plane"
+                print "check the orientation of the cell, make sure a is along x, b is on the x-y plane"
                 sys.exit()
-                
-        #set the path by linear interpolation between end points
+
+        # set the path by linear interpolation between end points
         n = self.numImages - 1
         self.path = [p1]
         self.path+= [p1.copy() for i in range(self.numImages-2)]
@@ -67,8 +67,8 @@ class ssneb:
         cell1 = p1.get_cell()
         cell2 = p2.get_cell()
         dRB   = (cell2 - cell1) / n # path for cell
-        #don't use get_scaled_positions() or applay sPBC() here 
-        #if the atoms can move over half of the lattice from initail to final
+        # don't use get_scaled_positions() or apply sPBC() here
+        # if the atoms can move over half of the lattice from initial to final
         icell = numpy.linalg.inv(cell1)
         vdir1 = numpy.dot(p1.get_positions(),icell)
         icell = numpy.linalg.inv(cell2)
@@ -76,7 +76,7 @@ class ssneb:
         dR    = sPBC(vdir2 - vdir1) / n # path for direct coordinates
         calc  = p1.get_calculator()
         for i in range(1, n):
-            # making a directory for each image, which is nessary for vasp to read last step's WAVECAR  
+            # making a directory for each image, which is nessecary for vasp to read last step's WAVECAR
             # also, it is good to prevent overwriting files for parallelizaiton over images
             fdname = '0'+str(i)
             if not os.path.exists(fdname): os.mkdir(fdname)
@@ -88,7 +88,7 @@ class ssneb:
             self.path[i].set_calculator(calc)
         self.Umaxi = 1
 
-        #calculat the Jacobian to make cell move has the same unit and weight as atom move
+        # calculate the Jacobian so that a cell move have the same units and weight as an atomic move
         vol1     = self.path[0].get_volume()
         vol2     = self.path[self.numImages-1].get_volume()
         vol      = (vol1+vol2)*0.5
@@ -96,7 +96,7 @@ class ssneb:
         avglen   = (vol/self.natom)**(1.0/3.0)
         self.jacobian = avglen * self.natom**0.5 * self.weight
 
-        #add some new properties
+        # add some new properties
         for i in [0,n]:
             fdname = '0'+str(i)
             if not os.path.exists(fdname): os.mkdir(fdname)
@@ -109,7 +109,7 @@ class ssneb:
             self.path[i].icell = numpy.linalg.inv(self.path[i].get_cell())
             self.path[i].vdir  = self.path[i].get_scaled_positions()
             self.path[i].st = numpy.zeros((3,3))
-            #solid-state or not
+            # solid-state or not
             if self.ss:
                 vol = self.path[i].get_volume()*(-1)
                 self.path[i].st[0][0] = stt[0] * vol
@@ -120,7 +120,7 @@ class ssneb:
                 self.path[i].st[1][0] = stt[5] * vol
                 self.path[i].st      -= self.express * (-1)*vol
 
-            #calculate the pv term in enthalpy E+PV, setting image 0 as reference
+            # calculate the PV term in the enthalpy E+PV, setting image 0 as reference
             dcell  = self.path[i].get_cell() - self.path[0].get_cell()
             strain = numpy.dot(self.path[0].icell, dcell)
             pv     = numpy.vdot(self.express, strain) * self.path[0].get_volume()
@@ -134,12 +134,12 @@ class ssneb:
         Parameters:
             force - the potential energy force.
         """
-    
-        # Calculate the force due to the potential on the intermediate points.
+
+        # Calculate the force due to the potential on the intermediate points
         self.Umax  = self.path[0].u
         self.Umaxi = 0
         for i in range(1, self.numImages - 1):
-            # writing input and do the calculation in images' directories respectly
+            # writing input and do the calculation in images' directories respectively
             fdname = '0'+str(i)
             os.chdir(fdname)
             self.path[i].u     = self.path[i].get_potential_energy()
@@ -149,11 +149,11 @@ class ssneb:
             self.path[i].cellt = self.path[i].get_cell() * self.jacobian 
             self.path[i].icell = numpy.linalg.inv(self.path[i].get_cell())
             self.path[i].vdir  = self.path[i].get_scaled_positions()
-            try: 
+            try:
                 self.path[i].st
             except:
                 self.path[i].st = numpy.zeros((3,3))
-            #solid-state or not
+            # solid-state or not
             if self.ss:
                 vol = self.path[i].get_volume()*(-1)
                 self.path[i].st[0][0] = stt[0] * vol
@@ -166,8 +166,8 @@ class ssneb:
                 self.path[i].st[0][2] = 0.0
                 self.path[i].st[1][2] = 0.0
                 self.path[i].st      -= self.express * vol*(-1)
-             
-            #calculate the pv term in enthalpy E+PV, setting image 0 as reference
+
+            # calculate the PV term in the enthalpy E+PV, setting image 0 as reference
             dcell  = self.path[i].get_cell() - self.path[0].get_cell()
             strain = numpy.dot(self.path[0].icell, dcell)
             pv     = numpy.vdot(self.express, strain) * self.path[0].get_volume()
@@ -178,13 +178,13 @@ class ssneb:
                 self.Umax  = self.path[i].u
                 self.Umaxi = i
             
-        # Loop over each intermediate point and calculate the tangents.
+        # Loop over each intermediate point and calculate the tangent.
         for i in range(1, self.numImages - 1):
 
-            # Here st should be cauchy stress tensor times cell volume. 
+            # Here st should be the Cauchy stress tensor times cell volume. 
             # Timing box volume should have been done.
             self.path[i].totalf = numpy.vstack((self.path[i].f, self.path[i].st / self.jacobian))
-            # realtf that needed by nebspline.pl is saved for output 
+            # realtf that needed by nebspline.pl is saved for output
             self.path[i].realtf = deepcopy(self.path[i].totalf)
             
             # If we're using the 'old' tangent, the tangent is defined as the
@@ -200,20 +200,20 @@ class ssneb:
             # nudged elastic path method for finding minimum energy paths and 
             # saddle points, J. Chem. Phys. 113, 9978-9985 (2000)
             else:
-            
-                # it wouldn't hurt for these names to be more descriptive
+                # UPm1: is the previous image higher in energy
+                # UPp1: is the next image higher in energy
                 UPm1 = self.path[i - 1].u > self.path[i].u
                 UPp1 = self.path[i + 1].u > self.path[i].u
                 
                 # if V(i+1)>V(i)>V(i-1)
                 # or V(i+1)<V(i)<V(i-1)
-                # (this is the usual along the MEP)
+                # (this is the usual case along the MEP)
                 '''
                 tangent
                 '''
                 if(UPm1 != UPp1):
                     if(UPm1):
-                        # use direct coordinates to avoid double counting cell's movement
+                        # use direct coordinates to avoid double counting cell motion
                         dr_dir  = sPBC(self.path[i].vdir - self.path[i - 1].vdir)
                         avgbox  = 0.5*(self.path[i].get_cell() + self.path[i - 1].get_cell())
                         sn  = numpy.dot(dr_dir,avgbox)
@@ -235,7 +235,7 @@ class ssneb:
                         #snb = numpy.dot(iavgbox, snb)
                         #------------------------------------------------------------------
                         self.path[i].n = numpy.vstack((sn,snb))
-                # otherwise, we are near some extremum 
+                # otherwise, we are near some extremum
                 else:
                     Um1 = self.path[i - 1].u - self.path[i].u
                     Up1 = self.path[i + 1].u - self.path[i].u
@@ -269,8 +269,8 @@ class ssneb:
                         snb2 = numpy.dot(self.path[i].icell, dh)*0.5 + numpy.dot(self.path[i - 1].icell, dh)*0.5
                         snb  = snb1 * Umax + snb2 * Umin
                         self.path[i].n = numpy.vstack((sn,snb))
-        
-        # Normalize the tangents.
+
+        # Normalize each tangent
         print "==========!tangent contribution!=========="
         print "Jacobian:", self.jacobian
         print "ImageNum        atom         cell"
@@ -278,18 +278,18 @@ class ssneb:
             self.path[i].n = vunit(self.path[i].n)
             print i, vmag(self.path[i].n[:-3]), vmag(self.path[i].n[-3:])
 
-        # Loop over each intermediate image and adjust the potential energy 
-        # force and apply the spring force.
+        # Loop over each intermediate image and adjust the potential energy,
+        # force, and apply the spring force.
         for i in range(1, self.numImages - 1):
-        
-            # Push the climbing image uphill.
+
+            # push the climbing image uphill
             if self.method == 'ci' and i == self.Umaxi:
                 self.path[i].totalf -= 2.0 * vproj(self.path[i].totalf, self.path[i].n) 
                 self.path[i].fPerp   = self.path[i].totalf
-            
-            # And for the non-climbing images...
+
+            # and for the non-climbing images...
             else:
-                
+
                 # Calculate the force perpendicular to the tangent. 
                 self.path[i].fPerp = self.path[i].totalf - vproj(self.path[i].totalf,   \
                                                             self.path[i].n)
@@ -311,8 +311,7 @@ class ssneb:
                 self.path[i].fsN = (vmag(Rp1) - vmag(Rm1)) * self.k * self.path[i].n
                 #print i, vmag(Rp1),vmag(Rm1)
 
-                # For dneb use total spring force -spring force in the grad
-                # direction.
+                # For dneb use total spring force -spring force in the grad direction.
                 if self.dneb:
                     self.path[i].fs = (Rp1 + Rm1) * self.k
                     self.path[i].fsperp = self.path[i].fs -                   \
@@ -320,19 +319,18 @@ class ssneb:
                     self.path[i].fsdneb = self.path[i].fsperp -               \
                                           vproj(self.path[i].fs, self.path[i].fPerp)
 
-                    # New dneb where dneb force converges with (What?!)
+                    # dneb modification so that it will converge
                     if not self.dnebOrg:
                         FperpSQ = vmag(self.path[i].fPerp)
-                        FsperpSQ = vmag(self.path[i].fsperp)                 
+                        FsperpSQ = vmag(self.path[i].fsperp)
                         if FsperpSQ > 0:
-                            self.path[i].fsdneb *= 2.0 / pi * atan(FperpSQ /  \
-                                                                   FsperpSQ)
-                
+                            self.path[i].fsdneb *= 2.0/pi*atan(FperpSQ/FsperpSQ)
+
                 # Not using double-nudging, so set the double-nudging spring
                 # force to zero.
                 else:
                     self.path[i].fsdneb = 0
-                
+
                 # The final force is the sum of these forces.    
                 self.path[i].totalf = self.path[i].fsdneb + self.path[i].fsN +     \
                                  self.path[i].fPerp
@@ -340,4 +338,4 @@ class ssneb:
                 # only move the climing image
                 if(self.method == 'ci' and self.onlyci): 
                     self.path[i].totalf *= 0.0
-                
+

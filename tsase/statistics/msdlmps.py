@@ -79,7 +79,7 @@ def snapshots_command(args):
                 atoms2 = atoms2.copy()
 
                 if args.ignore_elements:
-                    ignore_indicies = [atom.index for atom in atoms   
+                    ignore_indicies = [atom.index for atom in atoms
                         if atom.symbol in args.ignore_elements]
                     del atoms[ignore_indicies]
                 pos_sc = atoms2.get_scaled_positions()
@@ -88,7 +88,7 @@ def snapshots_command(args):
                 dt = (j-i)
                
                 cnt[dt] += 1
-            ### get difference squared                
+            ### get difference squared
                 for k in xrange(len(atoms)):
                         if j == 1:
                             natoms += 1

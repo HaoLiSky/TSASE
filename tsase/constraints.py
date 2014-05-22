@@ -26,5 +26,3 @@ class FixBlockAxes:
         return FixBlockAxes(self.index)
 
 
-
-

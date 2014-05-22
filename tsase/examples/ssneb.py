@@ -56,5 +56,3 @@ band = neb.ssneb(p1, p2, numImages = nim, method = 'ci', weight = 1)
 opt = neb.fire_ssneb(band, maxmove =0.2, dtmax = 0.1, dt=0.1)
 opt.minimize(forceConverged=0.001, maxIterations = 1000)
 
-
-

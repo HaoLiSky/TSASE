@@ -38,8 +38,8 @@ class fire_ssneb(minimizer_ssneb):
         i = self.band.numImages-2
         j = self.band.natom+3
         self.v = np.zeros((i,j,3))
-	
-        
+
+
     def step(self):
         """
         Fire step
@@ -78,7 +78,7 @@ class fire_ssneb(minimizer_ssneb):
             rt += dR[:-3]
             self.band.path[i].set_positions(rt)
 
-            # move box and update cartesian coordinates 
+            # move box and update cartesian coordinates
             ct  = self.band.path[i].get_cell()
             ct += np.dot(ct, dR[-3:]) / self.band.jacobian
             self.band.path[i].set_cell(ct, scale_atoms=True)

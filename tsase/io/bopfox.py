@@ -8,7 +8,7 @@ def read_bopfox(filename):
     f.close()
     line_index = 0
     newlines = []
-    # Strip out comment lines
+    # strip out comment lines
     for line in lines:
         l = line.strip()
         if len(l) < 1:
@@ -44,7 +44,7 @@ def read_bopfox(filename):
         else:
             atomdata = l.strip().split()
             symbol = atomdata[0]
-            x, y, z = float(atomdata[1]), float(atomdata[2]), float(atomdata[3]) 
+            x, y, z = float(atomdata[1]), float(atomdata[2]), float(atomdata[3])
             a.append(ase.Atom(symbol, (x, y, z)))
         line_index += 1
     a.cell = box * scale
@@ -70,33 +70,3 @@ def write_bopfox(filename, a, w = 'w'):
         fout.write("%s % .12f % .12f % .12f /% 3d\n" % (symbols[i], r[i][0], r[i][1], r[i][2], i))
     fout.close()
 
-
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
