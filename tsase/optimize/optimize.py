@@ -101,17 +101,22 @@ class Optimizer(Dynamics):
     def initialize(self):
         pass
 
-    def run(self, fmax=0.05, steps=100000000,optimizer='L2'):
+###############################################################
+    def run(self, fmax=0.05, emax= 0.001, steps=100000000,optimizer='L2',maximize=False):  
         """Run structure optimization algorithm.
 
         This method will return when the forces on all individual
         atoms are less than *fmax* or when the number of steps exceeds
         *steps*."""
-
+        self.maximize = maximize
         self.fmax = fmax
+        self.emax = emax
         step = 0
         while step < steps:
-            f = self.atoms.get_forces()
+            if self.maximize == False:
+             f = self.atoms.get_forces()
+            else:
+             f = - self.atoms.get_forces()
             self.log(f)
             self.call_observers()
 	    if optimizer == 'L2':
@@ -123,6 +128,9 @@ class Optimizer(Dynamics):
 	    elif optimizer == 'energy':
 		if self.converged_PE(f):   
                  return
+	    elif optimizer == 'bgsd':
+		if self.bgsd_check(f):
+		 return
             self.step(f)
             self.nsteps += 1
             step += 1
@@ -149,14 +157,23 @@ class Optimizer(Dynamics):
         """Did the optimization converge?"""
         return self.atoms.get_potential_energy() < self.fmax
 
+    def bgsd_check(self,  forces=None):
+        if forces is None:
+                    forces = self.atoms.get_forces()
+        if self.atoms.get_potential_energy() < self.emax:
+            return self.atoms.get_potential_energy() < self.emax
+        else:
+            return np.sqrt(np.vdot(forces,forces)) < self.fmax
+            
     def log(self, forces):
         fmax = np.sqrt(np.vdot(forces,forces))
         e = self.atoms.get_potential_energy()
         T = time.localtime()
         if self.logfile is not None:
             name = self.__class__.__name__
-            self.logfile.write('%s: %3d  %02d:%02d:%02d %15.6f %12.4f\n' %
-                               (name, self.nsteps, T[3], T[4], T[5], e, fmax))
+            self.logfile.write('%s: %3d  %02d:%02d:%02d %15.10f %12.6f\n' %
+                                           (name, self.nsteps, T[3], T[4], T[5], e, fmax))
+
             self.logfile.flush()
         
     def dump(self, data):
