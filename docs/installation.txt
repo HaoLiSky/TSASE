@@ -1,0 +1,36 @@
+
+.. _installation:
+
+================================
+Installation
+================================
+
+This library is an extension of `ASE`_ and so a working version must be installed before use of TSASE.
+
+A read-only copy of the code can be anonymously checked out of the subversion
+repository with the following command:
+
+.. code-block:: sh
+
+    svn co http://theory.cm.utexas.edu/svn/tsase
+
+If you are a developer you can checkout the code using the command:
+
+.. code-block:: sh
+
+    svn co svn+ssh://username@theory.cm.utexas.edu/svn/tsase
+
+This will fetch a copy of the latest code to a local directory named tsase. 
+
+Once you have a local copy of tsase, include the top directory to you ``$PYTHONPATH`` and to use the independent scripts, it is recommended to add ``$HOME/tsase/tsase/bin`` to your ``$PATH``:
+
+.. code-block:: sh
+    
+    export PYTHONPATH=$HOME/tsase:$PYTHONPATH
+    export PATH=$HOME/tsase/tsase/bin:$PATH
+
+
+For more information on subversion read its `online documentation`_.
+
+.. _ASE: https://wiki.fysik.dtu.dk/ase/overview.html
+.. _online documentation: http://svnbook.red-bean.com/en/1.5/index.html
