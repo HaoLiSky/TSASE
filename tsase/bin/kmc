@@ -1,0 +1,259 @@
+#!/usr/bin/env python
+import argparse
+import numpy
+import os
+import pickle
+import re
+import shelve
+import sys
+
+from ase.calculators.singlepoint import SinglePointCalculator
+from ase.visualize import view
+from tsase.io import read_con
+from scipy.interpolate import interp1d
+
+def log(message):
+    print message
+
+def parse_results(path):
+    '''
+    Reads a results.dat file and gives a dictionary of the values contained therein
+    '''
+    if hasattr(path, 'readline'):
+        f = path
+        f.seek(0)
+    else:
+        f = open(path)
+    results = {}
+    for line in f:
+        line = line.split()
+        if len(line) < 2:
+            continue
+        if '.' in line[0]:
+            try:
+                results[line[1]] = float(line[0])
+            except ValueError:
+                log("Couldn't parse float in results.dat: %s", line)
+        else:
+            try:
+                results[line[1]] = int(line[0])
+            except ValueError:
+                try:
+                    results[line[1]] = line[0]
+                except ValueError:
+                    log("Couldn't parse string in results.dat: %s", line)
+
+    return results
+
+def find_configuration(db, kind, atoms, energy_tol=0.01):
+    energy = atoms.get_potential_energy()
+    configurations = db[kind]
+    for key in configurations:
+        if abs(configurations[key].get_potential_energy() - energy) < energy_tol:
+            return key
+
+def add_process(db, reactant, saddle, product):
+    reactant_name = find_configuration(db, 'minima', reactant)
+    if reactant_name is None:
+        reactant_name = len(db['minima'])
+        log('found new minimum (reactant): %s'%reactant_name)
+        db['minima'][reactant_name] = reactant
+
+    product_name = find_configuration(db, 'minima', product)
+    if product_name is None:
+        product_name = len(db['minima'])
+        log('found new minimum (product): %s'%product_name)
+        db['minima'][product_name] = product
+
+    saddle_name = find_configuration(db, 'saddles', saddle)
+    if saddle_name is None:
+        saddle_name = len(db['saddles'])
+        db['connections'][saddle_name] = (reactant_name, product_name)
+        log('found new saddle: %s'%saddle_name)
+        db['saddles'][saddle_name] = saddle
+
+def read_eon_result(db, path='.'):
+    if os.path.isfile('results.dat'):
+        results = parse_results('results.dat')
+
+    if 'barrier_reactant_to_product' in results:
+        configurations = {}
+        for name in [ 'reactant', 'saddle', 'product' ]:
+            atoms = read_con('%s.con' % name)
+            calculator = SinglePointCalculator(atoms, energy=results['potential_energy_%s'%name])
+            atoms.set_calculator(calculator)
+            configurations[name] = atoms
+
+    add_process(db, **configurations)
+
+def print_minima(db, pattern='.*', machine_readable=False):
+    if len(db['minima']) == 0:
+        return
+
+    if not machine_readable:
+        print '%8s %12s' % ('id', 'energy')
+    for key in db['minima']:
+        if not re.match(pattern, str(key)):
+            continue
+        energy = db['minima'][key].get_potential_energy()
+        print "%8i %12.6f" % (key, energy)
+
+def view_minima(db, pattern='.*'):
+    if len(db['minima']) == 0:
+        return
+
+    minima = []
+    for key in db['minima']:
+        if not re.match(pattern, str(key)):
+            continue
+        minima.append(db['minima'][key])
+    view(minima)
+
+def view_process(db, saddle_id, num_images=30):
+    if saddle_id not in db['saddles']:
+        return
+
+    if num_images < 3:
+        num_images = 3
+
+    saddle = db['saddles'][saddle_id]
+    minima_ids = db['connections'][saddle_id]
+    reactant = db['minima'][minima_ids[0]]
+    product = db['minima'][minima_ids[1]]
+
+    x = [0.0, numpy.linalg.norm(saddle.positions - reactant.positions) ]
+    x.append(numpy.linalg.norm(saddle.positions - product.positions) + x[-1])
+    f = interp1d(x, [ reactant.positions.flatten(), saddle.positions.flatten(), product.positions.flatten() ], axis=0)
+    e = interp1d(x, [ reactant.get_potential_energy(), saddle.get_potential_energy(), product.get_potential_energy() ])
+    traj = []
+    for i in numpy.linspace(x[0], x[2], num_images):
+        atoms = reactant.copy()
+        p = f(i)
+        p.shape = (-1,3)
+        atoms.positions = p
+        calculator = SinglePointCalculator(atoms, energy=e(i))
+        atoms.set_calculator(calculator)
+        traj.append(atoms)
+
+
+    #view([reactant,saddle,product])
+    view(traj)
+
+def print_saddles(db, pattern='.*', machine_readable=False):
+    if len(db['saddles']) == 0:
+        return
+
+    if not machine_readable:
+        print '%8s %12s %8s %8s %16s %16s' % ('id', 'energy', 'reactant', 'product', 'forward barrier', 'reverse barrier')
+    for key in db['saddles']:
+        if not re.match(pattern, str(key)):
+            continue
+        energy = db['saddles'][key].get_potential_energy()
+        minima = db['connections'][key]
+        forward_barrier = energy - db['minima'][minima[0]].get_potential_energy()
+        reverse_barrier = energy - db['minima'][minima[1]].get_potential_energy()
+        print "%8i %12.6f %8i %8i %16.6f %16.6f" % (key, energy, minima[0], minima[1], forward_barrier, reverse_barrier)
+
+def export_connection_graph(db):
+    if len(db['connections']) == 0:
+        return
+
+    print 'graph kmc {'
+    for key in db['connections']:
+        minima = db['connections'][key]
+        print '    %i -- %i;' % (minima[0], minima[1])
+
+    energies = [ atoms.get_potential_energy() for atoms in db['minima'].values() ]
+    min_energy = min(energies)
+    for key in db['minima']:
+        energy = db['minima'][key].get_potential_energy()
+        print '    %i [label="%i: %.3f eV"];' % (key, key, energy - min_energy)
+
+    print '}'
+
+def print_info(db, filename):
+    nminima = len(db['minima'])
+    nsaddles = len(db['saddles'])
+    if nminima > 0:
+        atoms = db['minima'][0]
+        formula = atoms.get_chemical_formula()
+        print '%s: formula %s: %i minima %i saddles' % (filename, formula, nminima, nsaddles)
+    else:
+        print '%s: empty database' % filename
+
+def initalize_db(db):
+    if 'minima' not in db:
+        db['minima'] = {}
+
+    if 'saddles' not in db:
+        db['saddles'] = {}
+
+    if 'connections' not in db:
+        db['connections'] = {}
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--database', '-d', default='kmc.db')
+    subparsers = parser.add_subparsers(dest='command')
+
+    parser_print = subparsers.add_parser('print')
+    parser_print.add_argument('--machine-readable', '-m', action='store_true')
+    parser_print_subparsers = parser_print.add_subparsers(dest='subcommand')
+    parser_print_minima = parser_print_subparsers.add_parser('minima')
+    parser_print_minima.add_argument('pattern', nargs='?', default='.*')
+    parser_print_saddles = parser_print_subparsers.add_parser('saddles')
+    parser_print_saddles.add_argument('pattern', nargs='?', default='.*')
+
+    subparsers.add_parser('add')
+    subparsers.add_parser('info')
+
+    parser_export = subparsers.add_parser('export')
+    parser_export_subparsers = parser_export.add_subparsers(dest='subcommand')
+    parser_export_connections = parser_export_subparsers.add_parser('connections')
+    parser_export_connections
+
+    parser_view = subparsers.add_parser('view')
+    parser_view_subparsers = parser_view.add_subparsers(dest='subcommand')
+    parser_view_minima = parser_view_subparsers.add_parser('minima')
+    parser_view_minima.add_argument('pattern', nargs='?', default='.*')
+    parser_view_process = parser_view_subparsers.add_parser('process')
+    parser_view_process.add_argument('saddle_id', nargs=1, type=int)
+    parser_view_process.add_argument('--number-of-images', '-n', type=int, default=30)
+
+    args = parser.parse_args()
+
+    if 'KMCDB' in os.environ:
+        args.database = os.environ['KMCDB']
+
+    if not os.path.isfile(args.database) and args.command != 'add':
+        sys.stderr.write('cannot find database: %s\n' % args.database)
+        sys.stderr.write('specify the path to a kmc database file using the -d option\n')
+        sys.exit(1)
+
+    if not os.path.isfile(args.database):
+        log('creating new kmc.db')
+    db = shelve.open(args.database, protocol=pickle.HIGHEST_PROTOCOL, writeback=True)
+    initalize_db(db)
+
+    if args.command == 'print':
+        if args.subcommand == 'minima':
+            print_minima(db, args.pattern, args.machine_readable)
+        elif args.subcommand == 'saddles':
+            print_saddles(db, args.pattern, args.machine_readable)
+    elif args.command == 'view':
+        if args.subcommand == 'minima':
+            view_minima(db, args.pattern)
+        elif args.subcommand == 'process':
+            view_process(db, args.saddle_id[0], args.number_of_images)
+    elif args.command == 'add':
+        read_eon_result(db)
+    elif args.command == 'info':
+        print_info(db, args.database)
+    elif args.command == 'export':
+        if args.subcommand == 'connections':
+            export_connection_graph(db)
+
+    db.close()
+
+if __name__ == '__main__':
+    main()
