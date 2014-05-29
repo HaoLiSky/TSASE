@@ -1,0 +1,34 @@
+
+.. _calculators:
+
+=========
+Calculators
+=========
+
+Several calculators are included in addition to calculators which can be run through `ASE <https://wiki.fysik.dtu.dk/ase/ase/calculators/calculators.html#module-calculators>_`
+
+**calculators**: the type of calculator to execute
+
+        ``eam_al``: Embedded atom method parameterized for aluminum.
+
+        ``bopfox``: Bond order potential, for metals. 
+
+        ``ljocl``: Lennard-Jones potential in reduced unit with openCL [#ljocl]_
+
+        ``meam_si``: Modified-EAM potential, for silicon. [#swsi]_
+
+        ``meam_si``: Modified-EAM potential, for lithium and silicon. [#meamsi]_
+
+	``lepsho``: LEPS+ Harmonic Oscillator potential. [#lepsho]_
+
+	``push``: Simple potential to push apart atoms to minimal distance
+
+	``Voter77``: Voter77 potential.  [#voter77]_
+	
+	``w``: Molybdenum potential. [#w]_
+
+	``ZDP_5Gaus``: ZDP 5Gaus potential. [#ZDP5Gaus]_
+
+
+
+.. [#lj] Lennard-Jones, J. E. Proc. R. Soc. Lond.A **106** (738): 463–477  doi:`10.1098/rspa.1924.0082 <http://dx.doi.org/10.1098%2Frspa.1924.0082>`_

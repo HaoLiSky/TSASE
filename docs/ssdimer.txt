@@ -1,0 +1,23 @@
+
+.. _ssdimer:
+
+=====
+Solid State Dimer
+=====
+
+The dimer method of Henkelman and Jónsson with improvements by Heyden et al
+and Kästner and Sherwood for estimating the lowest eigenmode using only first derivatives.  
+[#henkelman99_7010]_ [#heyden05_224101]_ [#kastner08_014106]_
+
+The solid state dimer module extends this method to solid state phase transitions. [#Xiao14_174104]_
+
+
+.. rubric:: References
+
+.. [#henkelman99_7010] G. Henkelman and H. Jónsson, "A dimer method for finding saddle points on high dimensional potential surfaces using only first derivatives," *J. Chem. Phys.* **111**, 7010-7022 (1999). `DOI <http://dx.doi.org/10.1063/1.480097>`_
+
+.. [#heyden05_224101] A. Heyden, A.T. Bell, and F.J. Keil, "Efficient methods for finding transition states in chemical reactions: Comparison of improved dimer method and partitioned rational function optimization method," *J. Chem. Phys.* **123**, 224101 (2005). `DOI <http://dx.doi.org/10.1063/1.2104507>`_
+
+.. [#kastner08_014106] J. Kästner and P. Sherwood, "Superlinearly converging dimer method for transition state search," *J. Chem. Phys.* **128**, 014106 (2008) `DOI <http://dx.doi.org/10.1063/1.2815812>`_
+
+.. [#Xiao14_174104]]  P. Xiao, D. Sheppard, J. Rogal, and G. Henkelman, "Solid-state dimer method for calculating solid-solid phase transitions", *J. Chem. Phys.* **140**, 174104 (2014). `DOI <http://dx.doi.org/10.1063/1.4873437>`

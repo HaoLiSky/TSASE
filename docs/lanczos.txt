@@ -1,0 +1,11 @@
+
+.. _lanczos:
+
+================================
+Lanczos
+================================
+
+The Lanczos method for determining the lowest eigenmode.
+[#malek00_7723]_
+
+.. [#malek00_7723] R. Malek and N. Mousseau, "Dynamics of Lennard-Jones clusters: A characterization of the activation-relaxation technique," *Phys. Rev. E* **62**, 7723 (2000). `DOI <http://dx.doi.org/10.1103/PhysRevE.62.7723>`_

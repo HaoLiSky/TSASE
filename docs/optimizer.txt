@@ -1,0 +1,31 @@
+
+.. _optimizer:
+
+Optimizer
+==============
+
+TSASE hold the following optimization routines:
+
+
+Limited memory BFGS
+-------------------
+
+    A limited memory version of the bfgs algorithm. Unlike the bfgs algorithm
+    used in bfgs.py, the inverse of Hessian matrix is updated.  The inverse
+    Hessian is represented only as a diagonal matrix to save memory
+
+    This version of LBFGS is based off of ASE implementation with a few improvements
+
+
+
+MDMin:
+------
+    
+    MDmin class from ASE which takes an atoms object and locally minimizes for a given maximum step
+
+
+Optimize:
+---------
+
+   A module that needs a description.  Utilizes MD for local optimization
+
