@@ -29,3 +29,8 @@ Optimize:
 
    A module that needs a description.  Utilizes MD for local optimization
 
+
+MushyBox:
+---------
+
+   Relaxes a variable number of degrees of freedom which may include full cell relaxation

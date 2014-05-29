@@ -5,3 +5,9 @@
 Kinetic Database
 ================================
 
+Kinetic Database implementation
+[#Terrell12_014105]_
+
+.. rubric:: References
+
+..[#Terrell12_014105]  R. Terrell, M. Welborn, S. T. Chill, and G. Henkelman, Database of atomistic reaction mechanisms with application to kinetic Monte Carlo, *J. Chem. Phys.* **137**, 014105 (2012). `DOI <http://dx.doi.org/10.1063/1.4730746>`

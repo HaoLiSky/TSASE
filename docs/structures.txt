@@ -1,0 +1,27 @@
+
+.. _structures:
+
+================================
+Structure Writer
+================================
+
+An extension of ASE's lattice factories and ClusterFactory.
+
+Lattices:
+---------
+
+diamond
+graphene
+graphite
+simple tetragonal (beta-Tin)
+SnO2-rutile phase
+
+Clusters:
+---------
+
+Octahedron (commandline control for modified octahedron)
+Wulff construction
+
+
+Usage:
+-----

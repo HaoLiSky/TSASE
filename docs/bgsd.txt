@@ -8,6 +8,10 @@ Biased Gradient Squared Descent
 Implementation of BGSD with citation.
 [#Duncan14_194102]_
 
+Usage:
+------
+
+
 .. rubric:: References
 
 .. [#Duncan14_194102] J. Duncan, Q. Wu, K. Promislow, and G. Henkelman, "Biased gradient squared descent saddle point finding method", *J. Chem. Phys.* **140**, 194102 (2014). `DOI <http://dx.doi.org/10.1063/1.4875477>`_ 

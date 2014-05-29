@@ -10,7 +10,24 @@ Contents:
 
    home
    installation
-   calculators
+   documentation
+
+  
+   calculators 
+   
+   saddle_searches
+   bgsd
+   ssdimer
+   ssneb
+   
+   svm
+   tem
+   kdb
+   optimizers
+   scripts 
+   structures
+   examples
+
 
 Indices and tables
 ==================

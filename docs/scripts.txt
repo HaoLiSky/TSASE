@@ -1,0 +1,23 @@
+
+.. _scripts:
+
+================================
+Scripts
+================================
+
+Standalone scripts to handle file conversions and other utlities.
+
+
+
+..list-table::
+	lmp2pos
+	lmp2con
+	soc2pos
+	water_solvate
+	xyz
+	neighbors
+	pdfstats
+	mobfil		
+	
+Usage:
+-----
