@@ -8,16 +8,34 @@ Scripts
 Standalone scripts to handle file conversions and other utlities.
 
 
+- **lmp2pos**
+	.. code-block:: sh
 
-..list-table::
-	lmp2pos
-	lmp2con
-	soc2pos
-	water_solvate
-	xyz
-	neighbors
-	pdfstats
-	mobfil		
+		$ lmp2pos <lmp_file/POSCAR> <POSCAR/lmp_file>
+		[DEFAULT OUTPUT] lmp_pos, POSCAR
+		
+- **lmp2con**
+        .. code-block:: sh
+
+                $ lmp2con <lmp_file/file.con> <file.con/lmp_file>
+                [DEFAULT OUTPUT] lmps_pos, pos.con
+
+- **soc2pos**
+        .. code-block:: sh
+
+                $ soc2pos <crystal/POSCAR> <POSCAR/crystal>
+                [DEFAULT OUTPUT] crystal, POSCAR
+
+- **splitxdat**
+	splits XDATCAR files at given segments and outputs XDATCAR or multiple POSCARS
+        .. code-block:: sh
+
+                $ splitxdat --help
+
+- **pdf-make**
+- **water_solvate**
+- **xyz**
+- **neighbors**
+- **pdfstats**
+- **mobfil**
 	
-Usage:
------
