@@ -10,16 +10,15 @@ Quick links:
 
 .. list-table:
 
-   * - :mod: `xyz`
    * - :mod: `calculators`
-   * - :mod: `saddle_searches`
+   * - :mod: `saddle_search`
     * - :mod: `bgsd`
     * - :mod: `ssdimer`
     * - :mod: `ssneb`
     * - :mod: `svm`
     * - :mod: `tem'
     * - :mod: `kdb`
-    * - :mod: `filehandling`
+    * - :mod: `scripts`
     * - :mod: `optimizers`
     * - :mod: `structures`
     * - :mod: `examples`

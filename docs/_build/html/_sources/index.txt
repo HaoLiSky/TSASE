@@ -15,7 +15,7 @@ Contents:
   
    calculators 
    
-   saddle_searches
+   saddle_search
    bgsd
    ssdimer
    ssneb
