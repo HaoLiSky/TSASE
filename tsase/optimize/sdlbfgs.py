@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import sys
 import numpy as np
 from tsase.optimize.optimize import Optimizer
 
@@ -12,6 +11,7 @@ class SDLBFGS(Optimizer):
 
     This version of LBFGS is based off of ASE implementation with a few improvements
     """
+
     def __init__(self, atoms, restart=None, logfile='-', trajectory=None,
                  maxstep=None, memory=100, damping = 1.0):
         """
@@ -64,7 +64,7 @@ class SDLBFGS(Optimizer):
         self.iteration = 0
         self.s = []
         self.y = []
-        self.rho = [] # Store also rho, to avoid calculationg the dot product
+        self.rho = [] # Store also rho, to avoid calculationing the dot product
                       # again and again
 
         self.r0 = None
@@ -84,76 +84,77 @@ class SDLBFGS(Optimizer):
         Use the given forces, update the history and calculate the next step --
         then take it"""
         r = self.atoms.get_positions()
-        p0 = self.p
-    if self.iteration == 0:
-        self.force_calls += 2
-        ### initial Hessian by steepest descent step
-        C = self.get_curvature_via_FD()
+
+        if self.iteration == 0:
+            self.force_calls += 2
+            ### initial Hessian by steepest descent step
+            C = self.get_curvature_via_FD()
             H0 = 1/C
-    else:
-        ### change H0 to be approximate curvature at each step
-        self.force_calls += 1
-        deltaF = self.prev_force - f
-        deltaR = r - self.prev_positions
-        C = np.vdot(deltaF,deltaF)/np.vdot(deltaR,deltaF)
-    ### if curvature is negative restart build up of hessian
-    if C < 0:
+        else:
+            ### change H0 to be approximate curvature at each step
+            self.force_calls += 1
+            deltaF = self.prev_force - f
+            deltaR = r - self.prev_positions
+            C = np.vdot(deltaF,deltaF)/np.vdot(deltaR,deltaF)
+
+        ### if curvature is negative restart build up of hessian
+        if C < 0:
             self.rho = []
-                    self.y = []
-                    self.s = []
-    else:
+            self.y = []
+            self.s = []
+        else:
             H0 = 1/C
 
-    self.prev_force = f
-    self.prev_positions = r
+        self.prev_force = f
+        self.prev_positions = r
 
         self.update(r, f, self.r0, self.f0)
 
         s = self.s
         y = self.y
         rho = self.rho
-    loopmax = len(y)
-    #### if we reset hessian because of negative curvature take maxstep in the direction of the force
-    if C < 0:
-        g = f*1000
-        dr = self.determine_step(g) * self.damping
-        self.atoms.set_positions(r+dr)
-    ## otherwise take lbfgs step
-    else:
-         a = np.empty((loopmax,), dtype=np.float64)
-
-         ### The algorithm itself:
-         q = - f.reshape(-1)
-         for i in range(loopmax - 1, -1, -1):
-            a[i] = rho[i] * np.dot(s[i], q)
-            q -= a[i] * y[i]
-         z = H0 * q
-
-         for i in range(loopmax):
-            b = rho[i] * np.dot(y[i], z)
-            z += s[i] * (a[i] - b)
-
-     #### check if angle of move is greater than 90 reset build up of Hessian #######
-     stepdir = -z/np.sqrt(np.vdot(z,z))
-     fdir = f/np.sqrt(np.vdot(f,f))
-     dot = np.vdot(fdir,stepdir)
-     if dot > 1:
-        dot = 1
-     if dot < -1:
-        dot = -1
-     angle = np.arccos(dot)*360/(2*np.pi)
-     if angle > 90:  ### if greater than 90 take SD step
-                    self.rho = []
-                        self.y = []
-                        self.s = []
+        loopmax = len(y)
+        #### if we reset hessian because of negative curvature take maxstep in the direction of the force
+        if C < 0:
             g = f*1000
-                    dr = self.determine_step(g) * self.damping
-                    self.atoms.set_positions(r+dr)
-            else:  ##### otherwise take lbfgs step
-        self.p = - z.reshape((-1, 3))
-        g = -f
-             dr = self.determine_step(self.p) * self.damping
-             self.atoms.set_positions(r+dr)
+            dr = self.determine_step(g) * self.damping
+            self.atoms.set_positions(r+dr)
+        ## otherwise take lbfgs step
+        else:
+             a = np.empty((loopmax,), dtype=np.float64)
+
+             ### The algorithm itself:
+             q = - f.reshape(-1)
+             for i in range(loopmax - 1, -1, -1):
+                a[i] = rho[i] * np.dot(s[i], q)
+                q -= a[i] * y[i]
+             z = H0 * q
+
+             for i in range(loopmax):
+                b = rho[i] * np.dot(y[i], z)
+                z += s[i] * (a[i] - b)
+
+        #### check if angle of move is greater than 90 reset build up of Hessian #######
+        stepdir = -z/np.sqrt(np.vdot(z,z))
+        fdir = f/np.sqrt(np.vdot(f,f))
+        dot = np.vdot(fdir,stepdir)
+        if dot > 1:
+           dot = 1
+        if dot < -1:
+           dot = -1
+        angle = np.arccos(dot)*360/(2*np.pi)
+        if angle > 90:  ### if greater than 90 take SD step
+            self.rho = []
+            self.y = []
+            self.s = []
+            g = f*1000
+            dr = self.determine_step(g) * self.damping
+            self.atoms.set_positions(r+dr)
+        else:  ##### otherwise take lbfgs step
+            self.p = - z.reshape((-1, 3))
+            g = -f
+            dr = self.determine_step(self.p) * self.damping
+            self.atoms.set_positions(r+dr)
 
         self.iteration += 1
         self.r0 = r
