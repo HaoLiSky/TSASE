@@ -1,9 +1,18 @@
 .. _ssneb:
 
-===================
+===============================
 Solid State Nudged Elastic Band
-===================
+===============================
 
 The nudged elastic band (NEB) is a method for finding saddle points and minimum energy paths between known reactants and products. The method works by optimizing a number of intermediate images along the reaction path. Each image finds the lowest energy possible while maintaining equal spacing to neighboring images. This constrained optimization is done by adding spring forces along the band between images and by projecting out the component of the force due to the potential perpendicular to the band.
 
-The implementation of solid-state NEB is found in this library.  Cite Xiao.
+
+The implementation of solid-state NEB is found in this library. [#Sheppard12_074103]_
+
+Usage
+=====
+
+
+.. rubric:: References
+
+.. [#Sheppard12_074103]  D. Sheppard, P. Xiao, W. Chemelewski, D. D. Johnson, and G. Henkelman, A generalized solid-state nudged elastic band method, J. Chem. Phys. 136, 074103 (2012). `DOI <http://dx.doi.org/10.1063/1.3684549>`_

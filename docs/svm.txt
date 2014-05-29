@@ -1,11 +1,11 @@
 
-.. _svm
+.. _svm:
 
-===============================
+================================
 Support Vector Machine Dynamics
 ================================
 
 Implementation of SVM dynamics with citation.
 
 Usage:
------
+======

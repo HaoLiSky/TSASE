@@ -8,8 +8,8 @@ Biased Gradient Squared Descent
 Implementation of BGSD with citation.
 [#Duncan14_194102]_
 
-Usage:
-------
+Usage
+=====
 
 
 .. rubric:: References

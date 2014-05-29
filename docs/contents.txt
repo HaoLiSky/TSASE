@@ -1,0 +1,24 @@
+.. tsase documentation:
+
+Contents
+========
+
+.. toctree::
+   :maxdepth: 2
+
+   index
+   installation
+   documentation
+   calculators 
+   saddle_search
+   bgsd
+   ssdimer
+   ssneb
+   svm
+   tem
+   kdb
+   optimizer
+   scripts 
+   structures
+   examples
+

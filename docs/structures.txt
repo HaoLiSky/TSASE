@@ -1,9 +1,9 @@
 
 .. _structures:
 
-================================
+=================
 Structure Writer
-================================
+=================
 
 An extension of ASE's lattice factories and ClusterFactory.
 
@@ -24,4 +24,4 @@ Wulff construction
 
 
 Usage:
------
+------
