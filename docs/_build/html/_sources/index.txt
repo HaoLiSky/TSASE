@@ -19,11 +19,11 @@ Contents:
    bgsd
    ssdimer
    ssneb
-   
+   lanczos   
    svm
    tem
    kdb
-   optimizers
+   optimizer
    scripts 
    structures
    examples

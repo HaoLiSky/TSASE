@@ -19,7 +19,7 @@ Quick links:
     * - :mod: `tem'
     * - :mod: `kdb`
     * - :mod: `scripts`
-    * - :mod: `optimizers`
+    * - :mod: `optimizer`
     * - :mod: `structures`
     * - :mod: `examples`
 
@@ -29,17 +29,15 @@ List of all Modules:
 .. toctree::
    :maxdepth: 2
 
-   xyz
    calculators
-   saddle_searches
+   saddle_search
    bgsd
    ssdimer
    ssneb
    svm
    tem
    kdb
-   filehandling
-   optimizers
+   scripts
+   optimizer
    structures
 
-:ref:`Debug <debug>`: options for printing more information to help debug calculations.
