@@ -3,7 +3,6 @@
 import sys
 import pickle
 import time
-from math import sqrt
 from os.path import isfile
 
 import numpy as np
@@ -38,7 +37,7 @@ class Dynamics:
             else:
                 logfile = open(logfile, 'a')
         self.logfile = logfile
-        
+
         self.observers = []
         self.nsteps = 0
 
@@ -50,7 +49,7 @@ class Dynamics:
     def get_number_of_steps(self):
         return self.nsteps
 
-    def insert_observer(self, function, position=0, interval=1, 
+    def insert_observer(self, function, position=0, interval=1,
                         *args, **kwargs):
         """Insert an observer."""
         if not callable(function):
@@ -123,11 +122,11 @@ class Optimizer(Dynamics):
             if self.converged_L2(f):
                 return
         elif optimizer == 'maxatom':
-        if self.converged(f):
-            return
+            if self.converged(f):
+                return
         elif optimizer == 'energy':
-        if self.converged_PE(f):
-            return
+            if self.converged_PE(f):
+                return
         elif optimizer == 'bgsd':
             if self.bgsd_check(f):
                 return
@@ -151,7 +150,7 @@ class Optimizer(Dynamics):
         if hasattr(self.atoms, 'get_curvature'):
             return np.sqrt(np.vdot(forces,forces)) < self.fmax and \
                    self.atoms.get_curvature() < 0.0
-        return np.sqrt(np.vdot(forces,forces)) < self.fmax    
+        return np.sqrt(np.vdot(forces,forces)) < self.fmax
 
     def converged_PE(self, forces=None):
         """Did the optimization converge?"""
@@ -164,7 +163,7 @@ class Optimizer(Dynamics):
             return self.atoms.get_potential_energy() < self.emax
         else:
             return np.sqrt(np.vdot(forces,forces)) < self.fmax
-            
+
     def log(self, forces):
         fmax = np.sqrt(np.vdot(forces,forces))
         e = self.atoms.get_potential_energy()
@@ -175,7 +174,7 @@ class Optimizer(Dynamics):
                                            (name, self.nsteps, T[3], T[4], T[5], e, fmax))
 
             self.logfile.flush()
-        
+
     def dump(self, data):
         if rank == 0 and self.restart is not None:
             pickle.dump(data, open(self.restart, 'wb'), protocol=2)
@@ -192,7 +191,7 @@ class NDPoly:
             Number of dimensions.
         order: int
             Order of polynomium."""
-        
+
         if ndims == 0:
             exponents = [()]
         else:
@@ -202,7 +201,7 @@ class NDPoly:
                 exponents += [(i,) + tuple(e) for e in E]
         self.exponents = np.array(exponents)
         self.c = None
-        
+
     def __call__(self, *x):
         """Evaluate polynomial at x."""
         return np.dot(self.c, (x**self.exponents).prod(1))
@@ -218,7 +217,7 @@ def polyfit(x, y, order=3):
 
     With D dimensions and N points, x must have shape (N, D) and y
     must have length N."""
-    
+
     p = NDPoly(len(x[0]), order)
     p.fit(x, y)
     return p
