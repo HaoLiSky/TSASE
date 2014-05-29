@@ -1,0 +1,116 @@
+#!/usr/bin/env python
+import ase
+from ase.io import write
+from tsase.io import read
+import numpy as np
+import sys
+import math
+
+def main():
+    import argparse
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('-ie', '--ignore-elements', type=str, metavar='ELEMENTS',
+            help='comma delimited list of elements to ignore in the ' + \
+            'pdf')
+    parser.add_argument('--skip', type=int, default=0,
+            help='number of frames to skip at the beginning')
+    parser.add_argument('--every', type=int, default=1,
+            help='number of frames to between each step')
+    parser.add_argument('--splitall', type=bool, default=False,
+            help='split trajectory in to POSCARS or return a spliced XDATCAR')
+    parser.add_argument('--trunc', type=bool, default=False,
+            help='enable truncation')
+    parser.add_argument('--frange', type=int, default=1,
+            help='Range of truncation')
+    parser.add_argument('trajectories', metavar='TRAJ', nargs='+',
+            help='trajectory file (POSCAR, con, xyz)')
+
+    args = parser.parse_args()
+
+    if args.ignore_elements:
+        args.ignore_elements = args.ignore_elements.split(',')
+
+    if args.splitall:
+        snapshots_command(args)
+    else:
+        group_command(args)
+       
+
+def read_xdatcar(filename, skip=0, every=1, trunc=False, frange=1):
+    f = open(filename, 'r')  
+    lines = f.readlines()
+    f.close()         
+    lattice_constant = float(lines[1].strip())
+    cell = np.array([[float(x) * lattice_constant for x in lines[2].split()],
+        [float(x) * lattice_constant for x in lines[3].split()],
+        [float(x) * lattice_constant for x in lines[4].split()]])
+    elements = lines[5].split()
+    natoms = [int(x) for x in lines[6].split()]
+    nframes = (len(lines)-7)/(sum(natoms) + 1)
+    trajectory = []
+    if trunc:
+        nframes = frange
+    for i in range(skip, nframes, every):
+        a = ase.Atoms('H'*sum(natoms))
+        a.masses = [1.0] * len(a)
+        a.set_chemical_symbols(''.join([n*e for (n, e) in zip(natoms, elements)]))
+        a.cell = cell.copy()
+        a.set_pbc((True, True, True))
+        j = 0
+        for N, e in zip(natoms, elements):
+            for k in range(N):
+                split = lines[8 + i * (sum(natoms) + 1) + j].split()
+                a[j].position = [float(l) for l in split[0:3]]
+                j += 1
+        a.positions = np.dot(a.positions, cell)
+        trajectory.append(a)                
+    return trajectory
+
+
+def snapshots_command(args):
+    trajectory = []
+    for filename in args.trajectories:
+        print 'reading', filename
+        trajectory += read_xdatcar(filename, args.skip, args.every, args.trunc, args.frange)
+
+    ## write frames to POSCARs 
+    for i, atoms in enumerate(trajectory):
+        name='POSCAR.'+str(i)
+        if args.ignore_elements:
+            ignore_indicies = [atom.index for atom in atoms 
+                               if atom.symbol in args.ignore_elements]
+            del atoms[ignore_indicies]
+        write(name, atoms, direct=True, vasp5=True)
+    
+def format(value):
+        return "%.3f" % value
+
+def group_command(args):
+
+    trajectory = []   
+    for filename in args.trajectories:
+        print 'reading', filename
+        trajectory += read_xdatcar(filename, args.skip, args.every, args.trunc, args.frange)    
+            
+            ## write frames to POSCARs            
+        for i, atoms in enumerate(trajectory):            
+            name='POSCAR.trj'                
+            if args.ignore_elements:                
+                ignore_indicies = [atom.index for atom in atoms                    
+                        if atom.symbol in args.ignore_elements]                            
+                del atoms[ignore_indicies]                    
+            if i == 0:
+                write(name, atoms, direct=True, vasp5=True)
+            else:
+                pos = atoms.get_scaled_positions()
+                with open(name, "a") as myfile:
+                    myfile.write("\n")
+                    for j in xrange(len(atoms)):
+                        myfile.write('  %.15f  %.15f  %.15f \n' % (pos[j, 0], pos[j,1], pos[j,2]))
+
+
+if __name__ == '__main__':
+        main()
+
