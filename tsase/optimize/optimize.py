@@ -119,18 +119,18 @@ class Optimizer(Dynamics):
              f = - self.atoms.get_forces()
             self.log(f)
             self.call_observers()
-	    if optimizer == 'L2':
-            	if self.converged_L2(f):
-                 return
-	    elif optimizer == 'maxatom':
-		if self.converged(f):  
-                 return
-	    elif optimizer == 'energy':
-		if self.converged_PE(f):   
-                 return
-	    elif optimizer == 'bgsd':
-		if self.bgsd_check(f):
-		 return
+            if optimizer == 'L2':
+                if self.converged_L2(f):
+                    return
+            elif optimizer == 'maxatom':
+                if self.converged(f):  
+                    return
+            elif optimizer == 'energy':
+                if self.converged_PE(f):   
+                    return
+            elif optimizer == 'bgsd':
+                if self.bgsd_check(f):
+                    return
             self.step(f)
             self.nsteps += 1
             step += 1

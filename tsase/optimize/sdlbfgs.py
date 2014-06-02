@@ -56,8 +56,8 @@ class SDLBFGS(Optimizer):
         self.p = None
         self.function_calls = 0
         self.force_calls = 0
-	self.prev_force = 0
-	self.prev_positions = 0
+        self.prev_force = 0
+        self.prev_positions = 0
 
     def initialize(self):
         """Initalize everything so no checks have to be done in step"""
@@ -85,76 +85,72 @@ class SDLBFGS(Optimizer):
         then take it"""
         r = self.atoms.get_positions()
         p0 = self.p
-	if self.iteration == 0:
-		self.force_calls += 2
-		### initial Hessian by steepest descent step
-		C = self.get_curvature_via_FD()
-        	H0 = 1/C
-	else:
-		### change H0 to be approximate curvature at each step 
-		self.force_calls += 1
-		deltaF = self.prev_force - f 
-		deltaR = r - self.prev_positions
-		C = np.vdot(deltaF,deltaF)/np.vdot(deltaR,deltaF)
-	### if curvature is negative restart build up of hessian
-	if C < 0:
-			self.rho = []
-                	self.y = []
-                	self.s = []
-	else:
-			H0 = 1/C
-
-	self.prev_force = f
-	self.prev_positions = r
-
-        self.update(r, f, self.r0, self.f0)
-        
+        if self.iteration == 0:
+            self.force_calls += 2
+            ### initial Hessian by steepest descent step
+            C = self.get_curvature_via_FD()
+            H0 = 1/C
+        else:
+        ### change H0 to be approximate curvature at each step 
+            self.force_calls += 1
+            deltaF = self.prev_force - f 
+            deltaR = r - self.prev_positions
+            C = np.vdot(deltaF,deltaF)/np.vdot(deltaR,deltaF)
+        ### if curvature is negative restart build up of hessian
+        if C < 0:
+            self.rho = []
+            self.y = []
+            self.s = []
+        else:
+            H0 = 1/C
+            self.prev_force = f
+            self.prev_positions = r
+            self.update(r, f, self.r0, self.f0)
         s = self.s
         y = self.y
         rho = self.rho
-	loopmax = len(y)
-	#### if we reset hessian because of negative curvature take maxstep in the direction of the force	
-	if C < 0:
-		g = f*1000
-		dr = self.determine_step(g) * self.damping
-		self.atoms.set_positions(r+dr)
-	## otherwise take lbfgs step
-	else:		
-         a = np.empty((loopmax,), dtype=np.float64)
-
-         ### The algorithm itself:
-         q = - f.reshape(-1) 
-         for i in range(loopmax - 1, -1, -1):
-            a[i] = rho[i] * np.dot(s[i], q)
-            q -= a[i] * y[i]
-         z = H0 * q
+        loopmax = len(y)
+        #### if we reset hessian because of negative curvature take maxstep in the direction of the force	
+        if C < 0:
+            g = f*1000
+            dr = self.determine_step(g) * self.damping
+            self.atoms.set_positions(r+dr)
+        ## otherwise take lbfgs step
+        else:
+            a = np.empty((loopmax,), dtype=np.float64)
+            ### The algorithm itself:
+            q = - f.reshape(-1) 
+            for i in range(loopmax - 1, -1, -1):
+                a[i] = rho[i] * np.dot(s[i], q)
+                q -= a[i] * y[i]
+            z = H0 * q
         
-         for i in range(loopmax):
-            b = rho[i] * np.dot(y[i], z)
-            z += s[i] * (a[i] - b)
+            for i in range(loopmax):
+                b = rho[i] * np.dot(y[i], z)
+                z += s[i] * (a[i] - b)
 
-	 #### check if angle of move is greater than 90 reset build up of Hessian #######
-	 stepdir = -z/np.sqrt(np.vdot(z,z))
-	 fdir = f/np.sqrt(np.vdot(f,f))
-	 dot = np.vdot(fdir,stepdir)
-	 if dot > 1:
-		dot = 1
-	 if dot < -1:
-		dot = -1
-	 angle = np.arccos(dot)*360/(2*np.pi)
-	 angle = 0.0 ######### added for test!!!!!!
-	 if angle > 90:  ### if greater than 90 take SD step
-	                self.rho = []
-                        self.y = []
-                        self.s = []
-			g = f*1000 
-                	dr = self.determine_step(g) * self.damping
-                	self.atoms.set_positions(r+dr)
-       	 else:  ##### otherwise take lbfgs step
-		self.p = - z.reshape((-1, 3))
-		g = -f
-         	dr = self.determine_step(self.p) * self.damping
-         	self.atoms.set_positions(r+dr)
+            #### check if angle of move is greater than 90 reset build up of Hessian #######
+            stepdir = -z/np.sqrt(np.vdot(z,z))
+            fdir = f/np.sqrt(np.vdot(f,f))
+            dot = np.vdot(fdir,stepdir)
+            if dot > 1:
+                dot = 1
+            if dot < -1:
+                dot = -1
+            angle = np.arccos(dot)*360/(2*np.pi)
+            angle = 0.0 ######### added for test!!!!!!
+            if angle > 90:  ### if greater than 90 take SD step
+                self.rho = []
+                self.y = []
+                self.s = []
+                g = f*1000 
+                dr = self.determine_step(g) * self.damping
+                self.atoms.set_positions(r+dr)
+            else:  ##### otherwise take lbfgs step
+                self.p = - z.reshape((-1, 3))
+                g = -f
+                dr = self.determine_step(self.p) * self.damping
+                self.atoms.set_positions(r+dr)
  
         self.iteration += 1
         self.r0 = r
@@ -173,7 +169,7 @@ class SDLBFGS(Optimizer):
         C = -np.vdot(newforce - initforce,Fnorm)/dR
         self.atoms.set_positions(pos)
         return C
-	
+
     def determine_step(self, dr):
         """Determine step to take according to maxstep
 
@@ -194,9 +190,9 @@ class SDLBFGS(Optimizer):
 #        Normalize all steps as the largest step. This way
 #        we still move along the eigendirection.
 #        """
-#	length = np.sqrt(np.vdot(dr,dr))
-#	if length > self.maxstep:
-#		dr *= self.maxstep/length
+#       length = np.sqrt(np.vdot(dr,dr))
+#       if length > self.maxstep:
+#           dr *= self.maxstep/length
 #        
 #        return dr
 
@@ -208,7 +204,7 @@ class SDLBFGS(Optimizer):
         if self.iteration > 0:
             s0 = r.reshape(-1) - r0.reshape(-1)
             self.s.append(s0)
-		
+
             # We use the gradient which is minus the force!
             y0 = f0.reshape(-1) - f.reshape(-1)
             self.y.append(y0)
