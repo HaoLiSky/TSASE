@@ -1,7 +1,7 @@
 import numpy
 numpy.seterr(all='raise')
 import calculators
-import io
+import tsase.io as io
 import data
 import neb
 import kdb
