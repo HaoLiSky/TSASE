@@ -82,11 +82,11 @@ class BGSD_potential:
 
 class BGSD:
 
- def __init__(self,p,pot,filename = 'pos.con',alpha=5.0,beta=0.0,dr=1.0e-5,numstep=1000,stepsize=0.05,kT_MC=0.01,k=5.0,displace_atomlist=[],displace_radius=3.3,displace_all_listed=True,CC1=0.01,CC2=0.001*0.001,CC3 = 0.0001,maxstepsize=0.2,maxnumstep=1000,memory=100):
+ def __init__(self,p,alpha=5.0,beta=0.0,dr=1.0e-5,numstep=1000,stepsize=0.05,kT_MC=0.01,k=5.0,displace_atomlist=[],displace_radius=3.3,displace_all_listed=True,CC1=0.01,CC2=0.001*0.001,CC3 = 0.0001,maxstepsize=0.2,maxnumstep=1000,memory=100,eigcheck = 'dimer'):
         self.p = p
-        self.pot = pot
+        self.pot = self.p.copy()
+        self.pot.set_calculator(self.p.get_calculator())
         self.alpha = alpha
-        self.filename = filename
         self.beta = beta + self.p.get_potential_energy()
         self.stepsize = stepsize
         self.kT_MC = kT_MC
@@ -103,8 +103,9 @@ class BGSD:
         self.min_pos = self.p.get_positions()
         self.memory = memory
         self.dr = dr
+        self.eigcheck = eigcheck
 
-###### calculates hessian ###################  Note: need to add function that does two dimers
+###### calculates hessian ######################################
  def hessian(self,numfree,clist):
         hessian = numpy.zeros((numfree*3,numfree*3))
         a=0
@@ -196,7 +197,7 @@ class BGSD:
             
 ###### set up potential for BGSD with alpha and beta #######
  def min_H(self):
-    bg = tsase.io.read_con(self.filename)
+    bg = self.p.copy() 
     bg.set_positions(self.p.get_positions())
     bg.set_calculator(BGSD_potential(pot = self.p,alpha = self.alpha,beta = self.beta,dr=self.dr))
     bg.set_velocities(0.0*self.p.get_positions())
@@ -209,11 +210,11 @@ class BGSD:
 
 ### minimize gradient squared ##################
  def min_V2(self):
-    bg = tsase.io.read_con(self.filename)
+    bg = self.p.copy() 
     bg.set_positions(self.p.get_positions())
     bg.set_calculator(BGSD_potential(pot = self.p,alpha = 0.0,beta = 1.,dr=self.dr))
     force = numpy.sqrt(numpy.vdot(bg.get_forces(),bg.get_forces()))
-    bmin = tsase.optimize.SDLBFGS(bg,logfile=None,maxstep=self.maxstepsize,memory=self.memory) #,trajectory='minV2.traj')
+    bmin = tsase.optimize.SDLBFGS(bg,logfile=None,maxstep=self.maxstepsize,memory=self.memory) 
     bmin.run(fmax=self.CC3,emax=self.CC2,steps=self.maxnumstep,optimizer='bgsd')
     FC2 = 2*bmin.get_number_of_steps()
     force = numpy.sqrt(numpy.vdot(bg.get_forces(),bg.get_forces()))
@@ -222,7 +223,7 @@ class BGSD:
 
 ### check to see if gradV^2 has converged ###########
  def Convergence_check(self,eng,force):
-    print 'convergence check',force
+    print 'convergence check',eng
     if eng > self.CC2:
         return False
     else:
@@ -247,18 +248,56 @@ class BGSD:
 
 ### check number of negative eigenvalues ##############
  def eig_check(self):
-    numfree,clist = self.free_atoms()
-    hes = self.hessian(numfree,clist)
-    val,vec=numpy.linalg.eig(hes)
-    counter = 0
-    for i in range(len(val)):
-        if val[i] < 0:
-            counter += 1
-            index = i
-    if counter == 1:
-        return vec[:,index].reshape((numfree,3)),counter
-    else:
-        return numpy.zeros(numpy.shape(vec[0])),counter
+    if self.eigcheck == 'hessian':
+        numfree,clist = self.free_atoms()
+        hes = self.hessian(numfree,clist)
+        val,vec=numpy.linalg.eig(hes)
+        print val
+        counter = 0
+        for i in range(len(val)):
+            if val[i] < 0:
+                counter += 1
+                index = i
+        if counter == 1:
+            return vec[:,index].reshape((numfree,3)),counter
+        else:
+            return numpy.zeros(numpy.shape(vec[0])),counter
+    elif self.eigcheck == 'dimer':
+        from tsase.dimer import ssdimer
+        dimer1 = self.p.copy()
+        dimer1.set_calculator(self.p.get_calculator())
+        d = ssdimer.SSDimer_atoms(dimer1, rotationMax = 100, maxStep = 0.10, phi_tol= 0.01, ss = False, dT = 0.1)
+        d.minmodesearch()
+        if d.curvature > 0.0:
+            return numpy.zeros((numfree,3)),0
+        else:
+            vec = d.get_mode()
+            for i in range(3):
+                vec = numpy.delete(vec,len(vec)-1,axis=0)
+            numfree,clist = self.free_atoms()
+            for i in range(len(vec)):
+                if clist[i] == 0:
+                    vec[i] = [0.,0.,0.]
+            vec /= numpy.sqrt(numpy.vdot(vec,vec))
+            dimer = self.p.copy()
+            dimer2 = self.p.copy()
+            dimer2.set_calculator(self.p.get_calculator())
+            dimer.set_calculator(tsase.calculators.hyperplane_potential(dimer2,negeig=vec))
+            d1 = ssdimer.SSDimer_atoms(dimer, rotationMax = 300, maxStep = 0.10, phi_tol= 0.01, ss = False, dT = 0.1)
+            d1.minmodesearch()
+            if d1.curvature < -1e-3:
+                print 'FOUND HIGHER ORDER SADDLE WITH EIGENVALUE',d1.curvature
+                return numpy.zeros((numfree,3)),2
+            else:
+                vec1 = numpy.zeros((numfree,3))
+                count = 0
+                for i in range(len(vec)):
+                    if clist[i] == 1:
+                        vec1[count] = vec[i]
+                        count += 1
+                return vec1,1
+
+
 
 ##### check if saddle is connected to reactant state #####
  def check_connected(self,min_eng,min_pos,eigvec):
@@ -275,7 +314,7 @@ class BGSD:
         self.p.set_positions(r)
         bmin = tsase.optimize.SDLBFGS(self.p,logfile=None,maxstep=0.1)  #,trajectory='1.traj')
         bmin.run(fmax=0.01)
-	FC = bmin.get_number_of_steps()
+        FC = bmin.get_number_of_steps()
         filename = 'min.con'
         tsase.io.write_con(filename,self.p,w='w')
 
@@ -295,7 +334,7 @@ class BGSD:
         self.p.set_positions(r)
         bmin = tsase.optimize.SDLBFGS(self.p,logfile=None,maxstep=0.1) #,trajectory='2.traj')
         bmin.run(fmax=0.01)
-	FC += bmin.get_number_of_steps()
+        FC += bmin.get_number_of_steps()
         dist = min_pos - self.p.get_positions()
         filename = 'product.con'
         tsase.io.write_con(filename,self.p,w='w')
@@ -352,5 +391,6 @@ class BGSD:
    else:
     print 'found product state'
     return False,FC
+
 
 
