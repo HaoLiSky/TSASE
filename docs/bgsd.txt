@@ -5,8 +5,76 @@
 Biased Gradient Squared Descent
 ================================
 
-Implementation of BGSD with citation.
+Biased Gradient Squared Descent is a saddle point finding method that does not require knowledge of a product state.  The method converts a potential energy surface (PES) into the square of the gradient which converts all critical points into local minima.  A bias term is added to stabilize critical points around a specified energy, beta, and destablize all other critical points leading to the following family of objective functions: 
+	:math:`H(r;\alpha,\beta) = |\nabla V(r)| ^ {2} + \alpha (V(r) - \beta)^{2}`		(1)
+
+Implementation detailsof BGSD are below with citation.
 [#Duncan14_194102]_
+
+BGSD Potential
+================================
+
+This module creates an atoms calculator `(See ASE for details) <https://wiki.fysik.dtu.dk/ase/ase/calculators/calculators.html#module-calculators>`_, which converts a different atoms object describing the PES, pot, into the H landscape. Below defines the various options for this class: 
+
+class ``tsase.bgsd.`` **BGSD_potential** (pot, alpha=1.0, beta=1.0, dr=1e-5):
+
+	**pot** : atoms object defining the PES and the reactant state 
+
+	**alpha** : parameter :math:`\alpha` in equation (1)
+
+	**beta** : parameter :math:`\beta` in equation (1)
+
+	**dr** : finite difference size for gradient of :math:`|\nabla V(r)|^{2}`
+
+
+BGSD 
+==========
+
+This module follows the procedure described in [#Duncan14_194102]_ to find a first order saddle point connected to a reactant state using BGSD.  First the isosurface corresponding to the value of :math:`\beta` used is sampled.  There options for various local displacement schemes while sampling this isosurface.  Next, :math:`H` and the :math:`|\nabla V(r)|^{2}` are minimized using the SDLBFGS optimizer. Finally the class tests to see if the critical point found is connected to the reactant state and a 1st order saddle point. Below defines the various options for this class: 
+
+class ``tsase.bgsd.`` **BGSD** (p, alpha=5.0, beta=0.0, dr=1e-5, numstep=1000, stepsize=0.05, kT_MC=0.01, k=5.0, displace_atomlist=[], displace_radius=3.3, displace_all_listed=True, CC1=0.01, CC2=0.001*0.001, CC3 = 0.0001, maxstepsize=0.2, maxnumstep=1000, memory=100, eigcheck = 'dimer')
+
+BGSD:
+
+	**p, alpha, beta, dr** : these parameters are exactly the same as the parameters defined in the BGSD Potential class
+
+Monte Carlo (MC) Sampling of Isosurface:
+
+	**numstep** : number of steps MC steps
+
+	**stepsize** : MC max per atom stepsize 
+
+	**kT_MC** : temperature in kT for MC sampling
+
+	**k** : spring constant of isosurface
+
+Biasing Initial Configuration:
+	
+	**displacement_atomlist** : index number of atoms to be moved in sampling of isocontour surface
+	
+	**displacement_radius** : displace atoms within this specified radius from atoms in atomlist
+
+	**displace_all_listed** : If True then atomlist uses all atoms listed. If False, the one atom is randomly choosen one form the atomlist. 
+				  (Note: once the one atom is selected, all atoms within the displacement_radius of this atom are moved)
+
+SDLBFGS optimizer options:
+
+	**CC1** : magnitude of the L2 norm used as the convergence criteria
+	
+	**CC2** : magnitude of :math:`|\nabla V(r)|^{2}` used as convergence criteria for the :math:`|\nabla V(r)|^{2}` landscape
+
+	**CC3** : magnitude of the L2 norm used as the convergence criteria of :math:`|\nabla V(r)|^{2}`; this additional convergence critieria is used to look for inflection points
+
+	**maxstepsize** : maximum step size for the SDLBFGS optimizer
+
+	**maxnumstep** :  maximum number of steps in optimization
+
+	**memory** : number of memory terms in SDLBFGS
+
+Options for Determining if a Saddle Point is Connected and a First Order:
+
+	**eigcheck** : option to use hessian or dimer to determine minimum mode 
+
 
 Usage
 =====
