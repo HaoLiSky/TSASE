@@ -4,9 +4,9 @@ import ase
 import tsase
 from ase.data import *
 
-def get_sym(tempmass):
+def get_sym(tempmass, massdigit):
     for i, d in enumerate(atomic_masses):
-        if tempmass == atomic_masses[i]:
+        if round(tempmass,massdigit) == round(atomic_masses[i],massdigit):
             return i
         else:
             continue
@@ -37,13 +37,6 @@ def write_lammps(filename, atoms):
         f.write(' %d 0.0 0.0 0.0\n' % (i+1))
     f.close()
 
-def get_sym(tempmass):
-    for i, d in enumerate(atomic_masses):
-        if tempmass == atomic_masses[i]:
-            return i
-        else:
-            continue
-
 def read_lammps(filename):
     f = open(filename, 'r')
     lines = f.readlines()
@@ -67,16 +60,23 @@ def read_lammps(filename):
                 for i in range(lenatomtypes):
                     typeid = int(lines[index].strip().split()[0])
                     tempmass = float(lines[index].strip().split()[1])
-                    elnum = get_sym(tempmass)
+                    massbase = len(str(int(tempmass)))
+                    massdigit = len(str(tempmass))-2-massbase
+                    
+                    #print massdigit
+                    #print round(tempmass,massdigit)
+                    #print round(atomic_masses[3],massdigit)
+                    #print round(atomic_masses[14],massdigit)
+                    elnum = get_sym(tempmass, massdigit)
+                    #print elnum
                     idpoint[typeid] = elnum
                     index += 1
         index += 1
         if 'Atoms' in lines[index]:
                 index += 2
                 for i in range(natoms):
-                    data = lines[index].strip().split()
-                    #yypa = atoms[int(data[0])-1]
-                    idn = int(data[0])-1
+                    data = lines[index].strip().split()                            
+                    idn = int(data[0])-1                            
                     idt = int(data[1])
                     atoms[idn].number = idpoint[idt]
                     atoms[idn].position[0] = float(data[2])

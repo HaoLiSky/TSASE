@@ -41,11 +41,11 @@ def read(filename, skip, every):
     except:
         pass
     try:
-       return read_vasp_multiframe(filename, skip, every)
+        return read_lammps(filename)
     except:
         pass
     try:
-        return read_lammps(filename)
+        return read_vasp_multiframe(filename, skip, every)
     except:
         pass
     try: 
