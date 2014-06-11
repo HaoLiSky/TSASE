@@ -18,10 +18,12 @@ def write_lammps(filename, atoms):
     symbols = atoms.get_chemical_symbols()
     elements = list(set(symbols))
     elements.sort()
+    cell = np.tril(atoms.cell)
     f.write(' %d atom types\n\n' % len(elements))
-    f.write(' 0.0 %12.6f xlo xhi\n' % atoms.cell[0][0])
-    f.write(' 0.0 %12.6f ylo yhi\n' % atoms.cell[1][1])
-    f.write(' 0.0 %12.6f zlo zhi\n\n' % atoms.cell[2][2])
+    f.write(' 0.0 %12.6f xlo xhi\n' % cell[0][0])
+    f.write(' 0.0 %12.6f ylo yhi\n' % cell[1][1])
+    f.write(' 0.0 %12.6f zlo zhi\n' % cell[2][2])
+    f.write(' %12.6f %12.6f %12.6f xy xz yz\n' % ( cell[1, 0], cell[2, 0], cell[2, 1]))
     f.write(' Masses\n\n')
     for i in range(len(elements)):
         f.write(' %d %12.6f\n' % (i+1, tsase.data.elements[elements[i]]['mass']))
@@ -53,6 +55,9 @@ def read_lammps(filename):
                 atoms.cell[0][0] = float(lines[index].split()[1])-float(lines[index].split()[0])
                 atoms.cell[1][1] = float(lines[index+1].split()[1])-float(lines[index+1].split()[0])
                 atoms.cell[2][2] = float(lines[index+2].split()[1])-float(lines[index+2].split()[0])
+                atoms.cell[1][0] = float(lines[index+3].split()[0])
+                atoms.cell[2][0] = float(lines[index+3].split()[1])
+                atoms.cell[2][1] = float(lines[index+3].split()[2])
                 index += 4
         if 'Masses' in lines[index]:
                 index += 2
