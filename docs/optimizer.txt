@@ -6,29 +6,76 @@ Optimizer
 
 TSASE hold the following optimization routines:
 
+Local Optimization:
+--------------------
 
-Limited memory BFGS
--------------------
+   The local optimization algorithms available in TSASE are: SDLBFGS and MDmin
+
+   All local optimization classes have the following structure: 
+	
+   .. code-block:: none
+	
+	class Optimizer:
+		def __init__(self, atoms, restart=None, logfile=None):
+		def run(self, fmax=0.05, emax= 0.001, steps=1000000,optimizer='L2',maximize=False):
+		def get_number_of_steps():
+    
+   The structure of the local optimization classes is very similar to ASE implementation 
+   with a few additional features. Below describes the additional options in TSASE implementation:
+ 
+   	**optimizer** : In ASEs implementation the convergence criteria is only the maximum per atom force
+			In TSASE implementation there are additional options:
+				
+				**'L2'** : L2-norm for the entire force vector
+				
+				**'maxatom'** : maximum per atom force
+				
+				**'energy'** :  value of potential energy 
+				
+				**'bgsd'** : a special case convergence criteria for the bgsd saddle search;
+					     a trajectory is converged when the L2 norm of the force or the 
+					     potential energy is below a specified value 
+	
+	**fmax** : specified force convergence criteria
+	
+	**emax** : specified energy convergence criteria 
+	 
+	
+
+Steepest Descent Limited memory BFGS
+------------------------------------
 
     A limited memory version of the bfgs algorithm. Unlike the bfgs algorithm
     used in bfgs.py, the inverse of Hessian matrix is updated.  The inverse
-    Hessian is represented only as a diagonal matrix to save memory
+    Hessian is represented only as a diagonal matrix to save memor.y
 
-    This version of LBFGS is based off of ASE implementation with a few improvements
+    This version of LBFGS is based off of ASE implementation with a few improvements. 
+    The initial guess for the inverse Hessian is updated at every step by estimating the 
+    curvature along the previous step direction.  If a negative curvature is calculated or 
+    if the angle between the force and the LBFGS direction is greater than 90, then the 
+    memory is reset.
 
-
+    Below is an example script of how to use this optimizer: 
+ 
+    .. code-block:: none
+	
+	al = tsase.calculators.al()
+	p = tsase.io.read_con('al.con')
+	p.set_calculator(al)
+	min = tsase.optimize.SDLBFGS(p, maxstepsize=0.1, memory=100)
+	min.run() 
 
 MDMin:
 ------
     
-    MDmin class from ASE which takes an atoms object and locally minimizes for a given maximum step
+    ASE implementation of MDMin `(See ASE for details) <https://wiki.fysik.dtu.dk/ase/ase/optimize.html>`_ with the additional option to have a maxmimum step distance. 
 
+    Below is and example of how to use this optimizer
 
-Optimize:
----------
-
-   A module that needs a description.  Utilizes MD for local optimization
-
+    .. code-block:: none
+	
+	min = tsase.optimize.MDMin(p,dt=0.1,maxstep=1.0)
+	min.run() 
 
 MushyBox:
 ---------
