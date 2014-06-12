@@ -8,13 +8,13 @@ Biased Gradient Squared Descent
 Biased Gradient Squared Descent is a saddle point finding method that does not require knowledge of a product state.  The method converts a potential energy surface (PES) into the square of the gradient which converts all critical points into local minima.  A bias term is added to stabilize critical points around a specified energy, beta, and destablize all other critical points leading to the following family of objective functions: 
 	:math:`H(r;\alpha,\beta) = |\nabla V(r)| ^ {2} + \alpha (V(r) - \beta)^{2}`		(1)
 
-Implementation detailsof BGSD are below with citation.
+Implementation details of BGSD are below with citation.
 [#Duncan14_194102]_
 
 BGSD Potential
 ================================
 
-This module creates an atoms calculator `(See ASE for details) <https://wiki.fysik.dtu.dk/ase/ase/calculators/calculators.html#module-calculators>`_, which converts a different atoms object describing the PES, pot, into the H landscape. Below defines the various options for this class: 
+This class creates an atoms calculator `(See ASE for details) <https://wiki.fysik.dtu.dk/ase/ase/calculators/calculators.html#module-calculators>`_, which converts a different atoms object describing the PES, pot, into the H landscape. Below defines the various options for this class: 
 
 class ``tsase.bgsd.`` **BGSD_potential** (pot, alpha=1.0, beta=1.0, dr=1e-5):
 
@@ -26,17 +26,21 @@ class ``tsase.bgsd.`` **BGSD_potential** (pot, alpha=1.0, beta=1.0, dr=1e-5):
 
 	**dr** : finite difference size for gradient of :math:`|\nabla V(r)|^{2}`
 
+**NOTE**: The initial configuration of pot needs to be at the local minimum of the reactant state. The parameter, :math:`\beta`, is a relative energy to the local minimum.
 
 BGSD 
 ==========
 
-This module follows the procedure described in [#Duncan14_194102]_ to find a first order saddle point connected to a reactant state using BGSD.  First the isosurface corresponding to the value of :math:`\beta` used is sampled.  There options for various local displacement schemes while sampling this isosurface.  Next, :math:`H` and the :math:`|\nabla V(r)|^{2}` are minimized using the SDLBFGS optimizer. Finally the class tests to see if the critical point found is connected to the reactant state and a 1st order saddle point. Below defines the various options for this class: 
+This class follows the procedure described in [#Duncan14_194102]_ to find a first order saddle point connected to a reactant state using BGSD.  First the isosurface corresponding to the value of :math:`\beta` used is sampled.  There options for various local displacement schemes while sampling this isosurface.  Next, :math:`H` and the :math:`|\nabla V(r)|^{2}` are minimized using the SDLBFGS optimizer. Finally the class tests to see if the critical point found is connected to the reactant state and a 1st order saddle point. Below defines the various options for this class: 
 
 class ``tsase.bgsd.`` **BGSD** (p, alpha=5.0, beta=0.0, dr=1e-5, numstep=1000, stepsize=0.05, kT_MC=0.01, k=5.0, displace_atomlist=[], displace_radius=3.3, displace_all_listed=True, CC1=0.01, CC2=0.001*0.001, CC3 = 0.0001, maxstepsize=0.2, maxnumstep=1000, memory=100, eigcheck = 'dimer')
 
 BGSD:
 
 	**p, alpha, beta, dr** : these parameters are exactly the same as the parameters defined in the BGSD Potential class
+	
+	**NOTE** : The initial configuration of pot needs to be at the local minimum of the reactant state. The parameter, :math:`\beta`, is a relative energy to the local minimum.
+
 
 Monte Carlo (MC) Sampling of Isosurface:
 
@@ -74,6 +78,14 @@ SDLBFGS optimizer options:
 Options for Determining if a Saddle Point is Connected and a First Order:
 
 	**eigcheck** : option to use hessian or dimer to determine minimum mode 
+
+Example Script
+=================
+
+Below is an example python script of how the two classes described above can be used.   
+
+
+.. literalinclude:: ../tsase/examples/bgsd.py
 
 
 Usage
