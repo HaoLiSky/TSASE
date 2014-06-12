@@ -2,9 +2,52 @@
 .. _md:
 
 ================================
-
+Molecular Dynamics
 ================================
 
+This class  is an addition to the molecular dynamics module in ASE `(See ASE for details) <https://wiki.fysik.dtu.dk/ase/ase/md.html#module-md>`_. 
+
+Anderson thermostat
+----------------------
+The anderson thermostat couples the dynamics of a system to a heat bath in order to simulate constant NVT simulations.  
+The thermostat is imposed by stochastic collisions of randomly selected particles throughout the simulation.  Below defines the 
+various options for this class:
+
+class ``tsase.md.`` **nvtandersen** (atoms,timestep,temperature,alpha,tcol,fixcm = True,
+        trajectory=None,logfile=None,loginterval=1, communicator=world,hyperplane=False,eig=None)
+
+	**atoms** : atoms object with list of atoms
+
+	**timestep** : the time step 
+
+	**temperature** : the temperature in kT
+
+	**alpha** : the collison strength in the andersen thermostat
+
+	**tcol** : the collision period for the andersen thermostat
+
+	**fixm** : If True, the position and momentum of the center of mass is kept constant 
+
+	**trajectory** : file to save a movie of the MD trajectory
+
+	**logfile** : file to save various properties throughout trajectory 
+
+	**loginterval** : every time step information is saved in log file
+
+	**hyperplane** : options to run dynamics in a htst hyperplane; if True no components of the velocity 
+			 will be in the direction of the degree of freedom taken away 
+
+	**eig** : required when running dynamics in hyperplane; defines the vector corresponding to the
+		  degree of freedom being taken away from the system.
+
+Below is an example of how to use the thermostat: 
+
+.. code-block:: none
+	
+	dyn = tsase.md.nvtandersen(atoms,1.0*units.fs,300*units.kB)
+	### the function step takes a velocity verlet step and applies the andersen thermostep once
+	f = atoms.get_forces()
+	f = dyn.step(f)	
 
 Usage:
 ======
