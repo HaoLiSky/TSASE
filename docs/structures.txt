@@ -7,19 +7,18 @@ Structure Writer
 
 An extension of ASE's `lattice factories <https://wiki.fysik.dtu.dk/ase/ase/lattice.html#defining-new-lattices>`_ and `ClusterFactory <https://wiki.fysik.dtu.dk/ase/epydoc/ase.cluster.factory.ClusterFactory-class.html>`_.
 
-Lattices
-========
+**Lattices**
 
-	* - diamond
-	* - graphene
-	* - graphite
-	* - simple tetragonal (beta-Tin)
-	* - SnO2-rutile phase
+	 - diamond
+	 - graphene
+	 - graphite
+	 - simple tetragonal (beta-Tin)
+	 - SnO2-rutile phase
 
-Clusters
-========
-	* - Octahedron (commandline control for modified octahedron)
-	* - Wulff construction
+**Clusters**
+
+	 - Octahedron (commandline control for modified octahedron)
+	 - Wulff construction
 
 
 Usage
