@@ -11,6 +11,13 @@ The implementation of solid-state NEB is found in this library. [#Sheppard12_074
 
 Usage
 =====
+The ssneb can be used as an atoms object. It becomes the regular neb if the initial and final states have the same cell vectors; anisotropic stressed can be applied to find saddles on enthalpy surfaces.
+
+    from tsase import neb
+    nim = 7  # number of images, including end points
+    band = neb.ssneb(p1, p2, numImages = nim, method = 'ci')
+    opt = neb.fire_ssneb(band, maxmove =0.2, dtmax = 0.1, dt=0.1)
+    opt.minimize(forceConverged=0.001, maxIterations = 1000)
 
 
 .. rubric:: References
