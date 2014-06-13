@@ -14,6 +14,19 @@ The solid state dimer module extends this method to solid state phase transition
 
 Usage
 =====
+The ssdimer can be used as an atoms object. It becomes the regular
+dimer by setting ss=False; anisotropic stressed can be applied to find saddles on
+enthalpy surfaces.
+
+    from tsase.dimer import ssdimer
+    d = ssdimer.SSDimer_atoms(p, rotationMax = 10, phi_tol=3, ss = True, rotationOpt = 'cg', express=np.zeros((3,3)))  # p is an atoms
+    object
+    # use quickmin optimizer in ssdimer
+    d.search(minForce = 0.0001, movie = "dimer2.movie", interval = 20 )
+    ### or use other first order optimizer in ase. Second order optimizers cannot be
+    # used currently.
+    #dyn = MDMin(d)
+    #dyn.run(fmax=0.0001)
 
 
 
