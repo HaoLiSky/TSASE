@@ -58,7 +58,6 @@ class SSDimer_atoms:
         avglen        = (vol/self.natom)**(1.0/3.0)
         self.weight   = weight
         self.jacobian = avglen * self.natom**0.5 * self.weight
-        self.V = np.zeros((self.natom+3,3))
 
         if self.rotationOpt == 'bfgs':
             ## BFGS for rotation: initial (inverse) Hessian
@@ -77,29 +76,44 @@ class SSDimer_atoms:
         print attr
 
     def __len__(self):
-        return self.natom+3
+        if self.ss:
+            return self.natom+3
+        else:
+            return self.natom
 
     def get_positions(self):
-        r    = self.R0.get_positions()*0.0
-        Rc   = np.vstack((r, self.R0.get_cell()*0.0))
-        return Rc
+        r    = self.R0.get_positions()
+        if self.ss:
+            # return zeros, so the vector passed to set_positions is just dr in the generalized space. 
+            # otherwise, "+" and "-" operations for position vectors need to be redefined in the optimizer
+            # this trick only works for first order optimzers for sure, where no operation applied to position vectors until the last update.
+            Rc   = np.vstack((r*0.0, self.R0.get_cell()*0.0))
+            return Rc
+        else:
+            return r
 
     def set_positions(self,dr):
-        rcell  = self.R0.get_cell()
-        rcell += np.dot(rcell, dr[-3:]) / self.jacobian
-        self.R0.set_cell(rcell, scale_atoms=True)
-        ratom  = self.R0.get_positions() + dr[:-3]
-        self.R0.set_positions(ratom)
-
+        if self.ss:
+            rcell  = self.R0.get_cell()
+            rcell += np.dot(rcell, dr[-3:]) / self.jacobian
+            self.R0.set_cell(rcell, scale_atoms=True)
+            ratom  = self.R0.get_positions() + dr[:-3]
+            self.R0.set_positions(ratom)
+        else:
+            # get_positions() returns non-zero values
+            # thus this dr is the final positions, not just dr
+            ratom  = dr
+            self.R0.set_positions(ratom)
+    
     def update_general_forces(self, Ri):
-        # update the generalized forces (f, st)
+        #update the generalized forces (f, st)
         self.forceCalls += 1
         f    = Ri.get_forces()
         if self.ss: stt  = Ri.get_stress()
         vol  = Ri.get_volume()*(-1)
         st   = np.zeros((3,3))
-        # following the order of get_stress in vasp.py
-        # (the order of stress in ase are the same for all calculators)
+        #following the order of get_stress in vasp.py
+        #(the order of stress in ase are the same for all calculators)
         if self.ss:
             st[0][0] = stt[0] * vol  
             st[1][1] = stt[1] * vol
@@ -110,7 +124,7 @@ class SSDimer_atoms:
             st  -= self.express * (-1)*vol
         Fc   = np.vstack((f, st/self.jacobian))
         return Fc
-
+  
     def get_curvature(self):
         return self.curvature
 
@@ -131,7 +145,10 @@ class SSDimer_atoms:
             print "drag up directly"
         else:
             self.Ftrans = Fperp - gamma * Fparallel
-        return self.Ftrans
+        if self.ss:
+            return self.Ftrans
+        else:
+            return self.Ftrans[:-3]
  
     def iset_endpoint_pos(self, Ni, R0, Ri):
         # update the position of Ri
@@ -209,6 +226,7 @@ class SSDimer_atoms:
         # self.N, the dimer direction; 
         # self.T, the rotation direction, spans the rotation plane with self.N.
 
+
         F0    = self.update_general_forces(self.R0)
         F1    = self.rotation_update()
 
@@ -267,11 +285,16 @@ class SSDimer_atoms:
             iteration += 1
         self.curvature = c0
         return F0
-
+        
 
 #######################################################################################################
 # The following part can be replaced by FIRE or MDMin optimizer in ase, see the ssdimer.py in examples
     def step(self):
+        if self.steps == 0:
+            if self.ss:
+                self.V = np.zeros((self.natom+3,3))
+            else:
+                self.V = np.zeros((self.natom,3))
         self.steps += 1
         Ftrans = self.get_forces() 
         print "Ftrans",vmag(Ftrans)
@@ -284,11 +307,11 @@ class SSDimer_atoms:
         step = self.V * self.dT
         if vmag(step) > self.maxStep:
             step = self.maxStep * vunit(step)
-
+ 
         self.set_positions(step)
         self.E = self.get_potential_energy()
-
-
+        
+    
     def getMaxAtomForce(self):
         if self.Ftrans is None:
             return 1000
@@ -297,7 +320,7 @@ class SSDimer_atoms:
             maxForce = max(maxForce, vmag(self.Ftrans[i]))
         #maxForce = vmag(self.Ftrans)
         return maxForce
-
+            
     def search(self, minForce = 0.01, quiet = False, maxForceCalls = 100000, movie = None, interval = 50):
         self.converged = False
         if movie:
@@ -326,4 +349,4 @@ class SSDimer_atoms:
 
         if self.getMaxAtomForce() <= minForce:
             self.converged = True
-
+                                   
