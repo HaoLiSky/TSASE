@@ -197,7 +197,7 @@ class SSDimer_atoms:
             omega, V = np.linalg.eigh(self.B)
             dr       = np.dot(V, np.dot(-g1, V) / np.fabs(omega)).reshape((-1, 3))
             vd       = np.vdot(vunit(dr), vunit(Fperp))
-            if abs(vd) < 0.05:  
+            if vd < 0.05:  
                 #print "////reset BFGS in rotation////"
                 dr = Fperp
                 self.B    = self.B0
