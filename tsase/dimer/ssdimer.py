@@ -308,7 +308,7 @@ class SSDimer_atoms:
         if vmag(step) > self.maxStep:
             step = self.maxStep * vunit(step)
  
-        self.set_positions(step)
+        self.set_positions(self.get_positions() + step)
         self.E = self.get_potential_energy()
         
     
