@@ -6,9 +6,9 @@ def writexyzatoms(atoms,filename, w='w',comment='Produced in TSASE'):
     symbols = atoms.get_chemical_symbols()
     energy = atoms.get_potential_energy()
     xyz.write(str(len(positions)) + " \n")
-    xyz.write(comment + " \n")
+    xyz.write(str(comment) + " \n")
     for i in range(len(positions)):
-        xyzposition = symbols[i] + " " + str(positions[i,0]) + " " + str(position[i,1]) + " " + str(position[i,2]) + " \n" 
+        xyzposition = symbols[i] + " " + str(positions[i,0]) + " " + str(positions[i,1]) + " " + str(positions[i,2]) + " \n" 
         xyz.write(xyzposition)
     xyz.close()
 
@@ -54,10 +54,10 @@ def learn_svm(parameters,datapoints,datalabels,datapointstest,datalabelstest,kva
     return selSVM
 
 def learn_ocsvm(datapoints,gam,nu):
-        from scikits.learn import svm
-        clf = svm.OneClassSVM(nu=nu, kernel="rbf", gamma=gam)
-        clf.fit(datapoints)
-        return clf
+    from scikits.learn import svm
+    clf = svm.OneClassSVM(nu=nu, kernel="rbf", gamma=gam)
+    clf.fit(datapoints)
+    return clf
 
 def selectmodel(parameters,xtrain,ytrain,kval):
     try:
