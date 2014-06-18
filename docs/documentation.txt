@@ -8,20 +8,19 @@ Our tsase (pronounced "sassy") library is an extension to ASE for transistion st
 
 Quick links:
 
-.. list-table:
+.. list-table::
 
-   * - :mod: `calculators`
-   * - :mod: `saddle_search`
-    * - :mod: `bgsd`
-    * - :mod: `ssdimer`
-    * - :mod: `ssneb`
-    * - :mod: `svm`
-    * - :mod: `tem'
-    * - :mod: `kdb`
-    * - :mod: `scripts`
-    * - :mod: `optimizer`
-    * - :mod: `structures`
-    * - :mod: `examples`
+ * - :mod:`calculators`
+ * - :mod:`optimizer`
+ * - :mod:`scripts`
+ * - :mod:`structures`
+ * - :mod:`saddle_search`
+ * - :mod:`bgsd`
+ * - :mod:`ssdimer`
+ * - :mod:`ssneb`
+ * - :mod:`svm`
+ * - :mod:`tem'
+ * - :mod:`kdb`
 
 
 List of all Modules:

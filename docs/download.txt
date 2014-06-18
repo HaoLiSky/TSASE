@@ -1,8 +1,8 @@
 
-.. _installation:
+.. _download:
 
 ================================
-Installation
+Download
 ================================
 
 This library is an extension of `ASE`_.
@@ -25,9 +25,12 @@ If you are a developer you can checkout the code using the command:
 
 This will fetch a copy of the latest code to a local directory named tsase. 
 
+=====================
+Environment Variables 
+=====================
+
 Once you have a local copy of tsase, include the top directory to your ``$PYTHONPATH``.
 To use the independent scripts, it is recommended to add ``$HOME/tsase/tsase/bin`` to your ``$PATH``:
-
 
 .. code-block:: sh
     
