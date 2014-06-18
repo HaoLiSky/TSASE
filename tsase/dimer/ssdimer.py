@@ -38,7 +38,10 @@ class SSDimer_atoms:
         self.R0    = R0
         self.N = mode
         self.natom  = self.R0.get_number_of_atoms()
-        if self.N == None:
+        if len(self.N) == self.natom: 
+            self.N = np.vstack(( mode, np.zeros((3,3)) ))
+        elif len(self.N) != self.natom+3:
+            print "radomly initialize the lowest eigenvector"
             self.N = vrand(np.zeros((self.natom+3,3)))
         self.N = vunit(self.N)
         self.maxStep = maxStep
@@ -129,7 +132,10 @@ class SSDimer_atoms:
         return self.curvature
 
     def get_mode(self):
-        return self.N
+        if self.ss:
+            return self.N
+        else:
+            return self.N[:-3]
 
     def get_forces(self):
         F0        = self.minmodesearch()
@@ -137,7 +143,7 @@ class SSDimer_atoms:
         Fparallel = np.vdot(F0, self.N) * self.N
         Fperp     = F0-Fparallel
         alpha     = vmag(Fperp)/vmag(F0)
-        print "alpha: ", alpha
+        print "alpha=vmag(Fperp)/vmag(F0): ", alpha
         gamma     = 1.0
 
         if self.curvature > 0:
@@ -209,7 +215,7 @@ class SSDimer_atoms:
             a  = np.dot(s, y)
             dg = np.dot(self.B, s)
             b  = np.dot(s, dg)
-            print "a, b", a, b
+            #print "a, b", a, b
             self.B  += np.outer(y, y) / a - np.outer(dg, dg) / b
             omega, V = np.linalg.eigh(self.B)
             dr       = np.dot(V, np.dot(-g1, V) / np.fabs(omega)).reshape((-1, 3))
