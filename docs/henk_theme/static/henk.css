@@ -57,7 +57,7 @@ div.body {
     color: #3E4349;
     padding: 0 30px 30px 30px;
     font-size: 1em;
-    border: 2px solid #FFBD5D;
+    border-left: 2px solid #FFBD5D;
     border-right-style: none;
     overflow: auto;
 }
@@ -103,6 +103,7 @@ div.sphinxsidebar {
     font-size: 0.85em;
     line-height: 1.75em;
     background-color: white;
+    border-right: 2px solid #FFBD5D;
 }
 
 div.sphinxsidebarwrapper{
