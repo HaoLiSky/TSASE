@@ -1,12 +1,10 @@
 .. _home:
 
-=====================================================
-TSASE: Transition State Library Extension for `ASE`_
-=====================================================
+==========================================
+TSASE: Transition State Library for `ASE`_
+==========================================
 
-The TSASE library contains python code which depends on `ASE`_ to tackle transition state sampling problems.   Standard molecular dynamics algorithms, based upon solving Newton's equations, are limited by the femtosecond time scale of atomic vibrations.  
-rare event systems where the interesting dynamics can be described by fast
-transition between stable states. 
+The TSASE library contains python code which depends on `ASE`_ to tackle transition state calculations.
 
 TSASE Contributors
 ==================
