@@ -10,7 +10,7 @@
           {%- block sidebarsearch %}
           {%- if pagename != "search" %}
             <!-- <h3>[[ builder == 'web' and 'Keyword' or 'Quick' ]] search</h3> -->
-        <div class="toprightsearch" style="float:right;">
+        <div class="toprightsearch" style="float:right;position: relative; top: 120px">
             <form class="search" action="{{ pathto('search') }}" method="get">
               <input type="text" name="q" size="18" /> <input type="submit" value="Search" />
               <input type="hidden" name="check_keywords" value="yes" />
@@ -34,16 +34,13 @@
         {%- endfor %}
 
         {%- block rootrellink %}
-        <li><a href="{{ pathto('index') }}"><img class="logo" src="{{ pathto('_static/' + logo, 1) }}" alt="TSASE logo"/></a></li>
+        <li><a href="{{ pathto('index') }}"><img class="logo" src="{{ pathto('_static/' + logo, 1) }}" alt="TSASE logo" style="position:relative; left: -250px; top 10 px"/></a></li>
         {%- endblock %}
 
     <!-- <li> {{ reldelim1 }} <a href="{{ pathto('download') }}">Download</a>{{ reldelim1 }}</li> -->
         <!-- <li> {{ reldelim1 }} <a href="{{ pathto('setups/setups') }}">Setups</a>{{ reldelim1 }}</li> -->
-        <!-- <li> {{ reldelim1 }} <a href="{{ pathto('tutorials/tutorials') }}">Tutorials</a>{{ reldelim1 }}</li> -->
         <!-- <li> {{ reldelim1 }} <a href="{{ pathto('documentation/documentation') }}">Documentation</a>{{ reldelim1 }}</li> -->
-        <!-- <li> {{ reldelim1 }} <a href="{{ pathto('performance') }}">Performance</a>{{ reldelim1 }}</li> -->
-        <!-- <li> {{ reldelim1 }} <a href="{{ pathto('faq') }}">FAQ</a>{{ reldelim1 }}</li> -->
-<!--        <li> {{ reldelim1 }} <a href="{{ pathto('contents') }}">Contents</a>{{ reldelim1 }}</li> -->
+<!--	     <li> {{ reldelim1 }} <a href="{{ pathto('contents') }}">Contents</a>{{ reldelim1 }}</li> -->
         <!-- <li> {{ reldelim1 }} <a href="{{ pathto('genindex') }}">Index</a>{{ reldelim1 }}</li> -->
 
         {%- for parent in parents %}
@@ -66,7 +63,13 @@
         <li><a href="{{ pathto('download') }}">Download</a></li>
 <!--        <li><a href="{{ pathto('installation') }}">Installation</a></li> -->
 <!--        <li><a href="{{ pathto('tutorials') }}">Tutorials</a></li> -->
-        <li><a href="{{ pathto('documentation') }}">Documentation</a></li>
+        <li><a href="{{ pathto('contents') }}">Contents</a></li>
+        <li><a href="{{ pathto('calculators') }}">Calculators</a></li>
+        <li><a href="{{ pathto('optimizer') }}">Optimizers</a></li>
+        <li><a href="{{ pathto('saddle_search') }}">Saddle Search Methods</a></li>
+        <li><a href="{{ pathto('kdb') }}">Kinetic Database</a></li>
+        <li><a href="{{ pathto('tem') }}">TEM Image</a></li>
+        <li><a href="{{ pathto('scripts') }}">Scripts</a></li>
       </ul>
       <h3>Development</h3>
       <ul class="this-page-menu">

@@ -6,23 +6,6 @@ Documentation
 
 Our tsase (pronounced "sassy") library is an extension to ASE for transistion state calculations. If you are looking for our Solid State NEB or Kinetic Database code, you are in the right place. 
 
-Quick links:
-
-.. list-table::
-
- * - :mod:`calculators`
- * - :mod:`optimizer`
- * - :mod:`scripts`
- * - :mod:`structures`
- * - :mod:`saddle_search`
- * - :mod:`bgsd`
- * - :mod:`ssdimer`
- * - :mod:`ssneb`
- * - :mod:`svm`
- * - :mod:`tem'
- * - :mod:`kdb`
-
-
 List of all Modules:
 
 .. toctree::
