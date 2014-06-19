@@ -48,9 +48,6 @@ div.header {
 }
 
 div.logo {
-    position: absolute
-    left: 10px
-    top: -5px
     text-align: left;
     padding-top: 10px;
 }

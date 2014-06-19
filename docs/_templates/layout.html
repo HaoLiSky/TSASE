@@ -10,7 +10,7 @@
           {%- block sidebarsearch %}
           {%- if pagename != "search" %}
             <!-- <h3>[[ builder == 'web' and 'Keyword' or 'Quick' ]] search</h3> -->
-        <div class="toprightsearch" style="float:right;position: relative; top: 120px">
+        <div class="toprightsearch" style="float:right;position: relative; top: 35px">
             <form class="search" action="{{ pathto('search') }}" method="get">
               <input type="text" name="q" size="18" /> <input type="submit" value="Search" />
               <input type="hidden" name="check_keywords" value="yes" />
@@ -34,7 +34,7 @@
         {%- endfor %}
 
         {%- block rootrellink %}
-        <li><a href="{{ pathto('index') }}"><img class="logo" src="{{ pathto('_static/' + logo, 1) }}" alt="TSASE logo" style="position:relative; left: -250px; top 10 px"/></a></li>
+        <li><a href="{{ pathto('index') }}"><img class="logo" src="{{ pathto('_static/' + logo, 1) }}" alt="TSASE logo" style="position:relative; left: -250px; top 0 px"/></a></li>
         {%- endblock %}
 
     <!-- <li> {{ reldelim1 }} <a href="{{ pathto('download') }}">Download</a>{{ reldelim1 }}</li> -->
