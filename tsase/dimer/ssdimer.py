@@ -252,7 +252,7 @@ class SSDimer_atoms:
         # self.T, the rotation direction, spans the rotation plane with self.N.
 
         # project out any rigid translation and rotation
-        self.N = self.project_translt_rott(self.N, self.R0)
+        if not self.ss: self.N = self.project_translt_rott(self.N, self.R0)
 
         F0    = self.update_general_forces(self.R0)
         F1    = self.rotation_update()
@@ -269,7 +269,7 @@ class SSDimer_atoms:
                 self.T    = vunit(Fperp)
 
             # project out any rigid translation and rotation
-            self.T = self.project_translt_rott(self.T, self.R0)
+            if not self.ss: self.T = self.project_translt_rott(self.T, self.R0)
 
             # curvature and its derivative
             c0     = np.vdot(F0-F1, self.N) / self.dR
@@ -301,7 +301,7 @@ class SSDimer_atoms:
             Nold   = self.N
             self.N = vunit(self.N * cos(phi_min) + self.T * sin(phi_min))
             # project out any rigid translation and rotation
-            self.N = self.project_translt_rott(self.N, self.R0)
+            if not self.ss: self.N = self.project_translt_rott(self.N, self.R0)
             c0     = c0_min
 
             # update F1 by linear extropolation
