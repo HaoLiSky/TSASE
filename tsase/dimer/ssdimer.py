@@ -144,6 +144,7 @@ class SSDimer_atoms:
         Fperp     = F0-Fparallel
         alpha     = vmag(Fperp)/vmag(F0)
         print "alpha=vmag(Fperp)/vmag(F0): ", alpha
+        print "curvature:", self.get_curvature()
         gamma     = 1.0
 
         if self.curvature > 0:
@@ -155,6 +156,24 @@ class SSDimer_atoms:
             return self.Ftrans
         else:
             return self.Ftrans[:-3]
+
+    def project_translt_rott(self, N, R0):
+        # Project out rigid translational mode
+        for axisx in range(3):
+            transVec = np.zeros((self.natom+3, 3))
+            transVec[:, axisx] = 1.0
+            transVec = vunit(transVec)
+            N -= np.vdot(N, transVec)*transVec
+        # Project out rigid rotational mode
+        for axisx in ['x', 'y', 'z']:
+            ptmp = R0.copy()
+            # rotate a small angle around the center of mass
+            ptmp.rotate(axisx, 0.02, center='COM', rotate_cell=False)
+            rottVec = ptmp.get_positions() - R0.get_positions()
+            rottVec = vunit(rottVec)
+            #if np.vdot(N[:-3], rottVec) > 0.1: print "mainly rotation around "+axisx
+            N[:-3] -= np.vdot(N[:-3], rottVec)*rottVec
+        return N
  
     def iset_endpoint_pos(self, Ni, R0, Ri):
         # update the position of Ri
@@ -232,6 +251,8 @@ class SSDimer_atoms:
         # self.N, the dimer direction; 
         # self.T, the rotation direction, spans the rotation plane with self.N.
 
+        # project out any rigid translation and rotation
+        self.N = self.project_translt_rott(self.N, self.R0)
 
         F0    = self.update_general_forces(self.R0)
         F1    = self.rotation_update()
@@ -246,6 +267,9 @@ class SSDimer_atoms:
                 F1perp    = F1 - np.vdot(F1, self.N) * self.N
                 Fperp     = 2.0 * (F1perp - F0perp)
                 self.T    = vunit(Fperp)
+
+            # project out any rigid translation and rotation
+            self.T = self.project_translt_rott(self.T, self.R0)
 
             # curvature and its derivative
             c0     = np.vdot(F0-F1, self.N) / self.dR
@@ -276,7 +300,10 @@ class SSDimer_atoms:
             # update self.N
             Nold   = self.N
             self.N = vunit(self.N * cos(phi_min) + self.T * sin(phi_min))
+            # project out any rigid translation and rotation
+            self.N = self.project_translt_rott(self.N, self.R0)
             c0     = c0_min
+
             # update F1 by linear extropolation
             F1 = F1 * (sin(phi_1 - phi_min) / sin(phi_1)) + F1_prime * (sin(phi_min) / sin(phi_1)) \
                  + F0 * (1.0 - cos(phi_min) - sin(phi_min) * tan(phi_1 * 0.5))
