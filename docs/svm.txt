@@ -1,11 +1,110 @@
 
 .. _svm:
 
-================================
-Support Vector Machine Dynamics
-================================
+====================================
+Support Vector Machine Applications
+====================================
 
-Implementation of SVM dynamics with citation.
+Optimizing Transition State Theory Dividing Surfaces
+======================================================
+
+A method for optimizing Transition State Theory (TST) divding surfaces was developed using
+two-class support vector machines (SVM) that does not require prior knowledge of the system.
+The TST dividing surface is optimized by a cycle of machine learning and refinement by using 
+molecular dynamics (MD). More Implementation of details with citation.
+[#Pozun12_174101]_
 
 Usage:
 ======
+
+The function below takes a labeled training set of two classes (e.g. reactant and products) and applies the two
+class support vecort machine algorithm.  Parameters are selected using cross validation, which requires a test training set.  
+
+def ``tsase.svm.`` **learn_svm** (parameters, datapoints, datalabels, datapointstest, datalabelstest, kval=2):
+
+	**parameters** : a list of parameters to use for two class svm; below is an exaple:
+
+			parameters = {'kernel':['rbf'], 'gamma':[1e0,5e0,1e1,5e1,1e2], 'C':[1e2,1e3,1e4,1e5]}
+
+			**kernel** : specifies the kernel used ('rbf'(radial basis function),'linear','polynomial'
+					'sigmoid')
+
+			**gamma** : the most commonly used kernel is rbf; this parameter determines the gaussian
+				    radius and the values used in cross validation  
+
+			**C** : range of values of used in cross validation for parameter C; this parameter 
+				determines the trade off between a misclassification of points maximizing the
+				margin between classes
+	
+	**datapoints** : training set
+
+	**datalabels** : labels corresponding to training set
+
+	**datapointstest** : test training set 
+
+	**datalabelstest** : labels corresponding to test training set 
+
+	**kval** : parameter for k-cross validation; determines the number of partitions of training set
+
+This function sets up a potential to run dynamics for refining the TST dividing surface as oulined in [#Pozun12_174101]_. 
+
+class ``tsase.svm.`` **svm_dynamics** ( calc, selSVM, k=1.0, addgradient=True) 
+
+	**calc** : atoms object 
+
+	**selSVM** : two class SVM hypersurface generated from the learn_svm function 
+
+	**k** : spring constant for MD sampling close to SVM hypersurface 
+
+	**addgradient** : option to add the gradient for the biased sampling 
+
+
+.. [#Pozun12_174101] Z. D. Pozun, K. Hansen, D. Sheppard, M. Rupp, K.-R. Müller, and G. Henkelman, Optimizing transition states via kernel-based machine learning, J. Chem. Phys. 136, 174101 `DOI <http://dx.doi.org/10.1063/1.4707167>`_
+
+Accelerated Molecular Dynamics with Support Vector Machines
+============================================================
+
+Hyperdynamics is a method for accelerating molecular dynamic simulations, where a positive bias potential 
+that goes to zero at the TST divding surface is added to the potential energy landscape to lower barriers 
+between states.  A method was developed using one-class support vector machine (OCSVM) to generate a bias 
+potential for the hyperdynamics. By running high temperature MD constrained to a reactant state, OCSVM can 
+find a hypersurface enclosing the region where the system is most probable.  A bias potential is constructed 
+by finding the closest distance to this hypersurface. 
+
+Usage:
+======
+
+Given a training set obtained from high temperature MD the following function can be used to find the OCSVM hypersurface:
+	
+def ``tsase.svm.`` **learn_ocsvm** (datapoints,gam,nu):
+
+	**datapoints** : OCSVM training set
+
+	**gam** : This function uses the radial basis function kernal. This parameter defines the gaussian radius.
+
+	**nu** : This parameter defines a lower bound on the fraction of support vectors and an upper bound on the fraction of outliers
+
+The following class runs molecular dynamics on the biased potential energy surface given a ocsvm hypersurface obtained from the function above: 
+
+class ``tsase.svm.`` **ocsvm_dynamics** ( p, clf, csda_cc=0.001, cdsa_maxstep=1.0, w=1.0, B=1.0, fixcm=False,dt=1.0, kT=0.1)
+
+	**p** : atoms object
+
+	**clf** : ocsvm hypersurface obtained from the learn_ocsvm function
+
+	**cdsa_cc** : the closest distance to the surface algorithm (cdsa) convergence criteria 
+
+	**cdsa_maxstep** : a maximum allowed step for the cdsa 
+
+	**w** : parameter which determines the distance in which the bias potential switches between a constant form and a polynomial.  
+
+	**B** : parameter which determines the maximum boost 
+
+	**fixcm** : If True, the position and momentum of the center of mass is kept constant
+
+	**dt** : timestep 
+
+	**kT** : temperature in kT; this is need to calculate appropriate boost factor and renormalization of the time
+
+
+         

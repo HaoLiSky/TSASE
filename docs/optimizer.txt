@@ -62,7 +62,7 @@ Steepest Descent Limited memory BFGS
 	al = tsase.calculators.al()
 	p = tsase.io.read_con('al.con')
 	p.set_calculator(al)
-	min = tsase.optimize.SDLBFGS(p, maxstepsize=0.1, memory=100)
+	min = tsase.optimize.SDLBFGS(p, maxstep=0.1, memory=100)
 	min.run() 
 
 MDMin:
