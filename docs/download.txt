@@ -25,6 +25,8 @@ If you are a developer you can checkout the code using the command:
 
 This will fetch a copy of the latest code to a local directory named tsase. 
 
+The tsase code can also be download directly at `tarfile`_.
+
 =====================
 Environment Variables 
 =====================
@@ -37,9 +39,8 @@ To use the independent scripts, it is recommended to add ``$HOME/tsase/tsase/bin
     export PYTHONPATH=$HOME/tsase:$PYTHONPATH
     export PATH=$HOME/tsase/tsase/bin:$PATH
 
-
-
 For more information on subversion read its `online documentation`_.
 
 .. _ASE: https://wiki.fysik.dtu.dk/ase/overview.html
 .. _online documentation: http://svnbook.red-bean.com/en/1.5/index.html
+.. _tarfile: http://theory.cm.utexas.edu/code/tsase.tgz
