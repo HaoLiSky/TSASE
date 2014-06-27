@@ -11,7 +11,7 @@ The implementation of solid-state NEB is found in this library. [#Sheppard12_074
 
 Usage
 =====
-The ssneb class performs force projections for each image along the band. It becomes the regular neb if the initial and final states have the same cell vectors or by setting "ss=False". Anisotropic stresses can be applied to find saddles on enthalpy surfaces. [#Xiao12_101101]_[#Xiao13_144102]_ 
+The ssneb class performs force projections for each image along the band. It becomes the regular neb if the initial and final states have the same cell vectors or by setting "ss=False". Anisotropic stresses can be applied to find saddles on enthalpy surfaces. [#Xiao12_101101]_ [#Xiao13_144102]_ 
 
 Two optimizers are available for ssneb optimization: fire_ssneb and qm_ssneb.
 
