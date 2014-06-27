@@ -19,16 +19,17 @@ class SSDimer_atoms:
                  rotationOpt = 'cg', weight = 1):
         """
         Parameters:
-        force - the force to use
-        R0 - starting point
-        mode - initial mode (will be randomized if one is not provided)
+        R0      - an atoms object, which gives the starting point
+        mode    - initial mode (will be randomized if one is not provided)
         maxStep - longest distance dimer can move in a single iteration
-        dT - quickmin timestep
-        dR - finite difference step size for translation
+        dT      - quickmin timestep
+        dR      - separation between the two images for rotation
         phi_tol - rotation converging tolerence, degree
         rotationMax - max rotations per translational step
-        ss - boolean, solid-state dimer or regular dimer. Default: ssdimer
-        rotation_opt - how to update self.T: sd or cg or bfgs
+        ss      - boolean, solid-state dimer or not
+        express - 3*3 matrix, external stress tensor. Columns are the stress vectors. Needs to be in lower triangular form to avoid rigid rotation. 
+        rotation_opt - the optimization method for the rotation part: choose from "sd" (steepest descent), "cg" (conjugate gradient), and "bfgs".
+        weight  - extra weight to put on the cell degrees of freedom.
                  
         """
         self.steps = 0
