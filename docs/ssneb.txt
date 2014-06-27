@@ -11,7 +11,33 @@ The implementation of solid-state NEB is found in this library. [#Sheppard12_074
 
 Usage
 =====
-The ssneb can be used as an atoms object. It becomes the regular neb if the initial and final states have the same cell vectors; anisotropic stressed can be applied to find saddles on enthalpy surfaces.
+The ssneb class performs force projection for each image along the band. It becomes the regular neb if the initial and final states have the same cell vectors. Anisotropic stresses can be applied to find saddles on enthalpy surfaces.
+Two optimizers are available for ssneb optimization: fire_ssneb and qm_ssneb.
+
+
+class ssneb(self, p1, p2, numImages = 7, k = 5.0, tangent = "new",       
+            dneb = False, dnebOrg = False, method = 'normal',      
+            onlyci = False, weight = 1, parallel = False, ss = True,
+            express = numpy.zeros((3,3))):
+        """
+        The neb constructor.
+        Parameters:
+            p1.......... one endpoint of the path
+            p2.......... the other endpoint of the path
+            numImages... the total number of images in the path, including the 
+                         endpoints
+            k........... the spring force constant
+            tangent..... the tangent method to use, "new" for the new tangent,
+                         anything else for the old tangent
+            dneb........ set to true to use the double-nudging method
+            dnebOrg..... set to true to use the original double-nudging method
+            method...... "ci" for the climbing image method, anything else for
+                         normal NEB method 
+            onlyci...... boolean, if true only the climbing image is alloweed to move
+            ss.......... boolean, solid-state dimer or regular dimer. Default: ssdimer
+            express..... 3*3 matrix, external stress tensor. Columns are the stress vectors. Needs to be in lower triangular form to avoid rigid rotation. 
+            weight...... extra weight to put on the cell degrees of freedom.
+        """
 
     from tsase import neb
     nim = 7  # number of images, including end points
