@@ -39,6 +39,7 @@ class ssneb(self, p1, p2, numImages = 7, k = 5.0, tangent = "new",
             weight...... extra weight to put on the cell degrees of freedom.
         """
 
+Example:
     from tsase import neb
     nim = 7  # number of images, including end points
     band = neb.ssneb(p1, p2, numImages = nim, method = 'ci')
