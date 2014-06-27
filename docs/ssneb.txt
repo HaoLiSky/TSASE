@@ -11,7 +11,7 @@ The implementation of solid-state NEB is found in this library. [#Sheppard12_074
 
 Usage
 =====
-The ssneb class performs force projections for each image along the band. It becomes the regular neb if the initial and final states have the same cell vectors or by setting "ss=False". Anisotropic stresses can be applied to find saddles on enthalpy surfaces.
+The ssneb class performs force projections for each image along the band. It becomes the regular neb if the initial and final states have the same cell vectors or by setting "ss=False". Anisotropic stresses can be applied to find saddles on enthalpy surfaces. [#Xiao12_101101]_[#Xiao13_144102]_ 
 
 Two optimizers are available for ssneb optimization: fire_ssneb and qm_ssneb.
 
@@ -64,3 +64,7 @@ Example:
 .. rubric:: References
 
 .. [#Sheppard12_074103]  D. Sheppard, P. Xiao, W. Chemelewski, D. D. Johnson, and G. Henkelman, A generalized solid-state nudged elastic band method, J. Chem. Phys. 136, 074103 (2012). `DOI <http://dx.doi.org/10.1063/1.3684549>`_
+
+.. [#Xiao12_101101] P. Xiao and G. Henkelman, Communication: From graphite to diamond: Reaction pathways of the phase transition, J. Chem. Phys. 137, 101101 (2012). `DOI <http://dx.doi.org/10.1063/1.4752249>`_
+
+.. [#Xiao13_144102] P. Xiao, J.-G. Cheng, J.-S. Zhou, J. B. Goodenough, and G. Henkelman, Mechanism of the CaIrO3 post-perovskite phase transition under pressure, Phys. Rev. B 88, 144102 (2013). `DOI <http://dx.doi.org/10.1103/PhysRevB.88.144102>`_
