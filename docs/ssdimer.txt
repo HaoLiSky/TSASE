@@ -20,29 +20,29 @@ class SSDimer_atoms(self, R0 = None, mode = None, maxStep = 0.2, dT = 0.1, dR = 
                  phi_tol = 5, rotationMax = 4, ss = False, express=np.zeros((3,3)), 
                  rotationOpt = 'cg', weight = 1):
 
-      |**R0** :          an atoms object, which gives the starting point          
-      |**mode** :        initial mode (will be randomized if one is not provided) 
-      |**maxStep** :     longest distance dimer can move in a single iteration    
-      |**dT** :          quickmin timestep
-      |**dR** :          separation between the two images for rotation
-      |**phi_tol :       rotation converging tolerence, degree
-      |**rotationMax** : max rotations per translational step
-      |**ss** :          boolean, solid-state dimer or not
-      |**express** :     3*3 matrix, external stress tensor. Columns are the stress vectors. Needs to be in lower triangular form to avoid rigid rotation. 
-      |**rotationOpt**:  the optimization method for the rotation part: choose from "sd" (steepest descent), "cg" (conjugate gradient), and "bfgs".
-      |**weight**:       extra weight to put on the cell degrees of freedom
+      | **R0** :          an atoms object, which gives the starting point          
+      | **mode** :        initial mode (will be randomized if one is not provided) 
+      | **maxStep** :     longest distance dimer can move in a single iteration    
+      | **dT** :          quickmin timestep
+      | **dR** :          separation between the two images for rotation
+      | **phi_tol :       rotation converging tolerence, degree
+      | **rotationMax** : max rotations per translational step
+      | **ss** :          boolean, solid-state dimer or not
+      | **express** :     3*3 matrix, external stress tensor. Columns are the stress vectors. Needs to be in lower triangular form to avoid rigid rotation. 
+      | **rotationOpt**:  the optimization method for the rotation part: choose from "sd" (steepest descent), "cg" (conjugate gradient), and "bfgs".
+      | **weight**:       extra weight to put on the cell degrees of freedom
 
 Example:
 
     .. code-block:: none
 
-      | from tsase.dimer import ssdimer  
-      | d = ssdimer.SSDimer_atoms(p, rotationMax = 10, phi_tol=3, ss = True, rotationOpt = 'cg', express=np.zeros((3,3)))  
-      | # use quickmin optimizer in ssdimer 
-      | d.search(minForce = 0.0001, movie = "dimer2.movie", interval = 20 ) 
-      | ### or use other first order optimizer in ase. Second order optimizers cannot be used when "ss = True".
-      | #dyn = MDMin(d) 
-      | #dyn.run(fmax=0.0001) 
+       from tsase.dimer import ssdimer  
+       d = ssdimer.SSDimer_atoms(p, rotationMax = 10, phi_tol=3, ss = True, rotationOpt = 'cg', express=np.zeros((3,3)))  
+       # use quickmin optimizer in ssdimer 
+       d.search(minForce = 0.0001, movie = "dimer2.movie", interval = 20 ) 
+       ### or use other first order optimizer in ase. Second order optimizers cannot be used when "ss = True".
+       #dyn = MDMin(d) 
+       #dyn.run(fmax=0.0001) 
 
 
 
