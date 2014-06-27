@@ -14,7 +14,7 @@ The solid state dimer module extends this method to solid state phase transition
 
 Usage
 =====
-The ssdimer is as an atoms-like class, which defines suitable set_positions(), get_positions(), get_forces() for the solid-state dimer (SSDimer) method to include cell degrees of freedom in saddle search. It becomes the regular dimer by setting "ss=False". Anisotropic external stress can be applied by setting "express" to find saddles on enthalpy surfaces.
+The SSDimer_atoms is an atoms-like class, which defines suitable set_positions(), get_positions(), get_forces() for the solid-state dimer (SSDimer) method to include cell degrees of freedom in saddle search. It becomes the regular dimer by setting "ss=False". Anisotropic external stress can be applied by setting "express" to find saddles on enthalpy surfaces.
 
 class SSDimer_atoms(self, R0 = None, mode = None, maxStep = 0.2, dT = 0.1, dR = 0.001, 
                  phi_tol = 5, rotationMax = 4, ss = False, express=np.zeros((3,3)), 
