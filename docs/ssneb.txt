@@ -63,8 +63,8 @@ Example:
 
 .. rubric:: References
 
-.. [#Sheppard12_074103]  D. Sheppard, P. Xiao, W. Chemelewski, D. D. Johnson, and G. Henkelman, A generalized solid-state nudged elastic band method, J. Chem. Phys. 136, 074103 (2012). `DOI <http://dx.doi.org/10.1063/1.3684549>`_
+.. [#Sheppard12_074103]  D. Sheppard, P. Xiao, W. Chemelewski, D. D. Johnson, and G. Henkelman, A generalized solid-state nudged elastic band method, *J. Chem. Phys.* **136**, 074103 (2012). `DOI <http://dx.doi.org/10.1063/1.3684549>`_
 
-.. [#Xiao12_101101] P. Xiao and G. Henkelman, Communication: From graphite to diamond: Reaction pathways of the phase transition, J. Chem. Phys. 137, 101101 (2012). `DOI <http://dx.doi.org/10.1063/1.4752249>`_
+.. [#Xiao12_101101] P. Xiao and G. Henkelman, Communication: From graphite to diamond: Reaction pathways of the phase transition, *J. Chem. Phys.* **137**, 101101 (2012). `DOI <http://dx.doi.org/10.1063/1.4752249>`_
 
-.. [#Xiao13_144102] P. Xiao, J.-G. Cheng, J.-S. Zhou, J. B. Goodenough, and G. Henkelman, Mechanism of the CaIrO3 post-perovskite phase transition under pressure, Phys. Rev. B 88, 144102 (2013). `DOI <http://dx.doi.org/10.1103/PhysRevB.88.144102>`_
+.. [#Xiao13_144102] P. Xiao, J.-G. Cheng, J.-S. Zhou, J. B. Goodenough, and G. Henkelman, Mechanism of the CaIrO3 post-perovskite phase transition under pressure, *Phys. Rev. B* **88**, 144102 (2013). `DOI <http://dx.doi.org/10.1103/PhysRevB.88.144102>`_

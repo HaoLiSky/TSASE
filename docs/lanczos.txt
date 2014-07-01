@@ -1,0 +1,39 @@
+
+.. _lanczos:
+
+=================
+Lanczos
+=================
+
+The Lanczos method is a way to find the lowest eigenvalue and eigenvector efficiently without building the whole Hessian matrix. At each iteration, a new direction is added to the searching space by timing the Hessian, H, to the previous direction, v. Hv can be evaluated by finite difference: Hv = F(x0+dR*v) - F(x0), where F is the force and dR is the finite difference step, i.e. the separation distance in the dimer method. After ith iteration, the explored space spanned by :math:`{v, Hv, H^{2}v, \cdots, H^{i-1}v}`, which is the Krylov subspace. The lowest eigenvalue usually converges when i is much less than the dimensionality of the system. 
+ [#Lanczos1950]_ [#Zeng14_044115]_ 
+
+
+Usage
+=====
+The lanczos_atoms is a subclass of SSDimer_atoms, which employs the Lanczos algorithm to find the lowest curvature mode (the rotational part in ssdimer).
+
+class lanczos_atoms(SSDimer_atoms):
+
+        **rotationOpt**: not valid
+
+Example:
+
+    .. code-block:: none
+
+       from tsase.dimer import lanczos  
+       d = lanczos.lanczos_atoms(p, rotationMax = 10, phi_tol=3, ss = False)  
+       # use quickmin optimizer in ssdimer 
+       d.search(minForce = 0.0001, movie = "dimer2.movie", interval = 20 ) 
+       ### Or use other first order optimizer in ase. 
+       ### Second order optimizers cannot be used when "ss = True".
+       #dyn = MDMin(d) 
+       #dyn.run(fmax=0.0001) 
+
+
+
+.. rubric:: References
+
+.. [#Lanczos1950]  C. Lanczos, "An iteration method for the solution of the eigenvalue problem of linear differential and integral operators", (United States Government Press Office, 1950).
+
+.. [#Zeng14_044115]  Y. Zeng, P. Xiao, and G. Henkelman, "Unification of algorithms for minimum mode optimization", *J. Chem. Phys.* ***140***, 044115 (2014). `DOI <http://dx.doi.org/10.1063/1.4862410>`_
