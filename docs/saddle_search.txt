@@ -17,5 +17,6 @@ Modules
 
 	:ref:`Solid State Nudge Elastic Band <ssneb>`
 
+	:ref:`Lanczos<lanczos>`
 
 
