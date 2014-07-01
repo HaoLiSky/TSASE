@@ -4,12 +4,8 @@
 Cell optimization class
 '''
 
-from ase.optimize.fire import FIRE
 from ase import *
 from ase.io import read,write
-from ase.calculators.lammps import LAMMPS
-import os
-import sys
 import numpy as np
 
 class mushybox(Atoms):
