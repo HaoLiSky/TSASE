@@ -361,7 +361,9 @@ class SSDimer_atoms:
             #savexyz(movie, self.R0, 'w')
             io.write(movie, self.R0, format='vasp')
         # While the max atom force is greater than some criteria...
-        while self.getMaxAtomForce() > minForce and self.forceCalls < maxForceCalls:
+        try: cc = self.curvature
+        except: cc = 1.0
+        while (self.getMaxAtomForce() > minForce or cc > 0) and self.forceCalls < maxForceCalls :
             # Take a Dimer step.
             self.step()
 
