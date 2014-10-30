@@ -16,7 +16,7 @@ class SSDimer_atoms:
 
     def __init__(self, R0 = None, mode = None, maxStep = 0.2, dT = 0.1, dR = 0.001, 
                  phi_tol = 5, rotationMax = 4, ss = False, express=np.zeros((3,3)), 
-                 rotationOpt = 'cg', weight = 1):
+                 rotationOpt = 'cg', weight = 1, noZeroModes = True):
         """
         Parameters:
         R0      - an atoms object, which gives the starting point
@@ -42,6 +42,7 @@ class SSDimer_atoms:
         if self.N == None:
             print "radomly initialize the lowest eigenvector"
             self.N = vrand(np.zeros((self.natom+3,3)))
+            self.N[-3:] *= 0.0
         elif len(self.N) == self.natom: 
             self.N = np.vstack(( mode, np.zeros((3,3)) ))
         self.N = vunit(self.N)
@@ -55,6 +56,7 @@ class SSDimer_atoms:
         self.R1_prime.set_calculator(calc)
         self.rotationMax = rotationMax
         self.rotationOpt = rotationOpt
+        self.noZeroModes = noZeroModes # Set to False for 2D model potentials
         self.ss       = ss
         self.express  = express
    
@@ -159,6 +161,7 @@ class SSDimer_atoms:
             return self.Ftrans[:-3]
 
     def project_translt_rott(self, N, R0):
+        if not self.noZeroModes: return N
         # Project out rigid translational mode
         for axisx in range(3):
             transVec = np.zeros((self.natom+3, 3))
