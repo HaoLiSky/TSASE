@@ -39,11 +39,11 @@ class SSDimer_atoms:
         self.R0    = R0
         self.N = mode
         self.natom  = self.R0.get_number_of_atoms()
-        if len(self.N) == self.natom: 
-            self.N = np.vstack(( mode, np.zeros((3,3)) ))
-        elif len(self.N) != self.natom+3:
+        if self.N == None:
             print "radomly initialize the lowest eigenvector"
             self.N = vrand(np.zeros((self.natom+3,3)))
+        elif len(self.N) == self.natom: 
+            self.N = np.vstack(( mode, np.zeros((3,3)) ))
         self.N = vunit(self.N)
         self.maxStep = maxStep
         self.Ftrans = None
