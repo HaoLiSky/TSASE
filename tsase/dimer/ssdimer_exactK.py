@@ -27,7 +27,7 @@ class SSDimer_atoms:
     def __init__(self, R0 = None, mode = None, maxStep = 0.2, dT = 0.1, dR = 0.005, 
                  phi_tol = 10, phi_iso = 10, rotationMax = 4, ss = True, express=np.zeros((3,3)), 
                  estimateF1 = True, nebInitiate = False, originalRotation = False, 
-                 dTheta = 1, beta = 5, releaseF=0.1, weight = 1):
+                 dTheta = 1, beta = 5, releaseF=0.1, weight = 1, noZeroModes = True):
         """
         Parameters:
         force - the force to use
@@ -61,6 +61,7 @@ class SSDimer_atoms:
         self.R1.set_calculator(calc)
         self.R1_prime.set_calculator(calc)
         self.rotationMax = rotationMax
+        self.noZeroModes = noZeroModes # Set to False for 2D model potentials
         self.ss       = ss
         self.express  = express
         self.estimateF1  = estimateF1
@@ -89,16 +90,28 @@ class SSDimer_atoms:
         return self.natom+3
 
     def get_positions(self):
-        r    = self.R0.get_positions()*0.0
-        Rc   = np.vstack((r, self.R0.get_cell()*0.0))
-        return Rc
+        r    = self.R0.get_positions()
+        if self.ss:
+            # return zeros, so the vector passed to set_positions is just dr in the generalized space. 
+            # otherwise, "+" and "-" operations for position vectors need to be redefined in the optimizer
+            # this trick only works for first order optimzers for sure, where no operation applied to position vectors until the last update.
+            Rc   = np.vstack((r*0.0, self.R0.get_cell()*0.0))
+            return Rc
+        else:
+            return r
 
     def set_positions(self,dr):
-        rcell  = self.R0.get_cell()
-        rcell += np.dot(rcell, dr[-3:]) / self.jacobian
-        self.R0.set_cell(rcell, scale_atoms=True)
-        ratom  = self.R0.get_positions() + dr[:-3]
-        self.R0.set_positions(ratom)
+        if self.ss:
+            rcell  = self.R0.get_cell()
+            rcell += np.dot(rcell, dr[-3:]) / self.jacobian
+            self.R0.set_cell(rcell, scale_atoms=True)
+            ratom  = self.R0.get_positions() + dr[:-3]
+            self.R0.set_positions(ratom)
+        else:
+            # get_positions() returns non-zero values
+            # thus this dr is the final positions, not just dr
+            ratom  = dr
+            self.R0.set_positions(ratom)
     
     def update_general_forces(self, Ri):
         #update the generalized forces (f, st)
@@ -164,6 +177,7 @@ class SSDimer_atoms:
         return self.Ftrans
  
     def project_translt_rott(self, N, R0):
+        if not self.noZeroModes: return N
         # Project out rigid translational mode
         for axisx in range(3):
             transVec = np.zeros((self.natom+3, 3))
