@@ -76,7 +76,6 @@ class SSDimer_atoms:
         avglen        = (vol/self.natom)**(1.0/3.0)
         self.weight   = weight
         self.jacobian = avglen * self.natom**0.5 * self.weight
-        self.V = np.zeros((self.natom+3,3))
 
     # Pipe all the stuff from Atoms that is not overwritten.
     # Pipe all requests for get_original_* to self.atoms0.
@@ -342,6 +341,11 @@ class SSDimer_atoms:
 #######################################################################################################
 # The following part can be replaced by FIRE or MDMin optimizer in ase, see the ssdimer.py in examples
     def step(self):
+        if self.steps == 0:
+            if self.ss:
+                self.V = np.zeros((self.natom+3,3))
+            else:
+                self.V = np.zeros((self.natom,3))
         self.steps += 1
         Ftrans = self.get_forces() 
         #print "Ftrans",vmag(Ftrans)
