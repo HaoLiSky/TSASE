@@ -7,6 +7,8 @@ estimate the samllest curevature.
 If it is positive, the dimer moves in the regular way; 
 If it is zero, turn off the parallel force;
 If it is negative, reverse the parallel force;
+
+P. Xiao and Q. Wu and G. Henkelman Basin constrained k-dimer method for saddle point finding, J. Chem. Phys. 141 164111 (2014)     
 '''
 
 import time
@@ -19,127 +21,35 @@ from math import sqrt, atan, cos, sin, tan, pi
 from ase  import atoms, units, io
 from tsase.neb.util import vunit, vmag, vrand, sPBC
 from tsase.io import read_con
-from tsase import neb
+from tsase.dimer.ssdimer import SSDimer_atoms
 import sys
 
-class SSDimer_atoms:
+class KSSDimer_atoms(SSDimer_atoms):
 
-    def __init__(self, R0 = None, mode = None, maxStep = 0.2, dT = 0.1, dR = 0.005, 
-                 phi_tol = 10, phi_iso = 10, rotationMax = 4, ss = True, express=np.zeros((3,3)), 
-                 estimateF1 = True, nebInitiate = False, originalRotation = False, 
-                 dTheta = 1, beta = 5, releaseF=0.1, weight = 1, noZeroModes = True):
+    def __init__(self, R0 = None, mode = None, maxStep = 0.2, dT = 0.1, dR = 0.001, 
+                 phi_tol = 5, rotationMax = 4, ss = False, express=np.zeros((3,3)), 
+                 beta = 5, releaseF=0.1, phi_iso = 5,
+                 rotationOpt = 'cg', weight = 1, noZeroModes = True):
         """
-        Parameters:
-        force - the force to use
-        R0 - starting point
-        mode - initial mode (will be randomized if one is not provided)
-        maxStep - longest distance dimer can move in a single iteration
-        dT - quickmin timestep
-        dR - finite difference step size for translation
-        phi_tol - rotation converging tolerence, degree
-        rotationMax - max rotations per translational step
-        ss - boolean, solid-state dimer or regular dimer. Default: ssdimer
+        gamma1     =  2.0 / (np.exp((self.isocurv - 0.0) * beta) + 1.0) - 1.0
+        gamma2     = -1.0 / (np.exp((self.isocurv - 0.0) * beta) + 1.0) + 1.0
+        self.Ftrans = gamma2 * Fperp - gamma1 * Fparallel
+        %self.isocurv is kappa%
+
+        New Parameters:
+        beta       - how fast the forces change near the kappa=0 hyperplane 
+        releaseF   - when the magnitude of total force below this value, switch to the regular dimer
+        phi_iso    - rotation converging tolerence, in degree, for kappa search
         """
-        self.steps = 0
-        self.dT = dT
-        self.dR = dR
-        self.phi_tol = phi_tol / 180.0 * pi
-        self.phi_iso = phi_iso / 180.0 * pi
-        self.R0    = R0
-        self.N = mode
-        self.natom  = self.R0.get_number_of_atoms()
-        if self.N == None:
-            self.N = vrand(np.zeros((self.natom+3,3)))
-        self.N = vunit(self.N)
-        self.Contour = self.N.copy() #mode perpendicular to the force, along the contour(isosurface)
-        self.maxStep = maxStep
-        self.Ftrans = None
-        self.forceCalls = 0
-        self.R1 = self.R0.copy()
-        self.R1_prime = self.R0.copy()
-        calc    = self.R0.get_calculator()
-        self.R1.set_calculator(calc)
-        self.R1_prime.set_calculator(calc)
-        self.rotationMax = rotationMax
-        self.noZeroModes = noZeroModes # Set to False for 2D model potentials
-        self.ss       = ss
-        self.express  = express
-        self.estimateF1  = estimateF1
-        self.nebInitiate = nebInitiate
-        self.originalRotation = originalRotation
-        self.dTheta   = dTheta / 180.0 * pi
+        SSDimer_atoms.__init__(self, R0, mode = mode, maxStep = maxStep, dT = dT, dR = dR, 
+                 phi_tol = phi_tol, rotationMax = rotationMax, ss = ss, express = express, 
+                 rotationOpt = rotationOpt, weight = weight, noZeroModes = noZeroModes)
         self.alpha    = 0.0
         self.beta     = beta
         self.releaseF = releaseF
+        self.phi_iso  = phi_iso
+        self.Contour  = self.N.copy() #mode perpendicular to the force, along the contour(isosurface)
    
-        vol           = self.R0.get_volume()
-        avglen        = (vol/self.natom)**(1.0/3.0)
-        self.weight   = weight
-        self.jacobian = avglen * self.natom**0.5 * self.weight
-
-    # Pipe all the stuff from Atoms that is not overwritten.
-    # Pipe all requests for get_original_* to self.atoms0.
-    def __getattr__(self, attr):
-        """Return any value of the Atoms object"""
-        return getattr(self.R0, attr)
-        print "*************************************"
-        print attr
-
-    def __len__(self):
-        return self.natom+3
-
-    def get_positions(self):
-        r    = self.R0.get_positions()
-        if self.ss:
-            # return zeros, so the vector passed to set_positions is just dr in the generalized space. 
-            # otherwise, "+" and "-" operations for position vectors need to be redefined in the optimizer
-            # this trick only works for first order optimzers for sure, where no operation applied to position vectors until the last update.
-            Rc   = np.vstack((r*0.0, self.R0.get_cell()*0.0))
-            return Rc
-        else:
-            return r
-
-    def set_positions(self,dr):
-        if self.ss:
-            rcell  = self.R0.get_cell()
-            rcell += np.dot(rcell, dr[-3:]) / self.jacobian
-            self.R0.set_cell(rcell, scale_atoms=True)
-            ratom  = self.R0.get_positions() + dr[:-3]
-            self.R0.set_positions(ratom)
-        else:
-            # get_positions() returns non-zero values
-            # thus this dr is the final positions, not just dr
-            ratom  = dr
-            self.R0.set_positions(ratom)
-    
-    def update_general_forces(self, Ri):
-        #update the generalized forces (f, st)
-        self.forceCalls += 1
-        f    = Ri.get_forces()
-        if self.ss: stt  = Ri.get_stress()
-        vol  = Ri.get_volume()*(-1)
-        st   = np.zeros((3,3))
-        #following the order of get_stress in vasp.py
-        #(the order of stress in ase are the same for all calculators)
-        if self.ss:
-            st[0][0] = stt[0] * vol  
-            st[1][1] = stt[1] * vol
-            st[2][2] = stt[2] * vol
-            st[2][1] = stt[3] * vol
-            st[2][0] = stt[4] * vol
-            st[1][0] = stt[5] * vol
-            st  -= self.express * (-1)*vol
-        #print "original stress (no projecton applied):"
-        #print st
-        Fc   = np.vstack((f, st/self.jacobian))
-
-        return Fc
-  
-    def get_curvature(self):
-        return self.curvature
-
-    def get_mode(self):
-        return self.N
 
     def get_forces(self):
         F0 = self.minmodesearch(minoriso = 'min')
@@ -157,61 +67,26 @@ class SSDimer_atoms:
                 if abs(self.isocurv) > 20: self.isocurv = 20 * np.sign(self.isocurv)
                 gamma1     =  2.0 / (np.exp((self.isocurv - 0.0) * beta1) + 1.0) - 1.0
                 gamma2     = -1.0 / (np.exp((self.isocurv - 0.0) * beta1) + 1.0) + 1.0
-                #gamma1     =  1.2 / (np.exp((self.isocurv - 0.0) * beta1 + np.log(5)) + 1.0) - 0.2
-                #gamma1     =  1.5 / (np.exp((self.isocurv - 0.0) * beta1 ) + 1.0) - 0.5
-                #gamma2     = (-1.0 / (np.exp((self.isocurv + 0.0) * beta1) + 1.0) + 1.0) * 0.5
             self.Ftrans = gamma2 * Fperp - gamma1 * Fparallel
 
             #####xph: needs further improvement to insure k-dimer won't be trapped at isocurve=0.0 and Fperp=0.0
-            #if vmag(F0) > 0.02 and vmag(self.Ftrans) < 0.01 and self.alpha == 0.0:
-            #    self.alpha = 1.0
-            #if self.alpha == 1.0:
-            #    self.Ftrans = Fperp - Fparallel
-            #####or:
             #if vmag(F0) > 0.03 and vmag(self.Ftrans) < 0.005:
                 #self.Ftrans = Fperp - Fparallel
                 #self.Ftrans *= 10
 
             print "exact isocurve:", self.isocurv
-        return self.Ftrans
- 
-    def project_translt_rott(self, N, R0):
-        if not self.noZeroModes: return N
-        # Project out rigid translational mode
-        for axisx in range(3):
-            transVec = np.zeros((self.natom+3, 3))
-            transVec[:-3, axisx] = 1.0
-            transVec = vunit(transVec)
-            N -= np.vdot(N, transVec)*transVec
-        # Project out rigid rotational mode
-        for axisx in ['x', 'y', 'z']:
-            ptmp = R0.copy()
-            # rotate a small angle around the center of mass
-            ptmp.rotate(axisx, 0.02, center='COM', rotate_cell=False)
-            rottVec = ptmp.get_positions() - R0.get_positions()
-            rottVec = vunit(rottVec)
-            #if np.vdot(N[:-3], rottVec) > 0.1: print "mainly rotation around "+axisx
-            N[:-3] -= np.vdot(N[:-3], rottVec)*rottVec
-        return N
- 
-    def iset_endpoint_pos(self, Ni, R0, Ri, dRi):
-        # update the position of Ri
-        dRvec = dRi * Ni
-        cell0 = R0.get_cell()
-        cell1 = cell0 + np.dot(cell0, dRvec[-3:]) / self.jacobian
-        Ri.set_cell(cell1, scale_atoms=True)
-        vdir  = R0.get_scaled_positions()
-        ratom = np.dot(vdir, cell1) + dRvec[:-3]
-        ratom = R0.get_positions() + dRvec[:-3]
-        Ri.set_positions(ratom)
+        if self.ss:
+            return self.Ftrans
+        else:
+            return self.Ftrans[:-3]
  
     def rotation_update(self, mode):
         # position of R1
-        self.iset_endpoint_pos(mode, self.R0, self.R1, self.dR)
+        self.iset_endpoint_pos(mode, self.R0, self.R1)
         # force of R1
         F1    = self.update_general_forces(self.R1)
         return F1
-        
+
     def rotation_plane(self, Fperp, Fperp_old, mode):
         # determine self.T (big theta in the paper) with CG method
         a = abs(np.vdot(Fperp, Fperp_old))
@@ -224,7 +99,7 @@ class SSDimer_atoms:
         Ttmp       = Ttmp - np.vdot(Ttmp, mode) * mode
         self.Tnorm = np.linalg.norm(Ttmp)
         self.T     = vunit(Ttmp)
-        
+
     def minmodesearch(self, minoriso):
         # rotate dimer to the minimum mode direction
         # self.N, the dimer direction; 
@@ -286,7 +161,7 @@ class SSDimer_atoms:
             if abs(phi_1) <= self.phi_tol: break
             # calculate F_prime: force after rotating the dimer by phi_prime
             N1_prime = vunit(mode * cos(phi_1) + self.T * sin(phi_1))
-            self.iset_endpoint_pos(N1_prime, self.R0, self.R1_prime, self.dR)
+            self.iset_endpoint_pos(N1_prime, self.R0, self.R1_prime)
             F1_prime = self.update_general_forces(self.R1_prime)
             c0_prime = np.vdot(F0-F1_prime, N1_prime) / self.dR 
             
@@ -306,11 +181,8 @@ class SSDimer_atoms:
             mode = vunit(mode * cos(phi_min) + self.T * sin(phi_min))
             c0 = c0_min
             # update F1 by linear extropolation
-            if self.estimateF1:
-                F1 = F1 * (sin(phi_1 - phi_min) / sin(phi_1)) + F1_prime * (sin(phi_min) / sin(phi_1)) \
-                     + F0 * (1.0 - cos(phi_min) - sin(phi_min) * tan(phi_1 * 0.5))
-            else: 
-                F1    = self.rotation_update(mode)
+            F1 = F1 * (sin(phi_1 - phi_min) / sin(phi_1)) + F1_prime * (sin(phi_min) / sin(phi_1)) \
+                 + F0 * (1.0 - cos(phi_min) - sin(phi_min) * tan(phi_1 * 0.5))
             #print "phi_min:", phi_min, "toque:", vmag(Fperp)
             iteration += 1
 
@@ -324,7 +196,7 @@ class SSDimer_atoms:
             print "cosalpha", cosalpha
             if cosalpha > 0.01 and cosalpha < 0.999:
                 N1_prime = vunit(self.N - np.vdot(Fg, self.N)*Fg)
-                self.iset_endpoint_pos(N1_prime, self.R0, self.R1_prime, self.dR)
+                self.iset_endpoint_pos(N1_prime, self.R0, self.R1_prime)
                 F1_prime = self.update_general_forces(self.R1_prime)
                 c0_prime = np.vdot(F0-F1_prime, N1_prime) / self.dR 
                 self.kappa = -c0_prime/vmag(F0)
@@ -338,78 +210,3 @@ class SSDimer_atoms:
         return F0
         
 
-#######################################################################################################
-# The following part can be replaced by FIRE or MDMin optimizer in ase, see the ssdimer.py in examples
-    def step(self):
-        if self.steps == 0:
-            if self.ss:
-                self.V = np.zeros((self.natom+3,3))
-            else:
-                self.V = np.zeros((self.natom,3))
-        self.steps += 1
-        Ftrans = self.get_forces() 
-        #print "Ftrans",vmag(Ftrans)
-        dV = Ftrans * self.dT
-        #if np.vdot(self.V, Ftrans) > 0 and self.isocurv <= 0:
-        if np.vdot(self.V, Ftrans) > 0 :
-            self.V = dV * (1.0 + np.vdot(dV, self.V) / np.vdot(dV, dV))
-        else:
-            self.V = dV
-        step = self.V * self.dT
-        if vmag(step) > self.maxStep:
-            step = self.maxStep * vunit(step)
- 
-        self.set_positions(self.get_positions() + step)
-        self.E = self.get_potential_energy()
-        
-    
-    def getMaxAtomForce(self):
-        if self.Ftrans is None:
-            return 1000
-        maxForce = -1
-        #for i in range(len(self.FCross)):
-        #    maxForce = max(maxForce, vmag(self.FCross[i]))
-        maxForce = vmag(self.Ftrans)
-        return maxForce
-            
-    def search(self, minForce = 0.01, quiet = False, maxForceCalls = 300000, movie = None, interval = 50):
-        self.converged = False
-        if movie:
-            #savexyz(movie, self.R0, 'w')
-            Rcenter = self.R0.copy()
-            Rshadow = self.R0.copy()
-            self.iset_endpoint_pos(self.N, Rcenter, Rshadow, 0.5)
-            Oshadow = Rshadow[0] #copy the oxygen atom 
-            Rcenter.append(Oshadow)
-            io.write(movie, Rcenter, format='vasp')
-        # While the max atom force is greater than some criteria...
-        try: cc = self.curvature
-        except: cc = 1.0
-        while (self.getMaxAtomForce() > minForce or cc > 0) and self.forceCalls < maxForceCalls :
-            # Take a Dimer step.
-            self.step()
-
-            if movie and self.steps % interval == 0:
-                Rcenter = self.R0.copy()
-                Rshadow = self.R0.copy()
-                self.iset_endpoint_pos(self.N, Rcenter, Rshadow, 0.5)
-                Oshadow = Rshadow[0] #copy the oxygen atom 
-                Rcenter.append(Oshadow)
-                io.write('movie.tmp', Rcenter, format='vasp')
-                os.system('cat movie.tmp >> '+movie)
-            if not quiet:
-                ii = self.steps
-                ff = self.getMaxAtomForce()
-                cc = self.curvature
-                ee = self.E
-                nf = self.forceCalls
-                if self.steps % 100 == 0 or self.steps == 1:
-                    print "Iteration       Force       Curvature        Energy     ForceCalls"
-                    print "-------------------------------------------------------------------------------"
-                    print "%3i %13.6f %13.6f %13.6f %3i" % (ii,float(ff),float(cc),float(ee),nf)
-                else:
-                    print "%3i %13.6f %13.6f %13.6f %3i" % (ii,float(ff),float(cc),float(ee),nf)
-
-        if self.getMaxAtomForce() <= minForce:
-            self.converged = True
-                                   

@@ -10,7 +10,6 @@ from math import sqrt, atan, cos, sin, tan, pi
 from ase  import atoms, units, io
 from tsase.neb.util import vunit, vmag, vrand, sPBC
 from tsase.io import read_con
-from tsase import neb
 
 class SSDimer_atoms:
 
@@ -29,6 +28,7 @@ class SSDimer_atoms:
         ss      - boolean, solid-state dimer or not
         express - 3*3 matrix, external stress tensor. Columns are the stress vectors. Needs to be in lower triangular form to avoid rigid rotation. 
         rotation_opt - the optimization method for the rotation part: choose from "sd" (steepest descent), "cg" (conjugate gradient), and "bfgs".
+        noZeroModes  - boolean, project out the six zero modes or not. For some 2D analytical potential, it needs to be False.
         weight  - extra weight to put on the cell degrees of freedom.
                  
         """
