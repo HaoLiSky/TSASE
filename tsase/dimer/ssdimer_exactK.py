@@ -47,7 +47,7 @@ class KSSDimer_atoms(SSDimer_atoms):
         self.alpha    = 0.0
         self.beta     = beta
         self.releaseF = releaseF
-        self.phi_iso  = phi_iso
+        self.phi_iso  = phi_iso /180.0 * pi
         self.Contour  = self.N.copy() #mode perpendicular to the force, along the contour(isosurface)
    
 
