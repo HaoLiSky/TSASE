@@ -1,0 +1,3 @@
+pair_style comb
+pair_coeff * * ffield.comb O Cu
+fix 1 all qeq/comb 1 0.001

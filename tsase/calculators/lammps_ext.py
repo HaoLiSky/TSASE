@@ -275,8 +275,14 @@ class LAMMPS:
         """Method which writes a LAMMPS data file with atomic structure."""
         if (lammps_data == None):
             lammps_data = 'data.' + self.label
+        ##### write charge or not
+        parameters = self.parameters
+        if 'atom_style' in parameters and parameters['atom_style'] == 'charge':
+            write_charge = True
+        else:
+            write_charge = False
         write_lammps_data(lammps_data, self.atoms, self.specorder, 
-                          force_skew=self.always_triclinic)
+                          force_skew=self.always_triclinic, write_charge=write_charge)
 
     def write_lammps_in(self, lammps_in=None, lammps_trj=None, lammps_data=None):
         """Method which writes a LAMMPS in file with run parameters and settings."""
@@ -378,6 +384,9 @@ class LAMMPS:
             f.write('pair_modify %s\n' % parameters['pair_modify'])
         if 'kspace_style' in parameters:
             f.write('kspace_style %s\n' % parameters['kspace_style'])
+        # qeq for comb potential
+        if 'fix' in parameters:
+            f.write('fix %s\n' % parameters['fix'])
 ################################# ########################
         f.write('\n### run\n' +
                 'fix fix_nve all nve\n' +
@@ -714,7 +723,7 @@ class prism:
         return (axy >= acc) or (axz >= acc) or (ayz >= acc)
         
 
-def write_lammps_data(fileobj, atoms, specorder=[], force_skew=False):
+def write_lammps_data(fileobj, atoms, specorder=[], force_skew=False, write_charge=False):
     """Method which writes atomic structure data to a LAMMPS data file."""
     if isinstance(fileobj, str):
         f = paropen(fileobj, 'w')
@@ -759,13 +768,16 @@ def write_lammps_data(fileobj, atoms, specorder=[], force_skew=False):
 
     f.write('Atoms \n\n')
 ################## add charge in data file ########################
-    for i, r in enumerate(map(p.pos_to_lammps_str,
-                              atoms.get_positions())):
-        s = species.index(symbols[i]) + 1
-        try:
+    if write_charge:
+        for i, r in enumerate(map(p.pos_to_lammps_str,
+                                  atoms.get_positions())):
+            s = species.index(symbols[i]) + 1
             charge = atoms[i].get_charge()
             f.write('%6d %3d %.4f %s %s %s\n' % ((i+1, s, charge)+tuple(r)))
-        except: 
+    else:
+        for i, r in enumerate(map(p.pos_to_lammps_str,
+                                  atoms.get_positions())):
+            s = species.index(symbols[i]) + 1
             f.write('%6d %3d %s %s %s\n' % ((i+1, s)+tuple(r)))
     
     if close_file:
