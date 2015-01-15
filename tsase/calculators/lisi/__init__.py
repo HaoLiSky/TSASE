@@ -1,2 +1,2 @@
-from lisi import lisi
+from cuo import cuo
 
