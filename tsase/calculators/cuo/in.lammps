@@ -1,3 +1,5 @@
 pair_style comb
-pair_coeff * * ffield.comb O Cu
+pair_coeff * * ffield.comb Cu O
 fix 1 all qeq/comb 1 0.001
+atom_style charge
+mass 1 64 2 16

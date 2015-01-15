@@ -12,9 +12,9 @@ def cuo(cmd = None, tmp_dir = None, tolqeq = 0.01):
     lmptsase = os.path.dirname(os.path.abspath(__file__))
     os.chdir(lmptsase)
     parameters = {'pair_style': 'comb',
-                  'pair_coeff': ['* * %s O Cu' % ('ffield.comb')],
+                  'pair_coeff': ['* * %s Cu O' % ('ffield.comb')],
                   'atom_style':'charge',
-                  'mass':['1 16','2 64'],
+                  'mass':['1 64','2 16'],
                   'fix': '1 all qeq/comb 1 ' + str(tolqeq) + ' file log_qeq'}
     files = ['ffield.comb']
     if tmp_dir == None:
