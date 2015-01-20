@@ -184,7 +184,9 @@ class LAMMPS:
         if 'LAMMPS_OPTIONS' in os.environ:
             lammps_options = shlex.split(os.environ['LAMMPS_OPTIONS'])
         else:
-            lammps_options = shlex.split('-echo log -screen none')
+            #lammps_options = shlex.split('-echo log -screen none')
+            # xph: save screen output to tmp. If comb3 used, "screen none" crushes
+            lammps_options = shlex.split('-echo log -screen tmp')
 
 
         # change into subdirectory for LAMMPS calculations
@@ -275,7 +277,7 @@ class LAMMPS:
         """Method which writes a LAMMPS data file with atomic structure."""
         if (lammps_data == None):
             lammps_data = 'data.' + self.label
-        ##### write charge or not
+        # xph: write charge or not
         parameters = self.parameters
         if 'atom_style' in parameters and parameters['atom_style'] == 'charge':
             write_charge = True
@@ -311,7 +313,7 @@ class LAMMPS:
         else:
             f.write('boundary %c %c %c \n' % tuple('sp'[x] for x in pbc))
         f.write('atom_modify sort 0 0.0 \n')
-################## add atom_style ########################
+        # xph: add atom_style 
         for key in ('neighbor' ,'newton','atom_style'):
             if key in parameters:
                 f.write('%s %s \n' % (key, parameters[key]))
@@ -379,7 +381,7 @@ class LAMMPS:
                     'pair_coeff * * 1 1 \n' +
                     'mass * 1.0 \n')
 
-################## kspace command ########################
+        # xph: add atom_style 
         if 'pair_modify' in parameters:
             f.write('pair_modify %s\n' % parameters['pair_modify'])
         if 'kspace_style' in parameters:
@@ -387,7 +389,7 @@ class LAMMPS:
         # qeq for comb potential
         if 'fix' in parameters:
             f.write('fix %s\n' % parameters['fix'])
-################################# ########################
+
         f.write('\n### run\n' +
                 'fix fix_nve all nve\n' +
                 ('dump dump_all all custom 1 %s id type x y z vx vy vz fx fy fz\n' % lammps_trj) )
@@ -767,7 +769,7 @@ def write_lammps_data(fileobj, atoms, specorder=[], force_skew=False, write_char
     f.write('\n\n')
 
     f.write('Atoms \n\n')
-################## add charge in data file ########################
+    # xph: add charge in data file 
     if write_charge:
         for i, r in enumerate(map(p.pos_to_lammps_str,
                                   atoms.get_positions())):
