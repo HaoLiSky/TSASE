@@ -4,7 +4,7 @@ import os
 from tsase.calculators.lammps_ext import LAMMPS
 #from ase.calculators.lammps import LAMMPS
 
-def cuo(cmd = None, generation=2, tmp_dir = None, tolqeq = 0.01):
+def cuo(cmd = None, generation=3, tmp_dir = None, tolqeq = 0.01):
     cwd = os.getcwd()
     if cmd == None:
         cmd = os.path.join(cwd, 'lmp_serial')
