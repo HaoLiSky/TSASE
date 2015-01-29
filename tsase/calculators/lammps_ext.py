@@ -88,6 +88,13 @@ class LAMMPS:
             # If tmp_dir is pointing somewhere, don't remove stuff!
             self.keep_tmp_files = True
         self._lmp_handle = None        # To handle the lmp process
+        
+        # xph: if atom_style == charge, dump "q" to lammps dump file 
+        # and set self.charges to read in the "q" for further use in case  
+        # the charges have been updated by qeq relaxations. If not relaxed, 
+        # it doesn't hurt anyway. 
+        if 'atom_style' in parameters and parameters['atom_style'] == 'charge':
+            self.charges = None
 
         # read_log depends on that the first (three) thermo_style custom args
         # can be capitilized and matched aginst the log output. I.e. 
@@ -138,6 +145,17 @@ class LAMMPS:
         self.update(atoms)
         return self.forces.copy()
 
+    # xph: update charges in each atom
+    def get_charges(self, atoms):
+        if not hasattr(self, 'charges'):
+            print "no charges assigned to atoms initially, stop"
+            sys.exit()
+        elif self.charges == None:
+            self.update(atoms)
+        # xph: print is good, but something wrong with the return 
+        # print self.charges.copy()
+        return self.charges.copy()
+
     def get_stress(self, atoms):
         self.update(atoms)
         tc = self.thermo_content[-1]
@@ -148,6 +166,8 @@ class LAMMPS:
     def update(self, atoms):
         # TODO: check if (re-)calculation is necessary
         self.calculate(atoms)
+        for i in range(len(atoms)):
+            atoms[i].charge = self.charges[i]
 
     def calculate(self, atoms):
         self.atoms = atoms.copy()
@@ -278,8 +298,7 @@ class LAMMPS:
         if (lammps_data == None):
             lammps_data = 'data.' + self.label
         # xph: write charge or not
-        parameters = self.parameters
-        if 'atom_style' in parameters and parameters['atom_style'] == 'charge':
+        if hasattr(self, 'charges'):
             write_charge = True
         else:
             write_charge = False
@@ -390,9 +409,14 @@ class LAMMPS:
         if 'fix' in parameters:
             f.write('fix %s\n' % parameters['fix'])
 
-        f.write('\n### run\n' +
-                'fix fix_nve all nve\n' +
-                ('dump dump_all all custom 1 %s id type x y z vx vy vz fx fy fz\n' % lammps_trj) )
+        if hasattr(self, 'charges'):
+            f.write('\n### run\n' +
+                    'fix fix_nve all nve\n' +
+                    ('dump dump_all all custom 1 %s id type x y z vx vy vz fx fy fz q\n' % lammps_trj) )
+        else:
+            f.write('\n### run\n' +
+                    'fix fix_nve all nve\n' +
+                    ('dump dump_all all custom 1 %s id type x y z vx vy vz fx fy fz\n' % lammps_trj) )
         f.write(('thermo_style custom %s\n' +
                 'thermo_modify flush yes\n' +
                 'thermo 1\n') % (' '.join(self._custom_thermo_args)))
@@ -464,6 +488,8 @@ class LAMMPS:
                 lo = [] ; hi = [] ; tilt = []
                 id = [] ; type = []
                 positions = [] ; velocities = [] ; forces = []
+                # xph: add charges
+                charges = []
 
             if 'ITEM: NUMBER OF ATOMS' in line:
                 line = f.readline()
@@ -494,6 +520,8 @@ class LAMMPS:
                     positions.append( [ float(fields[atom_attributes[x]]) for x in ['x', 'y', 'z'] ] )
                     velocities.append( [ float(fields[atom_attributes[x]]) for x in ['vx', 'vy', 'vz'] ] )
                     forces.append( [ float(fields[atom_attributes[x]]) for x in ['fx', 'fy', 'fz'] ] )
+                    if hasattr(self, 'charges'):
+                         charges.append(  float(fields[atom_attributes['q']]) )
         f.close()
 
         # determine cell tilt (triclinic case!)
@@ -581,6 +609,10 @@ class LAMMPS:
             self.atoms = Atoms(type_atoms, positions=positions_atoms, cell=cell_atoms, pbc=True)
 
         self.forces = forces_atoms
+
+        # xph: add charges
+        charges_atoms = np.array(charges)
+        self.charges  = charges_atoms
 
 
 
@@ -774,7 +806,7 @@ def write_lammps_data(fileobj, atoms, specorder=[], force_skew=False, write_char
         for i, r in enumerate(map(p.pos_to_lammps_str,
                                   atoms.get_positions())):
             s = species.index(symbols[i]) + 1
-            charge = atoms[i].get_charge()
+            charge = atoms[i].charge
             f.write('%6d %3d %.4f %s %s %s\n' % ((i+1, s, charge)+tuple(r)))
     else:
         for i, r in enumerate(map(p.pos_to_lammps_str,
