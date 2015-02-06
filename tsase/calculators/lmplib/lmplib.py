@@ -1,9 +1,9 @@
 """ASE LAMMPS Calculator Library Version, modeified by xph for TSASE"""
 """ Changes:
-    1. Update atom positions and cell instead of recreating atoms every time,
+    1. Update atom positions instead of recreating atoms every time,
        so that the neighbor list don't need to be recalculated.
     2. Use a input file to initialize LAMMPS instead of lmp.command for easy debug.
-    3. 
+    3. Update cell if changed.
 """
        
 
@@ -204,14 +204,39 @@ End LAMMPSlib Interface Documentation
         
         Calculator.__init__(self, restart=restart, atoms=atoms, ignore_bad_restart_file=ignore_bad_restart_file, 
                  label=label, **kwargs)
+
+        # xph: cannot set pair_coeff before simulation box is defined. To avoid setting 
+        #      pair_coeff repeatedly, an atoms object has to be provided for initialization
+        if atoms == None: 
+            print "Please assign an atoms object by setting 'atoms = ' for LAMMPSlib initialization"
+            raise
+
+        # xph: if the cell is not lower triangular, it is difficult to map the forces back.
+        #      It is easier to rotate outside the calculator. 
+        if not self.is_lower_triangular(atoms.get_cell()):
+            print "Please rotate the cell following LAMMPS convention: 'A = (xhi-xlo,0,0); B = (xy,yhi-ylo,0); C = (xz,yz,zhi-zlo)'"
+            print "A roation example for an arbitrary oriented cell: "
+            print "'''"
+            print "cell = atoms.get_cell()"
+            print "atoms.rotate(cell[0], 'x', center=(0, 0, 0), rotate_cell=True)"
+            print "cell = atoms.get_cell()"
+            print "cell[1][0] = 0.0"
+            print "atoms.rotate(cell[1], 'y', center=(0, 0, 0), rotate_cell=True)"
+            print "'''"
+            raise
         self.initialize_lammps(atoms)
 
-        # xph: save screen output to tmp. If comb3 used, "screen none" crushes
+        # xph: save screen output to out_screen. If comb3 used, "screen none" crushes.
+        screenoption = 'none'
+        for cmd in self.parameters.lmpcmds:
+            if 'comb3' in cmd:
+                screenoption = 'out_screen'
+                break
         if self.parameters.log_file == None:
-            cmd_args = ['-echo', 'log', '-log', 'none', '-screen', 'out_screen']
+            cmd_args = ['-echo', 'log', '-log', 'none', '-screen', screenoption]
         else:
             cmd_args = ['-echo', 'log', '-log', self.parameters.log_file,
-                        '-screen', 'out_screen']
+                        '-screen', screenoption]
 
         self.cmd_args = cmd_args
 
@@ -219,7 +244,6 @@ End LAMMPSlib Interface Documentation
             self.lmp = lammps('', self.cmd_args)
 
         self.lmp.file(self.parameters.in_file)
-        print "success"
 
 
     def calculate(self, atoms, properties, system_changes):
@@ -234,19 +258,28 @@ End LAMMPSlib Interface Documentation
             any combination of these five: 'positions', 'numbers', 'cell',
             'pbc', 'charges' and 'magmoms'.
         """
+        # xph: self.atoms is saved in Calculator.calculate
+        Calculator.calculate(self, atoms, properties, system_changes)
         if len(system_changes) == 0:
             return
 
         self.atom_types = None
-        self.coord_transform = None
 
         pos = atoms.get_positions()
-        print "In calculate"
 
-        # If necessary, transform the positions to new coordinate system
-        if self.coord_transform != None:
-            pos = self.coord_transform * np.matrix.transpose(pos)
-            pos = np.matrix.transpose(pos)
+        # xph: update cell if changed
+        if "cell" in system_changes:
+            print "cell changed"
+            cell = atoms.get_cell()
+            cellupdate = ('change_box all x final 0.0 ' + str(cell[0][0]) +
+                                        ' y final 0.0 ' + str(cell[1][1]) +
+                                        ' z final 0.0 ' + str(cell[2][2]) +
+                                        ' yz final '    + str(cell[2][1]) +
+                                        ' xz final '    + str(cell[2][0]) +
+                                        ' xy final '    + str(cell[1][0]) + 
+                                        ' remap' +
+                                        ' units box')
+            self.lmp.command(cellupdate)
 
         # Convert ase position matrix to lammps-style position array
         lmp_positions = list(pos.ravel())
@@ -267,7 +300,10 @@ End LAMMPSlib Interface Documentation
             
 #        if 'stress' in properties:
         stress = np.empty(6)
-        stress_vars = ['pxx', 'pyy', 'pzz', 'pxy', 'pxz', 'pyz']
+
+        # xph: make the stress listed in the same order as in vasp.py and lammpsrun.py
+        #stress_vars = ['pxx', 'pyy', 'pzz', 'pxy', 'pxz', 'pyz']
+        stress_vars = ['pxx', 'pyy', 'pzz', 'pyz', 'pxz', 'pxy']
 
         for i, var in enumerate(stress_vars):
             stress[i] = self.lmp.extract_variable(var, None, 0)
@@ -287,47 +323,14 @@ End LAMMPSlib Interface Documentation
         if not self.parameters.keep_alive:
             self.lmp.close()
 
-    def is_upper_triangular(self, mat):
+    def is_lower_triangular(self, mat):
         """test if 3x3 matrix is upper triangular"""
         
         def near0(x):
             """Test if a float is within .00001 of 0"""
             return abs(x) < 0.00001
         
-        return near0(mat[1, 0]) and near0(mat[2, 0]) and near0(mat[2, 1])
-
-    def convert_cell(self, ase_cell):
-        """
-        Convert a parallel piped (forming right hand basis)
-        to lower triangular matrix LAMMPS can accept. This
-        function transposes cell matrix so the bases are column vectors
-        """
-        cell = np.matrix.transpose(ase_cell)
-
-        if not self.is_upper_triangular(cell):
-            # rotate bases into triangular matrix
-            tri_mat = np.zeros((3, 3))
-            A = cell[:, 0]
-            B = cell[:, 1]
-            C = cell[:, 2]
-            tri_mat[0, 0] = norm(A)
-            Ahat = A / norm(A)
-            AxBhat = np.cross(A, B) / norm(np.cross(A, B))
-            tri_mat[0, 1] = np.dot(B, Ahat)
-            tri_mat[1, 1] = norm(np.cross(Ahat, B))
-            tri_mat[0, 2] = np.dot(C, Ahat)
-            tri_mat[1, 2] = np.dot(C, np.cross(AxBhat, Ahat))
-            tri_mat[2, 2] = norm(np.dot(C, AxBhat))
-
-            # create and save the transformation for coordinates
-            volume = np.linalg.det(ase_cell)
-            trans = np.array([np.cross(B, C), np.cross(C, A), np.cross(A, B)])
-            trans = trans / volume
-            self.coord_transform = tri_mat * trans
-
-            return tri_mat
-        else:
-            return cell
+        return near0(mat[0, 1]) and near0(mat[0, 2]) and near0(mat[1, 2])
 
     def lammpsbc(self, pbc):
         if pbc:
@@ -419,6 +422,7 @@ End LAMMPSlib Interface Documentation
     def write_lammps_data(self, atoms):
         
         # xph: open a data file for geometry setting
+        # can switch to lmp.command by uncommenting those lines
         fname = self.parameters.data_file
         f = open(fname, 'w')
         
@@ -435,18 +439,15 @@ End LAMMPSlib Interface Documentation
         n_atom_types = len(species)
         f.write('%d  atom types\n' % n_atom_types)
 
-        #p = prism(atoms.get_cell())
-        #xhi, yhi, zhi, xy, xz, yz = p.get_lammps_prism_str()
-
-        # xph: from LAMMPSlib.py
+        # xph: check if cell is lower-triangle
         # Initialize cell
-        cell = self.convert_cell(atoms.get_cell())
+        cell = atoms.get_cell()
         xhi = cell[0, 0]
         yhi = cell[1, 1]
         zhi = cell[2, 2]
-        xy = cell[0, 1]
-        xz = cell[0, 2]
-        yz = cell[1, 2]
+        xy = cell[1, 0]
+        xz = cell[2, 0]
+        yz = cell[2, 1]
 
         f.write('0.0 %s  xlo xhi\n' % xhi)
         f.write('0.0 %s  ylo yhi\n' % yhi)
