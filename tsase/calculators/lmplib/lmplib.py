@@ -1,4 +1,11 @@
-"""ASE LAMMPS Calculator Library Version"""
+"""ASE LAMMPS Calculator Library Version, modeified by xph for TSASE"""
+""" Changes:
+    1. Update atom positions and cell instead of recreating atoms every time,
+       so that the neighbor list don't need to be recalculated.
+    2. Use a input file to initialize LAMMPS instead of lmp.command for easy debug.
+    3. 
+"""
+       
 
 import os
 import numpy as np
@@ -6,7 +13,7 @@ from numpy.linalg import norm
 from lammps import lammps
 from ase.calculators.calculator import Calculator
 from ase.units import GPa
-import ctypes
+import ctypes, sys
 
 # TODO
 # 1. should we make a new lammps object each time ?
@@ -183,10 +190,37 @@ End LAMMPSlib Interface Documentation
     default_parameters = dict(
         atom_types=None,
         log_file=None,
+        in_file='in.lmp.initialize',
+        data_file='data.lmp.initialize',
         keep_alive=False,
         lammps_header=['units metal',
                        'atom_style atomic',
                        'atom_modify map array sort 0 0'])
+
+    # xph: set the lammps header and basic parameters through an input file
+    # do not reset every time self.calculate is called 
+    def __init__(self, restart=None, atoms=None, ignore_bad_restart_file=False, 
+                 label=None, **kwargs):
+        
+        Calculator.__init__(self, restart=restart, atoms=atoms, ignore_bad_restart_file=ignore_bad_restart_file, 
+                 label=label, **kwargs)
+        self.initialize_lammps(atoms)
+
+        # xph: save screen output to tmp. If comb3 used, "screen none" crushes
+        if self.parameters.log_file == None:
+            cmd_args = ['-echo', 'log', '-log', 'none', '-screen', 'out_screen']
+        else:
+            cmd_args = ['-echo', 'log', '-log', self.parameters.log_file,
+                        '-screen', 'out_screen']
+
+        self.cmd_args = cmd_args
+
+        if not hasattr(self, 'lmp'):
+            self.lmp = lammps('', self.cmd_args)
+
+        self.lmp.file(self.parameters.in_file)
+        print "success"
+
 
     def calculate(self, atoms, properties, system_changes):
         """"atoms: Atoms object
@@ -206,20 +240,8 @@ End LAMMPSlib Interface Documentation
         self.atom_types = None
         self.coord_transform = None
 
-        if self.parameters.log_file == None:
-            cmd_args = ['-echo', 'log', '-log', 'none', '-screen', 'none']
-        else:
-            cmd_args = ['-echo', 'log', '-log', self.parameters.log_file,
-                        '-screen', 'none']
-
-        self.cmd_args = cmd_args
-
-        if not hasattr(self, 'lmp'):
-            self.lmp = lammps('', self.cmd_args)
-        
-        self.initialise_lammps(atoms)
-
         pos = atoms.get_positions()
+        print "In calculate"
 
         # If necessary, transform the positions to new coordinate system
         if self.coord_transform != None:
@@ -313,12 +335,23 @@ End LAMMPSlib Interface Documentation
         else:
             return 's'
 
-    def initialise_lammps(self, atoms):
+    def initialize_lammps(self, atoms):
         # Initialising commands
+        # xph: write an input and data_file for initialization of lammps
 
+        self.write_lammps_input(atoms)
+        self.write_lammps_data(atoms)
+
+    def write_lammps_input(self, atoms):
+
+        # xph: open an input file
+        fname = self.parameters.in_file
+        f = open(fname, 'w')
         # Use metal units, Angstrom and eV
         for cmd in self.parameters.lammps_header:
-            self.lmp.command(cmd)
+            f.write(cmd+'\n')
+            #self.lmp.command(cmd)
+
 
         # if the boundary command is in the supplied commands use that
         # otherwise use atoms pbc
@@ -327,9 +360,85 @@ End LAMMPSlib Interface Documentation
             if 'boundary' in cmd:
                 break
         else:
-            self.lmp.command(
-                'boundary ' + ' '.join([self.lammpsbc(bc) for bc in pbc]))
+            #self.lmp.command(
+            #    'boundary ' + ' '.join([self.lammpsbc(bc) for bc in pbc]))
+            cmdt = 'boundary ' + ' '.join([self.lammpsbc(bc) for bc in pbc])
+            f.write(cmdt+'\n')
 
+        f.write('\n\n')
+
+        # xph: read geometry from lammps data file
+        f.write('read_data %s \n' % self.parameters.data_file)
+
+        f.write('\n\n')
+
+        # Set masses, even though they don't matter
+        #self.lmp.command('mass * 1.0')
+        f.write('mass * 1.0 \n')
+        
+        # execute the user commands
+        for cmd in self.parameters.lmpcmds:
+            #self.lmp.command(cmd)
+            f.write(cmd+'\n')
+
+        # xph: nve
+        f.write('fix fix_nve all nve \n')
+
+        # I am not sure why we need this next line but LAMMPS will
+        # raise an error if it is not there. Perhaps it is needed to
+        # ensure the cell stresses are calculated
+        #self.lmp.command('thermo_style custom pe pxx')
+        f.write('thermo_style custom pe pxx \n')
+        
+        # Define force & energy variables for extraction
+        #self.lmp.command('variable pxx equal pxx')
+        #self.lmp.command('variable pyy equal pyy')
+        #self.lmp.command('variable pzz equal pzz')
+        #self.lmp.command('variable pxy equal pxy')
+        #self.lmp.command('variable pxz equal pxz')
+        #self.lmp.command('variable pyz equal pyz')
+        f.write('variable pxx equal pxx \n')
+        f.write('variable pyy equal pyy \n')
+        f.write('variable pzz equal pzz \n')
+        f.write('variable pxy equal pxy \n')
+        f.write('variable pxz equal pxz \n')
+        f.write('variable pyz equal pyz \n')
+
+        #self.lmp.command('variable fx atom fx')
+        #self.lmp.command('variable fy atom fy')
+        #self.lmp.command('variable fz atom fz')
+        f.write('variable fx atom fx \n')
+        f.write('variable fy atom fy \n')
+        f.write('variable fz atom fz \n')
+
+        # do we need this if we extract from a global ?
+        #self.lmp.command('variable pe equal pe')
+        f.write('variable pe equal pe \n')
+        f.close()
+
+    def write_lammps_data(self, atoms):
+        
+        # xph: open a data file for geometry setting
+        fname = self.parameters.data_file
+        f = open(fname, 'w')
+        
+        # xph: the following part is from lammpsrun.py in ASE
+        f.write(fname + ' (written by ASE) \n\n')
+
+        symbols = atoms.get_chemical_symbols()
+        n_atoms = len(symbols)
+        f.write('%d \t atoms \n' % n_atoms)
+
+        # This way it is assured that LAMMPS atom types are always
+        # assigned predictively according to the alphabetic order 
+        species = sorted(list(set(symbols)))
+        n_atom_types = len(species)
+        f.write('%d  atom types\n' % n_atom_types)
+
+        #p = prism(atoms.get_cell())
+        #xhi, yhi, zhi, xy, xz, yz = p.get_lammps_prism_str()
+
+        # xph: from LAMMPSlib.py
         # Initialize cell
         cell = self.convert_cell(atoms.get_cell())
         xhi = cell[0, 0]
@@ -339,63 +448,62 @@ End LAMMPSlib Interface Documentation
         xz = cell[0, 2]
         yz = cell[1, 2]
 
-        cell_cmd = 'region cell prism 0 {} 0 {} 0 {} {} {} {} units box'\
-            .format(xhi, yhi, zhi, xy, xz, yz)
-        self.lmp.command(cell_cmd)
+        f.write('0.0 %s  xlo xhi\n' % xhi)
+        f.write('0.0 %s  ylo yhi\n' % yhi)
+        f.write('0.0 %s  zlo zhi\n' % zhi)
+    
+        f.write('%s %s %s  xy xz yz\n' % (xy, xz, yz))
+        f.write('\n\n')
+
+        f.write('Atoms \n\n')
+         
+        write_charge = False
+        for cmd in self.parameters.lammps_header:
+            if 'charge' in cmd:
+                write_charge = True
+                break
+
+        # xph: add charge in data file 
+        if write_charge:
+            for i, r in enumerate(atoms.get_positions()):
+                s = species.index(symbols[i]) + 1
+                charge = atoms[i].charge
+                f.write('%6d %3d %.4f %.4f %.4f %.4f\n' % ((i+1, s, charge)+tuple(r)))
+        else:
+            for i, r in enumerate(atoms.get_positions()):
+                s = species.index(symbols[i]) + 1
+                f.write('%6d %3d %.4f %.4f %.4f\n' % ((i+1, s)+tuple(r)))
+        
+        f.close()
+
+        #cell_cmd = 'region cell prism 0 {} 0 {} 0 {} {} {} {} units box'\
+        #    .format(xhi, yhi, zhi, xy, xz, yz)
+        #self.lmp.command(cell_cmd)
         
         # The default atom_types has atom type in alphabetic order
         # by atomic symbol
-        symbols = np.asarray(atoms.get_chemical_symbols())
+        #symbols = np.asarray(atoms.get_chemical_symbols())
 
         # if the dictionary of types has not already been specified
-        if self.atom_types == None:
-            self.atom_types = {}
-            atom_types = np.sort(np.unique(symbols))
+        #if self.atom_types == None:
+        #    self.atom_types = {}
+        #    atom_types = np.sort(np.unique(symbols))
 
-            for i, sym in enumerate(atom_types):
-                self.atom_types[sym] = i + 1
+        #    for i, sym in enumerate(atom_types):
+        #        self.atom_types[sym] = i + 1
 
         # Initialize box
-        n_types = len(self.atom_types)
-        types_command = 'create_box {} cell'.format(n_types)
-        self.lmp.command(types_command)
+        #n_types = len(self.atom_types)
+        #types_command = 'create_box {} cell'.format(n_types)
+        #self.lmp.command(types_command)
 
         # Initialize the atoms with their types
         # positions do not matter here
-        self.lmp.command('echo none') # don't echo the atom positions
-        for sym in symbols:
-            cmd = 'create_atoms {} single 0.0 0.0 0.0  units box'.\
-                format(self.atom_types[sym])
-            self.lmp.command(cmd)
-
-        self.lmp.command('echo log') # turn back on
-
-        # Set masses, even though they don't matter
-        self.lmp.command('mass * 1.0')
-
-        # execute the user commands
-        for cmd in self.parameters.lmpcmds:
-            self.lmp.command(cmd)
-
-        # Define force & energy variables for extraction
-        self.lmp.command('variable pxx equal pxx')
-        self.lmp.command('variable pyy equal pyy')
-        self.lmp.command('variable pzz equal pzz')
-        self.lmp.command('variable pxy equal pxy')
-        self.lmp.command('variable pxz equal pxz')
-        self.lmp.command('variable pyz equal pyz')
-
-        # I am not sure why we need this next line but LAMMPS will
-        # raise an error if it is not there. Perhaps it is needed to
-        # ensure the cell stresses are calculated
-        self.lmp.command('thermo_style custom pe pxx')
-        
-        self.lmp.command('variable fx atom fx')
-        self.lmp.command('variable fy atom fy')
-        self.lmp.command('variable fz atom fz')
-
-        # do we need this if we extract from a global ?
-        self.lmp.command('variable pe equal pe')
+        #self.lmp.command('echo none') # don't echo the atom positions
+        #for sym in symbols:
+        #    cmd = 'create_atoms {} single 0.0 0.0 0.0  units box'.\
+        #        format(self.atom_types[sym])
+        #    self.lmp.command(cmd)
 
 
 #print('done loading lammpslib')
