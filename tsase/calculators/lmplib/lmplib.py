@@ -105,10 +105,12 @@ extracted and returned to python.
 Example
 =======
 
+1)
 ::
 
     from ase import Atom, Atoms
-    from lammpslib import LAMMPSlib
+    #from lammpslib import LAMMPSlib
+    from tsase.calculators.lmplib import LAMMPSlib
 
     cmds = ["pair_style eam/alloy",
             "pair_coeff * * NiAlH_jea.eam.alloy Al H"]
@@ -118,10 +120,32 @@ Example
     h = Atom([Atom('H')])
     alh = al + h
 
-    lammps = LAMMPSlib(lmpcmds = cmds, logfile='test.log')
+    #lammps = LAMMPSlib(lmpcmds = cmds, logfile='test.log')
+    lammps = LAMMPSlib(lmpcmds = cmds, logfile='test.log', atoms=a1h)
 
     alh.set_calculator(lammps)
     print "Energy ", alh.get_potential_energy()
+
+2)
+:: 
+    # comb3 potential, CuO 
+    from tsase.calculators.lmplib import LAMMPSlib
+
+    cmds = ["pair_style comb3 polar_off",
+            "pair_coeff * * ffield.comb3 Cu O",
+            "fix 1 all qeq/comb 1 0.003 file log_qeq"]
+    
+
+    p1 = read('POSCAR',format='vasp')
+    calc=LAMMPSlib(lmpcmds=cmds, logfile='test.log', keep_alive=True,
+                   atoms = p1,
+                   atom_types={'Cu':1, 'O':2},
+                   lammps_header=['units metal',
+                                  'atom_style charge',
+                                  'atom_modify map array sort 0 0.0'
+                                 ])
+    p1.set_calculator(calc)
+    print p1.get_potential_energy()
 
     
 Implementation
@@ -192,7 +216,7 @@ End LAMMPSlib Interface Documentation
         log_file=None,
         in_file='in.lmp.initialize',
         data_file='data.lmp.initialize',
-        keep_alive=False,
+        keep_alive=True,
         lammps_header=['units metal',
                        'atom_style atomic',
                        'atom_modify map array sort 0 0'])
@@ -269,7 +293,6 @@ End LAMMPSlib Interface Documentation
 
         # xph: update cell if changed
         if "cell" in system_changes:
-            print "cell changed"
             cell = atoms.get_cell()
             cellupdate = ('change_box all x final 0.0 ' + str(cell[0][0]) +
                                         ' y final 0.0 ' + str(cell[1][1]) +
