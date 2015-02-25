@@ -93,22 +93,25 @@ def group_command(args):
     for filename in args.trajectories:
         print 'reading', filename
         trajectory += read_xdatcar(filename, args.skip, args.every, args.trunc, args.frange)    
-            
+        
+        write_xdatcar(trajectory, args)
+
+def write_xdatcar(trajectory, args):
             ## write frames to POSCARs            
-        for i, atoms in enumerate(trajectory):            
-            name='POSCAR.trj'                
-            if args.ignore_elements:                
-                ignore_indicies = [atom.index for atom in atoms                    
-                        if atom.symbol in args.ignore_elements]                            
-                del atoms[ignore_indicies]                    
-            if i == 0:
-                write(name, atoms, direct=True, vasp5=True)
-            else:
-                pos = atoms.get_scaled_positions()
-                with open(name, "a") as myfile:
-                    myfile.write("\n")
-                    for j in xrange(len(atoms)):
-                        myfile.write('  %.15f  %.15f  %.15f \n' % (pos[j, 0], pos[j,1], pos[j,2]))
+    for i, atoms in enumerate(trajectory):            
+        name='POSCAR.trj'                
+        if args.ignore_elements:                
+            ignore_indicies = [atom.index for atom in atoms                    
+                    if atom.symbol in args.ignore_elements]                            
+            del atoms[ignore_indicies]                    
+        if i == 0:
+            write(name, atoms, direct=True, vasp5=True)
+        else:
+            pos = atoms.get_scaled_positions()
+            with open(name, "a") as myfile:
+                myfile.write("\n")
+                for j in xrange(len(atoms)):
+                    myfile.write('  %.15f  %.15f  %.15f \n' % (pos[j, 0], pos[j,1], pos[j,2]))
 
 
 if __name__ == '__main__':

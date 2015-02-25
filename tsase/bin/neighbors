@@ -9,7 +9,7 @@ CYAN  = '\033[36m'
 BLACK = '\033[30m'
 ENDC = '\033[0m'
 
-atoms = tsase.io.read(argv[1])
+atoms = tsase.io.read(argv[1], skip =0, every=1)
 if type(atoms) == type([]):
     atoms = atoms[0]
 
