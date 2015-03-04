@@ -15,8 +15,8 @@ class mushybox(Atoms):
         express: external pressure, a 3*3 lower triangular matrix in the unit of GPa
                  define positive values as compression
         """
-        Atoms.__init__(self,atomsx)
         self.atomsx = atomsx 
+        Atoms.__init__(self,atomsx)
         self.express= express * units.GPa
         if express[0][1]**2+express[0][2]**2+express[1][2]**2 > 1e-5:
            print "warning: xy, xz, yz components of the external pressure will be set to zero"
