@@ -16,11 +16,11 @@ class mushybox(Atoms):
                  define positive values as compression
         """
         self.atomsx = atomsx 
-        Atoms.__init__(self,atomsx)
         self.express= express * units.GPa
         if express[0][1]**2+express[0][2]**2+express[1][2]**2 > 1e-5:
            print "warning: xy, xz, yz components of the external pressure will be set to zero"
 
+        Atoms.__init__(self,atomsx)
         cell       = atomsx.get_cell()
         vol        = atomsx.get_volume()
         self.natom = atomsx.get_number_of_atoms()
