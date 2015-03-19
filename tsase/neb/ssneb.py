@@ -1,5 +1,19 @@
 """
-The generalized nudged elastic path (ssneb) module.
+The (generalized solid state) nudged elastic path, (ss)neb, module.
+
+When parallel is set to True, (ss)neb is parallelized over images through mpi4py.
+Each image can only use one processor, because the MPI comminicator cannot be 
+passed to the calculator. The command to execute the neb script should be:
+
+mpirun -np N python filename.py
+
+Here N equals the number of intermedia images (excluding the two end points).
+
+The other parallel version of (ss)neb, pssneb.py, parallelize over images through
+python pool and then each image can execute mpirun. pssneb has only been test for 
+the VASP calculator.
+"""
+
 """
 
 import numpy
@@ -58,6 +72,14 @@ class ssneb:
             if cr[0][1]**2+cr[0][2]**2+cr[1][2]**2 > 1e-3: 
                 print "check the orientation of the cell, make sure a is along x, b is on the x-y plane"
                 sys.exit()
+
+        # parallel over images through mpi4py
+        if self.parallel:
+            from mpi4py import MPI
+            self.comm = MPI.COMM_WORLD
+            self.size = self.comm.size
+            self.rank = self.comm.rank
+            self.MPIDB= MPI.DOUBLE
 
         # set the path by linear interpolation between end points
         n = self.numImages - 1
@@ -138,34 +160,84 @@ class ssneb:
         # Calculate the force due to the potential on the intermediate points
         self.Umax  = self.path[0].u
         self.Umaxi = 0
-        for i in range(1, self.numImages - 1):
-            # writing input and do the calculation in images' directories respectively
-            fdname = '0'+str(i)
+        
+        #=========================== Begin potential energy evaluation ==============================
+        #--------------------------- MPI version -------------------------
+        if self.parallel:
+            imgi  = self.rank+1
+            fdname = '0'+str(imgi)
             os.chdir(fdname)
-            self.path[i].u     = self.path[i].get_potential_energy()
-            self.path[i].f     = self.path[i].get_forces()
-            if self.ss: stt    = self.path[i].get_stress()
+            self.path[imgi].u    = self.path[imgi].get_potential_energy()
+            self.path[imgi].f    = self.path[imgi].get_forces()
+            if self.ss: stt      = self.path[imgi].get_stress()
             os.chdir('../')
+
+            try:
+                self.path[imgi].st
+            except:
+                self.path[imgi].st = numpy.zeros((3,3))
+            # solid-state or not
+            if self.ss:
+                vol = self.path[imgi].get_volume()*(-1)
+                self.path[imgi].st[0][0] = stt[0] * vol
+                self.path[imgi].st[1][1] = stt[1] * vol
+                self.path[imgi].st[2][2] = stt[2] * vol
+                self.path[imgi].st[2][1] = stt[3] * vol
+                self.path[imgi].st[2][0] = stt[4] * vol
+                self.path[imgi].st[1][0] = stt[5] * vol
+                self.path[imgi].st[0][1] = 0.0
+                self.path[imgi].st[0][2] = 0.0
+                self.path[imgi].st[1][2] = 0.0
+                self.path[imgi].st      -= self.express * vol*(-1)
+
+            ui    = self.path[imgi].u 
+            fi    = self.path[imgi].f 
+            sti   = self.path[imgi].st 
+            msg_s = numpy.vstack((fi, sti, [ui,0.0,0.0]))
+            msg_r = numpy.zeros((self.size, self.natom+4,3))
+
+            #The following pypar send and receive are equivalent to Allgather()
+            #msg_r=pypar.gather(msg_s,0,buffer=msg_r)
+            #msg_r=pypar.broadcast(msg_r,0)
+            self.comm.Allgather([msg_s, self.MPIDB], [msg_r, self.MPIDB])
+
+            for i in range(1, self.numImages - 1):
+                self.path[i].f = msg_r[i-1][:-4]
+                self.path[i].st = msg_r[i-1][-4:-1]
+                self.path[i].u = msg_r[i-1][-1][0]
+        #--------------------------- Serial version -------------------------
+        else: 
+            for i in range(1, self.numImages - 1):
+                # writing input and do the calculation in images' directories respectively
+                fdname = '0'+str(i)
+                os.chdir(fdname)
+                self.path[i].u     = self.path[i].get_potential_energy()
+                self.path[i].f     = self.path[i].get_forces()
+                if self.ss: stt    = self.path[i].get_stress()
+                os.chdir('../')
+                try:
+                    self.path[i].st
+                except:
+                    self.path[i].st = numpy.zeros((3,3))
+                # solid-state or not
+                if self.ss:
+                    vol = self.path[i].get_volume()*(-1)
+                    self.path[i].st[0][0] = stt[0] * vol
+                    self.path[i].st[1][1] = stt[1] * vol
+                    self.path[i].st[2][2] = stt[2] * vol
+                    self.path[i].st[2][1] = stt[3] * vol
+                    self.path[i].st[2][0] = stt[4] * vol
+                    self.path[i].st[1][0] = stt[5] * vol
+                    self.path[i].st[0][1] = 0.0
+                    self.path[i].st[0][2] = 0.0
+                    self.path[i].st[1][2] = 0.0
+                    self.path[i].st      -= self.express * vol*(-1)
+        #=========================== End potential energy evaluation ==============================
+
+        for i in range(1, self.numImages - 1):
             self.path[i].cellt = self.path[i].get_cell() * self.jacobian 
             self.path[i].icell = numpy.linalg.inv(self.path[i].get_cell())
             self.path[i].vdir  = self.path[i].get_scaled_positions()
-            try:
-                self.path[i].st
-            except:
-                self.path[i].st = numpy.zeros((3,3))
-            # solid-state or not
-            if self.ss:
-                vol = self.path[i].get_volume()*(-1)
-                self.path[i].st[0][0] = stt[0] * vol
-                self.path[i].st[1][1] = stt[1] * vol
-                self.path[i].st[2][2] = stt[2] * vol
-                self.path[i].st[2][1] = stt[3] * vol
-                self.path[i].st[2][0] = stt[4] * vol
-                self.path[i].st[1][0] = stt[5] * vol
-                self.path[i].st[0][1] = 0.0
-                self.path[i].st[0][2] = 0.0
-                self.path[i].st[1][2] = 0.0
-                self.path[i].st      -= self.express * vol*(-1)
 
             # calculate the PV term in the enthalpy E+PV, setting image 0 as reference
             dcell  = self.path[i].get_cell() - self.path[0].get_cell()
