@@ -1,20 +1,19 @@
 """
 The (generalized solid state) nudged elastic path, (ss)neb, module.
 
-When parallel is set to True, (ss)neb is parallelized over images through mpi4py.
+When "parallel=True" is set, (ss)neb is parallelized over images through mpi4py.
 Each image can only use one processor, because the MPI comminicator cannot be 
-passed to the calculator. The command to execute the neb script should be:
+passed to the calculator. The command to run the neb script should look like:
 
 mpirun -np N python filename.py
 
-Here N equals the number of intermedia images (excluding the two end points).
+where N equals the number of intermedia images, excluding the two end points.
 
-The other parallel version of (ss)neb, pssneb.py, parallelize over images through
-python pool and then each image can execute mpirun. pssneb has only been test for 
-the VASP calculator.
+The other parallel version of (ss)neb, pssneb.py, parallelizes over images through
+python pool and then each image invokes mpirun when calling the calculator. 
+pssneb has only been tested for the VASP calculator.
 """
 
-"""
 
 import numpy
 import os,sys
