@@ -19,7 +19,11 @@ class mushybox(Atoms):
         self.atomsx = atomsx 
         self.express= express * units.GPa
         if express[0][1]**2+express[0][2]**2+express[1][2]**2 > 1e-5:
+           express[0][1] = 0
+           express[0][2] = 0
+           express[1][2] = 0
            print "warning: xy, xz, yz components of the external pressure will be set to zero"
+        self.fixstrain = fixstrain
 
         Atoms.__init__(self,atomsx)
         cell       = atomsx.get_cell()
@@ -59,7 +63,7 @@ class mushybox(Atoms):
         st[1][0] = stt[5] * vol
         st  -= self.express * (-1)*vol
         # apply constrain
-        st = st * fixstrain
+        st *= self.fixstrain
         #print "original stress (no projecton applied):"
         #print st
         Fc   = np.vstack((f, st/self.jacobian))
