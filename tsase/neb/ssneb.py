@@ -30,7 +30,7 @@ class ssneb:
     def __init__(self, p1, p2, numImages = 7, k = 5.0, tangent = "new",       \
                  dneb = False, dnebOrg = False, method = 'normal',            \
                  onlyci = False, weight = 1, parallel = False, ss = True,     \
-                 express = numpy.zeros((3,3))):
+                 express = numpy.zeros((3,3)), fixstrain = numpy.ones((3,3))):
         """
         The neb constructor.
         Parameters:
@@ -45,7 +45,11 @@ class ssneb:
             dnebOrg..... set to true to use the original double-nudging method
             method...... "ci" for the climbing image method, anything else for
                          normal NEB method 
-            ss - boolean, solid-state dimer or regular dimer. Default: ssdimer
+            ss.......... boolean, solid-state dimer or regular dimer 
+            express..... external press, 3*3 lower triangular matrix in the 
+                         unit of GPa
+            fixstrain... 3*3 matrix as express. 
+                         0 fixes strain at the corresponding direction
         """
 
         self.numImages = numImages
@@ -64,6 +68,7 @@ class ssneb:
            express[0][2] = 0
            express[1][2] = 0
            print "warning: xy, xz, yz components of the external pressure will be set to zero"
+        self.fixstrain = fixstrain
 
         # check the orientation of the cell, make sure a is along x, b is on xoy plane
         for p in [p1,p2]:
@@ -188,6 +193,7 @@ class ssneb:
                 self.path[imgi].st[0][2] = 0.0
                 self.path[imgi].st[1][2] = 0.0
                 self.path[imgi].st      -= self.express * vol*(-1)
+                self.path[imgi].st      *= self.fixstrain 
 
             ui    = self.path[imgi].u 
             fi    = self.path[imgi].f 
@@ -231,6 +237,7 @@ class ssneb:
                     self.path[i].st[0][2] = 0.0
                     self.path[i].st[1][2] = 0.0
                     self.path[i].st      -= self.express * vol*(-1)
+                    self.path[i].st      *= self.fixstrain 
         #=========================== End potential energy evaluation ==============================
 
         for i in range(1, self.numImages - 1):
