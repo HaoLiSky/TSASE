@@ -9,11 +9,12 @@ from ase.io import read,write
 import numpy as np
 
 class mushybox(Atoms):
-    def __init__(self, atomsx, express=np.zeros((3,3))):
+    def __init__(self, atomsx, express=np.zeros((3,3)), fixstrain=np.ones((3,3))):
         """box relaxation
         atomsx: an Atoms object
-        express: external pressure, a 3*3 lower triangular matrix in the unit of GPa
+        express: external pressure, a 3*3 lower triangular matrix in the unit of GPa;
                  define positive values as compression
+        fixstrain: 3*3 matrix as express. 0 fixes strain at the corresponding direction
         """
         self.atomsx = atomsx 
         self.express= express * units.GPa
@@ -57,6 +58,8 @@ class mushybox(Atoms):
         st[2][0] = stt[4] * vol
         st[1][0] = stt[5] * vol
         st  -= self.express * (-1)*vol
+        # apply constrain
+        st = st * fixstrain
         #print "original stress (no projecton applied):"
         #print st
         Fc   = np.vstack((f, st/self.jacobian))
