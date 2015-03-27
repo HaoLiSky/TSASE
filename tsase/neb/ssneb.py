@@ -67,14 +67,16 @@ class ssneb:
            express[0][1] = 0
            express[0][2] = 0
            express[1][2] = 0
-           print "warning: xy, xz, yz components of the external pressure will be set to zero"
+           if (not self.parallel) or (self.parallel and self.rank == 0):
+               print "warning: xy, xz, yz components of the external pressure will be set to zero"
         self.fixstrain = fixstrain
 
         # check the orientation of the cell, make sure a is along x, b is on xoy plane
         for p in [p1,p2]:
             cr = p.get_cell()
             if cr[0][1]**2+cr[0][2]**2+cr[1][2]**2 > 1e-3: 
-                print "check the orientation of the cell, make sure a is along x, b is on the x-y plane"
+                if (not self.parallel) or (self.parallel and self.rank == 0):
+                    print "check the orientation of the cell, make sure a is along x, b is on the x-y plane"
                 sys.exit()
 
         # parallel over images through mpi4py
@@ -105,7 +107,8 @@ class ssneb:
             # making a directory for each image, which is nessecary for vasp to read last step's WAVECAR
             # also, it is good to prevent overwriting files for parallelizaiton over images
             fdname = '0'+str(i)
-            if not os.path.exists(fdname): os.mkdir(fdname)
+            if (not self.parallel) or (self.parallel and self.rank == 0):
+                if not os.path.exists(fdname): os.mkdir(fdname)
             cellt = cell1 + dRB * i
             vdirt = vdir1 + dR * i
             rt    = numpy.dot(vdirt,cellt)
@@ -125,12 +128,16 @@ class ssneb:
         # add some new properties
         for i in [0,n]:
             fdname = '0'+str(i)
-            if not os.path.exists(fdname): os.mkdir(fdname)
+            backfd = '../'
+            if self.parallel: 
+                fdname += '/'+str(self.rank)+str(i)
+                backfd  = '../../'
+            if not os.path.exists(fdname): os.makedirs(fdname)
             os.chdir(fdname)
             self.path[i].u = self.path[i].get_potential_energy()
             self.path[i].f = self.path[i].get_forces()
             if self.ss: stt = self.path[i].get_stress()
-            os.chdir('../')
+            os.chdir(backfd)
             self.path[i].cellt = self.path[i].get_cell() * self.jacobian 
             self.path[i].icell = numpy.linalg.inv(self.path[i].get_cell())
             self.path[i].vdir  = self.path[i].get_scaled_positions()
@@ -145,12 +152,14 @@ class ssneb:
                 self.path[i].st[2][0] = stt[4] * vol
                 self.path[i].st[1][0] = stt[5] * vol
                 self.path[i].st      -= self.express * (-1)*vol
+                self.path[i].st      *= self.fixstrain 
 
             # calculate the PV term in the enthalpy E+PV, setting image 0 as reference
             dcell  = self.path[i].get_cell() - self.path[0].get_cell()
             strain = numpy.dot(self.path[0].icell, dcell)
             pv     = numpy.vdot(self.express, strain) * self.path[0].get_volume()
-            print "i,pv:",i,pv
+            if (not self.parallel) or (self.parallel and self.rank == 0):
+                print "i,pv:",i,pv
             self.path[i].u += pv
 
     def forces(self):
@@ -249,7 +258,8 @@ class ssneb:
             dcell  = self.path[i].get_cell() - self.path[0].get_cell()
             strain = numpy.dot(self.path[0].icell, dcell)
             pv     = numpy.vdot(self.express, strain) * self.path[0].get_volume()
-            print "i,pv:",i,pv
+            if (not self.parallel) or (self.parallel and self.rank == 0):
+                print "i,pv:",i,pv
             self.path[i].u += pv
 
             if self.path[i].u > self.Umax:
@@ -349,12 +359,14 @@ class ssneb:
                         self.path[i].n = numpy.vstack((sn,snb))
 
         # Normalize each tangent
-        print "==========!tangent contribution!=========="
-        print "Jacobian:", self.jacobian
-        print "ImageNum        atom         cell"
+        if (not self.parallel) or (self.parallel and self.rank == 0):
+            print "==========!tangent contribution!=========="
+            print "Jacobian:", self.jacobian
+            print "ImageNum        atom         cell"
         for i in range(1,self.numImages-1):
             self.path[i].n = vunit(self.path[i].n)
-            print i, vmag(self.path[i].n[:-3]), vmag(self.path[i].n[-3:])
+            if (not self.parallel) or (self.parallel and self.rank == 0):
+                print i, vmag(self.path[i].n[:-3]), vmag(self.path[i].n[-3:])
 
         # Loop over each intermediate image and adjust the potential energy,
         # force, and apply the spring force.

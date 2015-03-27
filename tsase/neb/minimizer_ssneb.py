@@ -23,11 +23,12 @@ class minimizer_ssneb:
         '''
         fMax = 1e300
         iterations = 0
-        print "Iteration       Total Force       Perp Force        MaxU       MaxI    Stress on CI    "
-        print "---------------------------------------------------------------------------------------"
-        feout = open('fe.out','a')
-        feout.write('Iteration       Total Force       Perp Force        MaxU       MaxI    Stress on CI     \n')
-        feout.write('------------------------------------------------------------  \n')
+        if (not self.band.parallel) or (self.band.parallel and self.band.rank == 0) :
+            print "Iteration       Total Force       Perp Force        MaxU       MaxI    Stress on CI    "
+            print "---------------------------------------------------------------------------------------"
+            feout = open('fe.out','a')
+            feout.write('Iteration       Total Force       Perp Force        MaxU       MaxI    Stress on CI     \n')
+            feout.write('------------------------------------------------------------  \n')
         while fMax > forceConverged and iterations < maxIterations:
             self.step()
             fMax = 0.0
@@ -41,7 +42,8 @@ class minimizer_ssneb:
                     fMax = fi
                 if fPi > fPMax:
                     fPMax = fPi
-                io.write(str(i)+'.CON',self.band.path[i],format='vasp')
+                if (not self.band.parallel) or (self.band.parallel and self.band.rank == 0) :
+                    io.write(str(i)+'.CON',self.band.path[i],format='vasp')
 
             maxi=self.band.Umaxi
             fci =self.band.path[maxi].st 
@@ -50,17 +52,20 @@ class minimizer_ssneb:
             output = str(iterations+1)+'     '+str(fMax)+'     '+str(fPMax)+'     ' \
                  +str(self.band.Umax-self.band.path[0].u)+'     '+str(self.band.Umaxi) \
                  +'     '+str(fci) + '    '+str(self.dt)
-            print "-------------------------SSNEB------------------------------"
-            print output
-            feout.write(output+'\n')
+
+            if (not self.band.parallel) or (self.band.parallel and self.band.rank == 0) :
+                print "-------------------------SSNEB------------------------------"
+                print output
+                feout.write(output+'\n')
 
             iterations += 1
 
         # write data for neb.dat
-        print "-----------------------SSNEB Finished------------------------------"
-        print "Image    ReCoords      E      RealForce      Image"
-        feout.write("-----------------------SSNEB Finished------------------------------\n")
-        feout.write("Image    ReCoords      E      RealForce      Image \n")
+        if (not self.band.parallel) or (self.band.parallel and self.band.rank == 0) :
+            print "-----------------------SSNEB Finished------------------------------"
+            print "Image    ReCoords      E      RealForce      Image"
+            feout.write("-----------------------SSNEB Finished------------------------------\n")
+            feout.write("Image    ReCoords      E      RealForce      Image \n")
         for i in range(self.band.numImages):
             if i==0:
                 Rm1 = 0.0
@@ -78,8 +83,10 @@ class minimizer_ssneb:
                 else:
                     realtotalf = vdot(self.band.path[i].realtf,self.band.path[i].n)
             R20 += Rm1
-            print "%3i %13.6f %13.6f %13.6f %3i" % (i,float(R20),float(self.band.path[i].u-self.band.path[0].u),float(realtotalf),i)
-            feout.write( "%3i %13.6f %13.6f %13.6f %3i %s" % (i,float(R20),float(self.band.path[i].u-self.band.path[0].u),float(realtotalf),i,'\n'))
+            if (not self.band.parallel) or (self.band.parallel and self.band.rank == 0) :
+                print "%3i %13.6f %13.6f %13.6f %3i" % (i,float(R20),float(self.band.path[i].u-self.band.path[0].u),float(realtotalf),i)
+                feout.write( "%3i %13.6f %13.6f %13.6f %3i %s" % (i,float(R20),float(self.band.path[i].u-self.band.path[0].u),float(realtotalf),i,'\n'))
 
-        feout.close()
+        if (not self.band.parallel) or (self.band.parallel and self.band.rank == 0) :
+            feout.close()
 
