@@ -171,8 +171,6 @@ class ssneb:
         """
 
         # Calculate the force due to the potential on the intermediate points
-        self.Umax  = self.path[0].u
-        self.Umaxi = 0
         
         #=========================== Begin potential energy evaluation ==============================
         #--------------------------- MPI version -------------------------
@@ -249,6 +247,8 @@ class ssneb:
                     self.path[i].st      *= self.fixstrain 
         #=========================== End potential energy evaluation ==============================
 
+        self.Umax  = self.path[1].u
+        self.Umaxi = 1
         for i in range(1, self.numImages - 1):
             self.path[i].cellt = self.path[i].get_cell() * self.jacobian 
             self.path[i].icell = numpy.linalg.inv(self.path[i].get_cell())
