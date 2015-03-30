@@ -247,8 +247,6 @@ class ssneb:
                     self.path[i].st      *= self.fixstrain 
         #=========================== End potential energy evaluation ==============================
 
-        self.Umax  = self.path[1].u
-        self.Umaxi = 1
         for i in range(1, self.numImages - 1):
             self.path[i].cellt = self.path[i].get_cell() * self.jacobian 
             self.path[i].icell = numpy.linalg.inv(self.path[i].get_cell())
@@ -262,7 +260,7 @@ class ssneb:
                 print "i,pv:",i,pv
             self.path[i].u += pv
 
-            if self.path[i].u > self.Umax:
+            if i == 1 or self.path[i].u > self.Umax:
                 self.Umax  = self.path[i].u
                 self.Umaxi = i
             
