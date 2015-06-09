@@ -5,12 +5,15 @@
 Kinetic Database
 ================================
 
+The Kinetic Databse is a method of storing a minimal representation of kinetic events previously calculated so that they can be used to predict future saddle points. Estimates of reactant, saddle, and product geometries consistent with a query configuration speed up aKMC simulations by reducing the number of random saddle point searches needed to reach confidence. Due to its general design, the KDB can also be used for the determination of reaction mechanisms outside of KMC simulations. 
+
 Kinetic Database implementation
 [#Terrell12_014105]_
 
 Usage
-=====
+===== 
 
+The query algorithm
 
 .. rubric:: References
 
