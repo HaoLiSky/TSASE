@@ -5,7 +5,7 @@
 Kinetic Database
 ================================
 
-The Kinetic Databse is a method of storing a minimal representation of kinetic events previously calculated so that they can be used to predict future saddle points. Estimates of reactant, saddle, and product geometries consistent with a query configuration speed up aKMC simulations by reducing the number of random saddle point searches needed to reach confidence. Due to its general design, the KDB can also be used for the determination of reaction mechanisms outside of KMC simulations. 
+The Kinetic Databse (KDB) is a method of storing a minimal representation of kinetic events previously calculated so that they can be used to predict future saddle points. Estimates of reactant, saddle, and product geometries consistent with a query configuration speed up aKMC simulations by reducing the number of random saddle point searches needed to reach confidence. Due to its general design, the KDB can also be used for the determination of reaction mechanisms outside of KMC simulations. 
 
 Kinetic Database implementation
 [#Terrell12_014105]_
@@ -13,7 +13,27 @@ Kinetic Database implementation
 Usage
 ===== 
 
-The query algorithm
+The query algorithm selects those KDB entries that contain at least as many atoms of the same type as the query configuration. A matching procedure is then used to generate a new set of possible mappings from the previous step repeatedly until all atoms of the KDB configuraton have been mapped to a corresponding atom within the query configuration.
+
+Applying a transformation algorithm to each KDB configuration results in a calculated score for a match. If this score is less than a desired tolerance, the saddle configuration of the KDB entry is used to make a saddle point suggestion.
+
+query(reactant, options.kdbdir, "./kdbmatches", dc=options.dc, nf=options.nf, nodupes=options.nodupes)
+
+        **'reactant'** : the structure (atoms object) that will be checked if anything similar to it in the database exists
+
+        **'kdbdir'** : where the database file is stored
+
+        **'outputdir'** : where kdb suggestions are stored
+
+        **'nf'** : neighbor fudge; the percentage of the neighboring image to be explicitly included when removing the periodic boundary condition (pbc)
+
+        **'dc'** : distance cutoff; distance an atom moves to be considered local to the process
+
+        **'nodupes'** : whether or not kdb makes duplicate suggestions
+
+EOn
+---
+Instructions on using the KDB with eOn software are located `here <http://theory.cm.utexas.edu/eon/kdb.html>`_.
 
 .. rubric:: References
 
