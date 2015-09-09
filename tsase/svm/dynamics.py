@@ -116,8 +116,11 @@ class ocsvm_dynamics():
         self.kT = kT
 
     def svm_rbf_deriv(self,clf,Points): # Don't forget this returns the positive of the gradient!
-        import scikits.learn as sklearn
-        from scikits.learn.metrics.pairwise import rbf_kernel
+	try:
+            from sklearn.metrics.pairwise import rbf_kernel
+        except:
+            import scikits.learn as sklearn
+            from scikits.learn.metrics.pairwise import rbf_kernel
         Grad = numpy.zeros(Points.shape)
         noP = Points.shape[0]
         alpha = clf.dual_coef_
