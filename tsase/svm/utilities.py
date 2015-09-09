@@ -54,7 +54,10 @@ def learn_svm(parameters,datapoints,datalabels,datapointstest,datalabelstest,kva
     return selSVM
 
 def learn_ocsvm(datapoints,gam,nu):
-    from scikits.learn import svm
+    try:
+        from sklearn import svm
+    except:
+        from scikits.learn import svm
     clf = svm.OneClassSVM(nu=nu, kernel="rbf", gamma=gam)
     clf.fit(datapoints)
     return clf
