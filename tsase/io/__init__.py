@@ -36,6 +36,14 @@ def read(filename, skip, every):
         return read_con(filename)
     except:
         pass
+    try:
+        return ase.io.read(filename+"@:", format='aims')
+#        a = read_aims(filename)
+#        if len(a.positions) < 1:
+#            raise
+#        return a
+    except:
+        pass
     try: 
         return read_bopfox(filename)
     except:
@@ -54,13 +62,6 @@ def read(filename, skip, every):
         pass
     try:
         return read_socorro(filename)
-    except:
-        pass
-    try:
-        a = read_aims(filename)
-        if len(a.positions) < 1:
-            raise
-        return a
     except:
         pass
     try:

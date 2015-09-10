@@ -1,3 +1,4 @@
+# note: this is no longer used; the ase aims routines are
 import numpy
 import ase
 
