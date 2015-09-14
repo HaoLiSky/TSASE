@@ -64,6 +64,7 @@ class KSSDimer_atoms(SSDimer_atoms):
                 gamma1 = 1; gamma2 = 1; 
             else:
                 self.minmodesearch(minoriso = 'iso')
+                print "exact isocurve:", self.isocurv
                 if abs(self.isocurv) > 20: self.isocurv = 20 * np.sign(self.isocurv)
                 gamma1     =  2.0 / (np.exp((self.isocurv - 0.0) * beta1) + 1.0) - 1.0
                 gamma2     = -1.0 / (np.exp((self.isocurv - 0.0) * beta1) + 1.0) + 1.0
@@ -74,7 +75,6 @@ class KSSDimer_atoms(SSDimer_atoms):
                 #self.Ftrans = Fperp - Fparallel
                 #self.Ftrans *= 10
 
-            print "exact isocurve:", self.isocurv
         if self.ss:
             return self.Ftrans
         else:
