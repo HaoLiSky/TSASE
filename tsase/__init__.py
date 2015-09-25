@@ -4,7 +4,6 @@ import calculators
 import tsase.io as io
 import data
 import neb
-import kdb
 import structure
 import constraints
 import md
