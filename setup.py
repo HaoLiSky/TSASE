@@ -18,7 +18,7 @@ for dirname, dirnames, filenames in os.walk('tsase'):
 
 package_dir = {'tsase': 'tsase'}
 
-scripts = ['bin/xyz', 'bin/tsase']
+scripts = ['bin/xyz']
 
 setup(name='tsase',
       version='1.0',
