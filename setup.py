@@ -18,6 +18,8 @@ for dirname, dirnames, filenames in os.walk('tsase'):
 
 package_dir = {'tsase': 'tsase'}
 
+scripts = ['bin/xyz', 'bin/tsase']
+
 setup(name='tsase',
       version='1.0',
       description='Library based upon ASE for transition state theory calculations.',
@@ -25,6 +27,7 @@ setup(name='tsase',
       author_email='henkelman@utexas.edu',
       url='http://www.henkelmanlab.org',
 #      packages=['tsase'],
+      scripts=scripts,
       packages=packages,
       cmdclass={'install' : CustomInstall},
      )
