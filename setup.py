@@ -20,6 +20,10 @@ package_dir = {'tsase': 'tsase'}
 
 scripts = ['bin/xyz']
 
+package_data = {'tsase': ['xyz/xyz.glade',
+                          'xyz/xyz.help',
+                          'xyz/*.png']}
+
 setup(name='tsase',
       version='1.0',
       description='Library based upon ASE for transition state theory calculations.',
@@ -29,5 +33,6 @@ setup(name='tsase',
 #      packages=['tsase'],
       scripts=scripts,
       packages=packages,
+      package_data=package_data,
       cmdclass={'install' : CustomInstall},
      )
