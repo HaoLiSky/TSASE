@@ -22,7 +22,10 @@ scripts = ['bin/xyz']
 
 package_data = {'tsase': ['xyz/xyz.glade',
                           'xyz/xyz.help',
-                          'xyz/*.png']}
+                          'xyz/*.png',
+                          'calculators/al/al_.so',
+                          'calculators/lj/lj_.so',
+                          'calculators/morse/morse_.so']}
 
 setup(name='tsase',
       version='1.0',
