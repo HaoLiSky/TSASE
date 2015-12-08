@@ -13,7 +13,7 @@ class SDLBFGS(Optimizer):
     This version of LBFGS is based off of ASE implementation with a few improvements 
     """
     def __init__(self, atoms, restart=None, logfile='-', trajectory=None,
-                 maxstep=None, memory=100, damping = 1.0):
+                 maxstep=0.2, memory=100, damping = 1.0):
         """
         Parameters:
 
