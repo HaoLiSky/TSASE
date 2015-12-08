@@ -88,8 +88,7 @@ TSASE holds the following local optimization routines:
 
 Basin Hopping:
 --------------
-    Below outlines the features of our basin hoppping 
-    ASEs implementation of Basin Hopping with some additional features. 
+    Below outlines the features of the basin hoppping implementation. 
 
     class ``tsase.optimizer.`` **BasinHopping** (self, atoms, temperature=100 * kB, optimizer=SDLBFGS, fmax=0.1,dr=0.1, adjust_cm=True, mss=0.2, minenergy=None, distribution='uniform', significant_structure = False, pushapart = 0.4,jumpmax=15)
 
