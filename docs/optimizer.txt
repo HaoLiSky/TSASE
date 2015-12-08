@@ -1,10 +1,10 @@
 
 .. _optimizer:
 
-Optimizers
-==========
+Local Optimizers
+================
 
-TSASE hold the following optimization routines:
+TSASE holds the following local optimization routines:
 
 Local Optimization:
 --------------------
@@ -80,3 +80,50 @@ MDMin:
 - **MushyBox**
 
    Relaxes a variable number of degrees of freedom which may include full cell relaxation
+
+Global Optimizers
+==================
+
+TSASE holds the following local optimization routines:
+
+Basin Hopping:
+--------------
+    Below outlines the features of our basin hoppping 
+    ASEs implementation of Basin Hopping with some additional features. 
+
+    class ``tsase.optimizer.`` **BasinHopping** (self, atoms, temperature=100 * kB, optimizer=SDLBFGS, fmax=0.1,dr=0.1, adjust_cm=True, mss=0.2, minenergy=None, distribution='uniform', significant_structure = False, pushapart = 0.4,jumpmax=15)
+
+    ** atoms ** : atoms object defining the PES
+
+    ** temperature ** : temperature in kT
+
+    ** optimizer ** : local optimizer 
+    
+    ** fmax ** : magnitude of the L2 norm used as the convergence criteria for local optimization
+
+    ** dr ** : maximum displacement in each degree of freedom for Monte Carlo trial moves
+
+    ** adjust_cm ** : fix the center of mass
+
+    ** mss ** : maximum stepsize for the local optimization
+
+    ** minenergy ** : the BH algorithm stops when a configuration if found with a lower potential energy than this value
+
+    ** distribution ** : the distribution used for the displacement of each atom 
+        
+        default: uniform
+
+        options: 'gaussian': the parameter dr serves as the standard deviation of the gaussian distribution
+                 'uniform': a uniform random number is selected in the interval [-dr,dr]
+                 'linear': a uniform random number is selected in the interval [-dr*d,dr*d] where d is the distance from the geometric center o a cluster
+                 'quadratic': a uniform random number is selected in the interval [-dr*d*d,dr*d*d] where d is the distance from the geometric center ofa cluster
+                  
+    ** significant_structure ** : displace from the optimized structures 
+
+    ** pushapart ** : push atoms apart until all atoms are no closer than this distance 
+
+    ** jumpmax ** : After this number of consecutive rejected jumps, accept the following move.  This allows for a more global search of the potential energy surface.  
+
+.. rubric:: References
+
+.. [#Wales97_5111] D. J. Wales, J. P. K. Doye, "Global Optimization by Basin-Hopping and the Lowest Energy Structures of Lennard-Jones Clusters Containing up to 110 Atoms", *J. Phys. Chem.* **101**,5111-5116 (1997).
