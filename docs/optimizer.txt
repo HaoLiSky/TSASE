@@ -114,9 +114,12 @@ Basin Hopping:
         default: uniform
 
         options: 'gaussian': the parameter dr serves as the standard deviation of the gaussian distribution
+
                  'uniform': a uniform random number is selected in the interval [-dr,dr]
-                 'linear': a uniform random number is selected in the interval [-dr*d,dr*d] where d is the distance from the geometric center o a cluster
-                 'quadratic': a uniform random number is selected in the interval [-dr*d*d,dr*d*d] where d is the distance from the geometric center ofa cluster
+
+                 'linear': a uniform random number is selected in the interval [-dr*d,dr*d] where d is the distance from the geometric center of a cluster
+
+                 'quadratic': a uniform random number is selected in the interval [-dr*d*d,dr*d*d] where d is the distance from the geometric center of a cluster
                   
     ** significant_structure ** : displace from the optimized structures 
 
