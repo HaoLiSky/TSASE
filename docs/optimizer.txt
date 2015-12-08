@@ -93,23 +93,23 @@ Basin Hopping:
 
     class ``tsase.optimizer.`` **BasinHopping** (self, atoms, temperature=100 * kB, optimizer=SDLBFGS, fmax=0.1,dr=0.1, adjust_cm=True, mss=0.2, minenergy=None, distribution='uniform', significant_structure = False, pushapart = 0.4,jumpmax=15)
 
-    ** atoms ** : atoms object defining the PES
+    **atoms** : atoms object defining the PES
 
-    ** temperature ** : temperature in kT
+    **temperature** : temperature in kT
 
-    ** optimizer ** : local optimizer 
+    **optimizer** : local optimizer 
     
-    ** fmax ** : magnitude of the L2 norm used as the convergence criteria for local optimization
+    **fmax** : magnitude of the L2 norm used as the convergence criteria for local optimization
 
-    ** dr ** : maximum displacement in each degree of freedom for Monte Carlo trial moves
+    **dr** : maximum displacement in each degree of freedom for Monte Carlo trial moves
 
-    ** adjust_cm ** : fix the center of mass
+    **adjust_cm** : fix the center of mass
 
-    ** mss ** : maximum stepsize for the local optimization
+    **mss** : maximum stepsize for the local optimization
 
-    ** minenergy ** : the BH algorithm stops when a configuration if found with a lower potential energy than this value
+    **minenergy** : the BH algorithm stops when a configuration if found with a lower potential energy than this value
 
-    ** distribution ** : the distribution used for the displacement of each atom 
+    **distribution** : the distribution used for the displacement of each atom 
         
         default: uniform
 
@@ -121,11 +121,11 @@ Basin Hopping:
 
                  'quadratic': a uniform random number is selected in the interval [-dr*d*d,dr*d*d] where d is the distance from the geometric center of a cluster
                   
-    ** significant_structure ** : displace from the optimized structures 
+    **significant_structure** : displace from the optimized structures 
 
-    ** pushapart ** : push atoms apart until all atoms are no closer than this distance 
+    **pushapart** : push atoms apart until all atoms are no closer than this distance 
 
-    ** jumpmax ** : After this number of consecutive rejected jumps, accept the following move.  This allows for a more global search of the potential energy surface.  
+    **jumpmax** : After this number of consecutive rejected jumps, accept the following move.  This allows for a more global search of the potential energy surface.  
 
 .. rubric:: References
 
