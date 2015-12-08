@@ -10,7 +10,7 @@ import tsase
 import sys
 
 class BasinHopping(Dynamics):
-    """Basin hopping algorythm.
+    """Basin hopping algorithm.
 
     After Wales and Doye, J. Phys. Chem. A, vol 101 (1997) 5111-5116
 
@@ -21,10 +21,10 @@ class BasinHopping(Dynamics):
 
     def __init__(self, atoms,
                  temperature=100 * kB,
-                 optimizer=FIRE,
+                 optimizer=SDLBFGS,
                  fmax=0.1,
                  dr=0.1,
-                 logfile='-', 
+                 logfile=None, 
                  trajectory=None,
                  optimizer_logfile='-',
                  local_minima_trajectory='local_minima.con',
@@ -38,7 +38,7 @@ class BasinHopping(Dynamics):
                  adjust_fraction = 0.05,
                  significant_structure = False,
                  pushapart = 0.4,
-                 jumpmax=15
+                 jumpmax=None
                  ):
         Dynamics.__init__(self, atoms, logfile, trajectory)
         self.kT = temperature
