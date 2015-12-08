@@ -6,8 +6,8 @@ Local Optimizers
 
 TSASE holds the following local optimization routines:
 
-Local Optimization:
---------------------
+Local Optimization
+------------------
 
    The local optimization algorithms available in TSASE are: SDLBFGS and MDmin
 
@@ -65,8 +65,8 @@ Steepest Descent Limited memory BFGS
 	min = tsase.optimize.SDLBFGS(p, maxstep=0.1, memory=100)
 	min.run() 
 
-MDMin:
-------
+MDMin
+-----
     
     ASE implementation of MDMin `(See ASE for details) <https://wiki.fysik.dtu.dk/ase/ase/optimize.html>`_ with the additional option to have a maxmimum step distance. 
 
@@ -84,10 +84,10 @@ MDMin:
 Global Optimizers
 ==================
 
-TSASE holds the following local optimization routines:
+TSASE holds the following global optimization routines:
 
-Basin Hopping:
---------------
+Basin Hopping
+-------------
     Below outlines the features of the basin hoppping implementation. 
 
     class ``tsase.optimizer.`` **BasinHopping** (self, atoms, temperature=100 * kB, optimizer=SDLBFGS, fmax=0.1,dr=0.1, adjust_cm=True, mss=0.2, minenergy=None, distribution='uniform', significant_structure = False, pushapart = 0.4,jumpmax=15)

@@ -14,8 +14,8 @@ The TST dividing surface is optimized by a cycle of machine learning and refinem
 molecular dynamics (MD). More Implementation of details with citation.
 [#Pozun12_174101]_
 
-Usage:
-======
+Usage
+=====
 
 The function below takes a labeled training set of two classes (e.g. reactant and products) and applies the two
 class support vecort machine algorithm.  Parameters are selected using cross validation, which requires a test training set.  
@@ -71,8 +71,8 @@ potential for the hyperdynamics. By running high temperature MD constrained to a
 find a hypersurface enclosing the region where the system is most probable.  A bias potential is constructed 
 by finding the closest distance to this hypersurface. 
 
-Usage:
-======
+Usage
+=====
 
 Given a training set obtained from high temperature MD the following function can be used to find the OCSVM hypersurface:
 	
