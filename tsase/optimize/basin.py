@@ -24,7 +24,7 @@ class BasinHopping(Dynamics):
                  optimizer=SDLBFGS,
                  fmax=0.1,
                  dr=0.1,
-                 logfile=None, 
+                 logfile='-', 
                  trajectory=None,
                  optimizer_logfile='-',
                  local_minima_trajectory='local_minima.con',
@@ -60,7 +60,7 @@ class BasinHopping(Dynamics):
         self.adjust_every = adjust_every
         self.target_ratio = target_ratio
         self.adjust_fraction = adjust_fraction
-        self.significant_structure = True
+        self.significant_structure = significant_structure
         self.pushapart = pushapart
         self.jumpmax = jumpmax
         self.mss = mss
@@ -68,7 +68,7 @@ class BasinHopping(Dynamics):
 
     def initialize(self):
         self.positions = 0.0 * self.atoms.get_positions()
-        self.Emin = self.get_energy(self.atoms.get_positions()) or 1.e32
+        self.Emin = self.get_energy(self.atoms.get_positions()) or 1.e32 
         self.rmin = self.atoms.get_positions()
         self.positions = self.atoms.get_positions()
         self.call_observers()
@@ -76,13 +76,14 @@ class BasinHopping(Dynamics):
                 
     def run(self, steps):
         """Hop the basins for defined number of steps."""
-
+        self.steps = 0
         ro = self.positions
         Eo = self.get_energy(ro)
         acceptnum = 0
         rejectnum = 0
         for step in range(steps):
             En = None
+            self.steps += 1
             while En is None:
                 rn = self.move(ro)
                 En = self.get_energy(rn)
@@ -138,20 +139,19 @@ class BasinHopping(Dynamics):
             disp = np.zeros(np.shape(atoms.get_positions()))
             for i in range(len(disp)):
                 maxdist = self.dr*distgeo[i]
-                disp[i] = np.random.normal(0,maxdist,3)
-            #    disp[i] = np.random.uniform(-maxdist,maxdist,3)
+            #    disp[i] = np.random.normal(0,maxdist,3)
+                disp[i] = np.random.uniform(-maxdist,maxdist,3)
         elif self.distribution == 'quadratic':
             distgeo = self.get_dist_geo_center()
             disp = np.zeros(np.shape(atoms.get_positions()))
             for i in range(len(disp)):
                 maxdist = self.dr*distgeo[i]*distgeo[i]
-                disp[i] = np.random.normal(0,maxdist,3)
-            #    disp[i] = np.random.uniform(-maxdist,maxdist,3)
+            #    disp[i] = np.random.normal(0,maxdist,3)
+                disp[i] = np.random.uniform(-maxdist,maxdist,3)
         else:
             disp = np.random.uniform(-1*self.dr, self.dr, (len(atoms), 3))
         if self.significant_structure == True:
-            ro,reng = self.get_minimum()
-            rn = ro +disp
+            rn = self.local_min_pos + disp
         else:
             rn = ro + disp
         rn = self.push_apart(rn)
@@ -168,6 +168,7 @@ class BasinHopping(Dynamics):
         """Return minimal energy and configuration."""
         atoms = self.atoms.copy()
         atoms.set_positions(self.rmin)
+        print 'get_minimum',self.Emin
         return self.Emin, atoms
 
     def get_energy(self, positions):
@@ -177,17 +178,20 @@ class BasinHopping(Dynamics):
             self.atoms.set_positions(positions)
  
             try:
-                opt = self.optimizer(self.atoms, 
-                                     logfile=self.optimizer_logfile,
-                                     maxstep=self.mss)
+                opt = self.optimizer(self.atoms,
+                                         logfile=self.optimizer_logfile,
+                                        maxmove=self.mss)
+                #    opt = self.optimizer(self.atoms, 
+                #                     logfile=self.optimizer_logfile,
+                #                     maxstep=self.mss)
                 opt.run(fmax=self.fmax)
-                print self.atoms.get_potential_energy()
                 self.energy = self.atoms.get_potential_energy()
+                self.local_min_pos = self.atoms.get_positions()
             except:
                 # Something went wrong.
                 # In GPAW the atoms are probably to near to each other.
                 return None
-            
+        
         return self.energy
 
     def push_apart(self,positions):
