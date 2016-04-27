@@ -180,7 +180,7 @@ class BasinHopping(Dynamics):
             try:
                 opt = self.optimizer(self.atoms,
                                          logfile=self.optimizer_logfile,
-                                        maxmove=self.mss)
+                                        maxstep=self.mss)
                 #    opt = self.optimizer(self.atoms, 
                 #                     logfile=self.optimizer_logfile,
                 #                     maxstep=self.mss)
