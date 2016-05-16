@@ -36,7 +36,8 @@ class BasinHopping(Dynamics):
                  adjust_every = None,
                  target_ratio = 0.5,
                  adjust_fraction = 0.05,
-                 significant_structure = False,
+                 significant_structure = False,  # displace from minimum at each move
+                 significant_structure2 = False, # displace from global minimum found so far at each move
                  pushapart = 0.4,
                  jumpmax=None
                  ):
@@ -61,6 +62,7 @@ class BasinHopping(Dynamics):
         self.target_ratio = target_ratio
         self.adjust_fraction = adjust_fraction
         self.significant_structure = significant_structure
+        self.significant_structure2 = significant_structure2
         self.pushapart = pushapart
         self.jumpmax = jumpmax
         self.mss = mss
@@ -80,6 +82,7 @@ class BasinHopping(Dynamics):
         ro = self.positions
         Eo = self.get_energy(ro)
         acceptnum = 0
+        recentaccept = 0
         rejectnum = 0
         for step in range(steps):
             En = None
@@ -101,8 +104,12 @@ class BasinHopping(Dynamics):
                 rejectnum = 0
             if accept:
                 acceptnum += 1.
+                recentaccept += 1.
                 rejectnum = 0
-                ro = rn.copy()
+                if self.significant_structure2 == True:
+                    ro = self.local_min_pos.copy()
+                else:
+                    ro = rn.copy()
                 Eo = En
                 if self.lm_trajectory is not None:
                     tsase.io.write_con(self.lm_trajectory,self.atoms,w='a')
@@ -113,7 +120,9 @@ class BasinHopping(Dynamics):
                     break
             if self.adjust_step == True:
                 if step % self.adjust_every == 0:
-                    ratio = float(acceptnum)/float(self.adjust_every)
+                    ratio = float(acceptnum)/float(self.steps)
+                    ratio = float(recentaccept)/float(self.adjust_every)
+                    recentaccept = 0.
                     if ratio > self.target_ratio:
                        self.dr = self.dr * (1+self.adjust_fraction)
                     elif ratio < self.target_ratio:
@@ -152,6 +161,9 @@ class BasinHopping(Dynamics):
             disp = np.random.uniform(-1*self.dr, self.dr, (len(atoms), 3))
         if self.significant_structure == True:
             rn = self.local_min_pos + disp
+        elif self.significant_strucure2 == True:
+            ro,reng = self.get_minimum()
+            rn = ro + disp
         else:
             rn = ro + disp
         rn = self.push_apart(rn)
