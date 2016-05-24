@@ -6,6 +6,7 @@ Cell optimization class
 
 from ase import *
 from ase.io import read,write
+from ase import units
 import numpy as np
 
 class mushybox(Atoms):
