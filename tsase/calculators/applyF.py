@@ -45,7 +45,7 @@ class applyF():
     def get_potential_energy(self, atoms):
         e    = self.calc.get_potential_energy(atoms)
         r    = atoms.positions[np.array(self.pullatoms)]
-        e   += np.vdot(self.pullF, r)
+        e   -= np.vdot(self.pullF, r)
         #for i in range(len(self.pullatoms)):
         #    atomnum = self.pullatoms[i]
         #    ri      = atoms.positions[atomnum]

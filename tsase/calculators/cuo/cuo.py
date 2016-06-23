@@ -21,7 +21,8 @@ def cuo(cmd = None, generation=3, tmp_dir = None, tolqeq = 0.01):
                   'pair_coeff': ['* * %s Cu O' % (files[0])],
                   'atom_style':'charge',
                   'mass':['1 64','2 16'],
-                  'fix': '1 all qeq/comb 1 ' + str(tolqeq) + ' file log_qeq'}
+                  #'fix': '1 all qeq/comb 1 ' + str(tolqeq) + ' file log_qeq'}
+                  'fix': '1 all qeq/comb 1.0 ' + str(tolqeq) + ' nevery 1 verlet maxloop 200'}
     if tmp_dir == None:
         calc = LAMMPS(parameters = parameters, files = files)
     else:
