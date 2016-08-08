@@ -137,3 +137,16 @@ Basin Hopping
 .. rubric:: References
 
 .. [#Wales97_5111] D. J. Wales, J. P. K. Doye, "Global Optimization by Basin-Hopping and the Lowest Energy Structures of Lennard-Jones Clusters Containing up to 110 Atoms", *J. Phys. Chem.* **101**,5111-5116 (1997).
+
+
+Minima Hopping
+--------------
+    Below outlines the features of the minima hoppping implementation.
+
+    class ``tsase.optimizer.``  **MinimaHopping**(self, atoms, T0, beta1, beta2, beta3, Ediff0, alpha1, alpha2, mdmin, logfile, minima_threshold, timestep, optimizer, minima_traj, fmax, dimer_a, dimer_d, dimer_steps)
+    
+    **atoms** : atoms object defining the PES
+
+.. rubric:: References
+.. [#Goedecker04_9911] S. Goedecker, "Minima hopping: An efficient search method for the global minimum of the potential energy surface of complex molecular systems", *J. Chem. Phys.* **120**, 9911 (2004).
+
