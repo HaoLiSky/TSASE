@@ -134,7 +134,6 @@ Basin Hopping
 
     **adjust_fraction**: the fraction by which to change the step size in order to meet the target acceptance ratio
 
-.. rubric:: References
 
 .. [#Wales97_5111] D. J. Wales, J. P. K. Doye, "Global Optimization by Basin-Hopping and the Lowest Energy Structures of Lennard-Jones Clusters Containing up to 110 Atoms", *J. Phys. Chem.* **101**,5111-5116 (1997).
 
@@ -148,5 +147,6 @@ Minima Hopping
     **atoms** : atoms object defining the PES
 
 .. rubric:: References
+.. [#Wales97_5111] D. J. Wales, J. P. K. Doye, "Global Optimization by Basin-Hopping and the Lowest Energy Structures of Lennard-Jones Clusters Containing up to 110 Atoms", *J. Phys. Chem.* **101**,5111-5116 (1997).
 .. [#Goedecker04_9911] S. Goedecker, "Minima hopping: An efficient search method for the global minimum of the potential energy surface of complex molecular systems", *J. Chem. Phys.* **120**, 9911 (2004).
 
