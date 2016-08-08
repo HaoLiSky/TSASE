@@ -161,7 +161,7 @@ class BasinHopping(Dynamics):
             disp = np.random.uniform(-1*self.dr, self.dr, (len(atoms), 3))
         if self.significant_structure == True:
             rn = self.local_min_pos + disp
-        elif self.significant_strucure2 == True:
+        elif self.significant_structure2 == True:
             ro,reng = self.get_minimum()
             rn = ro + disp
         else:
