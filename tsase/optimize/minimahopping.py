@@ -26,7 +26,7 @@ class MinimaHopping:
         'mdmin': 2,  # criteria to stop MD simulation (no. of minima)
         'logfile': 'hop.log',  # text log
         'minima_threshold': 0.01,  # A, threshold for identical configs
-        'timestep': 1.0,  # fs, timestep for MD simulations
+        'timestep': 0.1,  # fs, timestep for MD simulations
         'optimizer': QuasiNewton,  # local optimizer to use
         'minima_traj': 'minima.traj',  # storage file for minima list
         'fmax': 0.05,  # eV/A, max force for optimizations
