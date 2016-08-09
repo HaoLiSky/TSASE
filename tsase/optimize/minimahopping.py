@@ -384,8 +384,10 @@ class MinimaHopping:
         xi = np.random.standard_normal((len(masses), 3))
         if N is not None:
             xi = N
+            momenta = 3 * len(masses) * xi * np.sqrt(2 * masses * temp)[:, np.newaxis]
+        else:
+            momenta = xi * np.sqrt(masses * temp)[:, np.newaxis]
         communicator.broadcast(xi, 0)
-        momenta = xi * np.sqrt(masses * temp)[:, np.newaxis]
         return momenta
 
 
