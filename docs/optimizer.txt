@@ -139,11 +139,45 @@ Minima Hopping
 --------------
     Below outlines the features of the minima hoppping implementation.
 
-    class ``tsase.optimizer.``  **MinimaHopping**(self, atoms, T0, beta1, beta2, beta3, Ediff0, alpha1, alpha2, mdmin, logfile, minima_threshold, timestep, optimizer, minima_traj, fmax, dimer_a, dimer_d, dimer_steps)
+    class ``tsase.optimizer.`` **MinimaHopping** (self, atoms, T0, beta1, beta2, beta3, Ediff0, alpha1, alpha2, mdmin, logfile, minima_threshold, timestep, optimizer, minima_traj, fmax, dimer_a, dimer_d, dimer_steps)
     
     **atoms** : atoms object defining the PES
+
+    **T0** : 1000. K, initial temperature
+
+    **beta1** : 1.04, temperature adjustment parameter
+
+    **beta2** : 1.04, temperature adjustment parameter
+
+    **beta3** : 1./1.04, temperature adjustment parameter
+
+    **Ediff0** : 0.5 eV, initial energy acceptance threshold
+
+    **alpha1** : 0.98, energy threshold adjustment parameter
+
+    **alpha2** : 1./0.98, energy threshold adjustment parameter
+
+    **mdmin** : 2, number of minima to stop MD simulation
+
+    **logfile** : 'hop.log', text log
+
+    **minima_threshold** : 0.01 Å, threshold for identical configurations
+
+    **timestep** : 0.1 fs, timestep for MD simulation
+
+    **optimizer** : QuasiNewton, local optimizer
+
+    **minima_traj** : 'minima.traj', storage file for accepted minima
+
+    **fmax** 0.05 eV/Å, max force for optimizations
+
+    **dimer_a** : 0.001, dimer ajustment parameter
+
+    **dimer_d** : 0.01, dimer adjustment parameter
+
+    **dimer_steps** : 40, number of dimer iterations
 
 .. rubric:: References
 .. [#Wales97_5111] D. J. Wales, J. P. K. Doye, "Global Optimization by Basin-Hopping and the Lowest Energy Structures of Lennard-Jones Clusters Containing up to 110 Atoms", *J. Phys. Chem.* **101**,5111-5116 (1997).
 .. [#Goedecker04_9911] S. Goedecker, "Minima hopping: An efficient search method for the global minimum of the potential energy surface of complex molecular systems", *J. Chem. Phys.* **120**, 9911 (2004).
-
+.. [#Shonborn09_144108] S. Shonborn, S. Goedecker, S. Roy, and A. Oganov, "The performance of minima hopping and evolutionary algorithms for cluster structure prediction", *J. Chem. Phys.* **130**, 144108 (2009). 
