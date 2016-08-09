@@ -177,6 +177,18 @@ Minima Hopping
 
     **dimer_steps** : 40, number of dimer iterations
 
+    Below is an example script of how to use this optimizer:
+
+    .. code-block:: none
+	
+	from tsase.optimize.minimahopping import MinimaHopping
+ 
+        lj = tsase.calculators.lj(cutoff=35.0)
+        system = tsase.io.read_con('lj38-cluster.con')
+        system.set_calculator(lj)
+	opt = MinimaHopping(atoms=system)
+	opt(totalsteps=10000, maxtemp=200000, minEnergy=-173.918427)
+
 .. rubric:: References
 .. [#Wales97_5111] D. J. Wales, J. P. K. Doye, "Global Optimization by Basin-Hopping and the Lowest Energy Structures of Lennard-Jones Clusters Containing up to 110 Atoms", *J. Phys. Chem.* **101**,5111-5116 (1997).
 .. [#Goedecker04_9911] S. Goedecker, "Minima hopping: An efficient search method for the global minimum of the potential energy surface of complex molecular systems", *J. Chem. Phys.* **120**, 9911 (2004).
