@@ -145,6 +145,12 @@ inp = """
 """
 
 def main():
+    """add the following line in .bash_profile and source the .bash_profile to
+       define the varialbe "ASE_CP2K_COMMAND": 
+       export ASE_CP2K_COMMAND="mpiexec.hydra -n NCORES cp2k_shell.popt"
+       where NCORES is the total number of cores used for calculation.
+       mpiexec.hydra is the mpi command used for the parrallel running.
+    """
     if "ASE_CP2K_COMMAND" not in os.environ:
         raise NotAvailable('$ASE_CP2K_COMMAND not defined')
 
@@ -189,7 +195,6 @@ def main():
 #Uncomment to use fire optimization algorithm
 #    opt = neb.fire_ssneb(band, maxmove =0.05, dtmax = 0.03, dt=0.03)
     opt.minimize(forceConverged=0.02, maxIterations = 200)
-#    energy = slab_from_file.get_potential_energy()
 
 
 main()
