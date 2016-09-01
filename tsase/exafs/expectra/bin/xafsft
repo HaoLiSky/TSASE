@@ -1,0 +1,53 @@
+#!/usr/bin/env python
+import argparse
+
+from expectra.io import read_chi, write_chir
+from expectra.feff import load_chi_dat
+from expectra.fft import xafsft, hanning_window
+
+import numpy
+
+def main():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--kmin', type=float, default=2.0)
+    parser.add_argument('--kmax', type=float, default=18.0)
+    parser.add_argument('--kweight', type=int, default=0)
+    parser.add_argument('--dk', type=float, default=1.0)
+    parser.add_argument('--rmin', type=float, default=0.0)
+    parser.add_argument('--rmax', type=float, default=8.0)
+    parser.add_argument('--ft-part', type=str, default='mag')
+
+    parser.add_argument('--output', '-o', type=str, default='exafs.chir')
+
+    parser.add_argument('chis', metavar='exafs.chi', nargs='+')
+
+    args = parser.parse_args()
+
+    chi_r_total = None
+    for chi in args.chis:
+
+        try:
+            k, chi = read_chi(chi) 
+        except:
+            k, chi = load_chi_dat(chi)
+
+        window = hanning_window(k, args.kmin, args.kmax, args.dk)
+        chi *= window
+
+        r, chi_r = xafsft(args.rmin, args.rmax, k, chi, args.kweight)
+        if chi_r_total == None:
+            chi_r_total = chi_r
+        else:
+            chi_r_total += chi_r
+    chi_r_total /= float(len(args.chis))
+
+    if args.ft_part[0] == 'm':
+        write_chir(args.output, r, numpy.abs(chi_r_total))
+    elif args.ft_part[0] == 'i':
+        write_chir(args.output, r, numpy.imag(chi_r_total))
+    elif args.ft_part[0] == 'r':
+        write_chir(args.output, r, numpy.real(chi_r_total))
+
+if __name__ == '__main__':
+    main()
