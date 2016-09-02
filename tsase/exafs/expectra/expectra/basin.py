@@ -26,7 +26,8 @@ class BasinHopping(Dynamics):
                  trajectory='lowest.traj',
                  optimizer_logfile='-',
                  local_minima_trajectory='local_minima.traj',
-                 adjust_cm=True):
+                 adjust_cm=True
+                 pseudo_pot):
         """Parameters:
 
         atoms: Atoms object
@@ -38,6 +39,7 @@ class BasinHopping(Dynamics):
         logfile: file object or str
             If *logfile* is a string, a file with that name will be opened.
             Use '-' for stdout.
+        pseudo_pot: pseudo potential defined
         """
         Dynamics.__init__(self, atoms, logfile, trajectory)
         self.kT = temperature

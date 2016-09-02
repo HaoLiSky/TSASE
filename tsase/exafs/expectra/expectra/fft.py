@@ -13,6 +13,27 @@ def hanning_window(k, kmin, kmax, dk):
 
     return np.piecewise(k, condlist, funclist) 
 
+#pick out a range of chi values by set unwanted values as 'zero'
+def hanning_window_origin(k, kmin, kmax, dk):
+    condlist = []   #booleen list
+    #if k[i] is in the range, condlist=true, otherwise, it will be False
+    condlist.append((kmin-dk/2.0 <= k) & (k <  kmin+dk/2.0))
+    condlist.append((kmin+dk/2.0 <= k) & (k <= kmax-dk/2.0))
+    condlist.append((kmax-dk/2.0 <= k) & (k <= kmax+dk/2.0))
+
+    funclist = []
+
+    #the functions corresponding to each condlist booleen. 
+    funclist.append(1.0)
+    funclist.append(1.0)
+    funclist.append(1.0)
+    #the extra function which will be used whereever condlist is False
+    funclist.append(0.0)
+
+    #piecewise: set funlist values based on condlist as descripted above and
+    #return the values.
+    return numpy.piecewise(k, condlist, funclist) 
+
 def xafsft(r_min, r_max, xk, ccpath, kweight=0):
     ccpath *= xk**kweight
     delta_k = 0.05
