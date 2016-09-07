@@ -16,9 +16,8 @@ The ssneb class performs force projections for each image along the band. It bec
 Two optimizers are available for ssneb optimization: fire_ssneb and qm_ssneb.
 
 
-class ssneb(self, p1, p2, numImages = 7, k = 5.0, tangent = "new",       
-            dneb = False, dnebOrg = False, method = 'normal',      
-            onlyci = False, weight = 1, parallel = False, ss = True,
+class ssneb(self, p1, p2, numImages = 7, k = 5.0, tangent = "new",  dneb = False, dnebOrg = False, 
+            method = 'normal', onlyci = False, weight = 1, parallel = False, ss = True,
             express = numpy.zeros((3,3)), fixstrain = numpy.ones((3,3))):
 
            **Notice** : The cells of the initial and final states (p1 and p2) must be in the lower triangular form to avoid rigid rotation, where the first vector is along the x axis and the second vector is on the xoy plane.
@@ -31,20 +30,18 @@ class ssneb(self, p1, p2, numImages = 7, k = 5.0, tangent = "new",
             
            **k** :         the spring force constant
 
-           **tangent** :   the tangent method to use, "new" for the new tangent,
-                           anything else for the old tangent
+           **tangent** :   "new" for the new tangent, anything else for the old tangent
 
            **dneb** :      set to true to use the double-nudging method
 
            **dnebOrg** :   set to true to use the original double-nudging method
 
-           **method** :    "ci" for the climbing image method, 
-                           anything else for normal NEB method 
+           **method** :    "ci" for the climbing image method, anything else for normal NEB method 
 
            **onlyci** :    boolean, if true only the climbing image is alloweed to move
 
            **ss** :        boolean, solid-state neb or regular neb. 
-                           If True, the stresses need to be provided by the calculator.
+                           If true, the stresses need to be provided by the calculator.
 
            **express** :   3*3 matrix, external stress tensor. 
                            Rows are the stress vectors applied to the corresponding cell vectors. 
@@ -56,7 +53,7 @@ class ssneb(self, p1, p2, numImages = 7, k = 5.0, tangent = "new",
            **weight**  :   extra weight to put on the cell degrees of freedom.
 
            **parallel** :  bollean, parallelize over images or not
-                           If True, force evaluation of each image will run on one processor. The communication between images is realized by mpi4py. The command to run the python script should be:
+                           If true, force evaluation of each image will run on one processor. The communication between images is realized by mpi4py. The command to run the python script should be:
 
                            mpirun -np N python filename.py 
 
