@@ -21,6 +21,8 @@ class ssneb(self, p1, p2, numImages = 7, k = 5.0, tangent = "new",
             onlyci = False, weight = 1, parallel = False, ss = True,
             express = numpy.zeros((3,3))):
 
+           **Notice** : The cells of the initial and final states (p1 and p2) must be in the lower triangular form, where the first vector is along the x axis and the second vector is on the xoy plane.
+
            **p1** :        one endpoint of the path
 
            **p2** :        the other endpoint of the path
@@ -45,10 +47,23 @@ class ssneb(self, p1, p2, numImages = 7, k = 5.0, tangent = "new",
                            If True, the stresses need to be provided by the calculator.
 
            **express** :   3*3 matrix, external stress tensor. 
-                           Columns are the stress vectors. 
+                           Rows are the stress vectors applied to the corresponding cell vectors. 
                            Needs to be in lower triangular form to avoid rigid rotation. 
 
+           **fixstrain** : 3*3 matrix as the cell matrix
+                           zero fixes strain at the correspondign direction.
+
            **weight**  :   extra weight to put on the cell degrees of freedom.
+
+           **parallel** :  bollean, parallelize over images or not
+                           If True, force evaluation of each image will run on one processor. The communication between images is realized by mpi4py. The command to run the python script should be:
+                           mpirun -np N python filename.py
+                           where N equals the number of intermedia images, excluding the two end pionts.
+                           This scheme is suitable for empirical potentials.
+                           If the calculator is a DFT code, the user should
+                           refer to pssneb.py where the parallelization over
+                           images is through python pool and each image
+                           invokes mpirun when calling the calculator.
 
 Example:
 
