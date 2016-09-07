@@ -19,9 +19,9 @@ Two optimizers are available for ssneb optimization: fire_ssneb and qm_ssneb.
 class ssneb(self, p1, p2, numImages = 7, k = 5.0, tangent = "new",       
             dneb = False, dnebOrg = False, method = 'normal',      
             onlyci = False, weight = 1, parallel = False, ss = True,
-            express = numpy.zeros((3,3))):
+            express = numpy.zeros((3,3)), fixstrain = numpy.ones((3,3))):
 
-           **Notice** : The cells of the initial and final states (p1 and p2) must be in the lower triangular form, where the first vector is along the x axis and the second vector is on the xoy plane.
+           **Notice** : The cells of the initial and final states (p1 and p2) must be in the lower triangular form to avoid rigid rotation, where the first vector is along the x axis and the second vector is on the xoy plane.
 
            **p1** :        one endpoint of the path
 
@@ -65,7 +65,7 @@ class ssneb(self, p1, p2, numImages = 7, k = 5.0, tangent = "new",
                            If the calculator is a DFT code, the user should
                            refer to pssneb.py where the parallelization over
                            images is through python pool and each image
-                           invokes mpirun when calling the calculator.
+                           invokes mpirun on a designated host when calling the calculator.
 
 Example:
 
