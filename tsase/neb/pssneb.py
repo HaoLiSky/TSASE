@@ -1,10 +1,12 @@
 """
 The parallel version of generalized nudged elastic path (ssneb) module.
-Multi processing scheme is employed here. When evaluating the force, each process deals with one image.
-For mpirun and vasp, the execution in run_vasp.py should be like:
+Multi processing scheme is employed here. When evaluating the force, each process deals with one image 
+and invokes mpirun on the designated host.
+For vasp, the execution in run_vasp.py should be like:
 mpirun -np 8 --hostfile my_hosts vasp
-Only works for SGE job system now, because my_hosts is greped from  $PE_HOSTFILE 
-The number of hosts used should be equal to the number of images.
+Here "8" is the number of cores per host (node). The rest don't need to be changed.
+The number of hosts allocated should be equal to the number of images when submitting the job.
+Only works for SGE job system now, because my_hosts is greped from  $PE_HOSTFILE.
 """
 
 import numpy
@@ -15,38 +17,6 @@ from util import vmag, vunit, vproj, vdot, sPBC
 from ase import atoms
 from multiprocessing import Pool
 
-def calpot((imgi,p,host)):
-        # making a directory for each image, which is nessary for vasp to read last step's WAVECAR  
-        # also, it is good to prevent overwriting files for parallelizaiton over images
-        fdname = str('0'+str(imgi))
-        if not os.path.exists(fdname): os.mkdir(fdname)
-        os.chdir(fdname)
-        hostfile = open('my_hosts','w')
-        #hostfile.write(self.hosts[imgi]+' slots=8 \n')
-        hostfile.write(host+' \n')
-        hostfile.close()
-        p.u = p.get_potential_energy()
-        p.f = p.get_forces()
-        stt = p.get_stress()
-        os.chdir("../")
-        p.icell = numpy.linalg.inv(p.get_cell())
-        p.vdir  = p.get_scaled_positions()
-        try:
-            p.st
-        except:
-            p.st = numpy.zeros((3,3))
-        vol = p.get_volume()*(-1)
-        p.st[0][0] = stt[0] * vol
-        p.st[1][1] = stt[1] * vol
-        p.st[2][2] = stt[2] * vol
-        p.st[2][1] = stt[3] * vol
-        p.st[2][0] = stt[4] * vol
-        p.st[1][0] = stt[5] * vol
-        p.st[0][1] = 0.0
-        p.st[0][2] = 0.0
-        p.st[1][2] = 0.0
-        return p
-
 
 class pssneb:
     """
@@ -54,7 +24,9 @@ class pssneb:
     """
     def __init__(self, p1, p2, numImages = 7, k = 5.0, tangent = "new",       \
                  dneb = False, dnebOrg = False, method = 'normal',            \
-                 onlyci = False, weight = 1, parallel = False):
+                 onlyci = False, weight = 1, ss = True,                       \
+                 express = numpy.zeros((3,3)), fixstrain = numpy.ones((3,3))):
+
         """
         The neb constructor.
         Parameters:
@@ -69,6 +41,11 @@ class pssneb:
             dnebOrg..... set to true to use the original double-nudging method
             method...... "ci" for the climbing image method, anything else for
                          normal NEB method 
+            ss.......... boolean, solid-state dimer or regular dimer 
+            express..... external press, 3*3 lower triangular matrix in the 
+                         unit of GPa
+            fixstrain... 3*3 matrix as express. 
+                         0 fixes strain at the corresponding direction
         """
 
         self.numImages = numImages
@@ -79,7 +56,15 @@ class pssneb:
         self.method = method
         self.onlyci = onlyci
         self.weight = weight 
-        self.parallel = parallel 
+        self.ss        = ss
+        self.express   = express * units.GPa
+        if express[0][1]**2+express[0][2]**2+express[1][2]**2 > 1e-3:
+           express[0][1] = 0
+           express[0][2] = 0
+           express[1][2] = 0
+           if (not self.parallel) or (self.parallel and self.rank == 0):
+               print "warning: xy, xz, yz components of the external pressure will be set to zero"
+        self.fixstrain = fixstrain
 
         #check the orientation of the cell, make sure a is along x, b is on xoy plane
         for p in [p1,p2]:
@@ -136,10 +121,49 @@ class pssneb:
         pool = Pool(processes=2)              # start several worker processes
         img0 = (0, self.path[0], self.hosts[0])
         img1 = (n, self.path[n], self.hosts[1])
-        self.path[0], self.path[n] = pool.map(calpot, [img0, img1])         
+        self.path[0], self.path[n] = pool.map(self.calpot, [img0, img1])         
         pool.close()
         self.path[0].cellt  = self.path[0].get_cell() * self.jacobian
         self.path[n].cellt  = self.path[n].get_cell() * self.jacobian
+
+    def calpot((imgi,p,host)):
+        # making a directory for each image, which is nessary for vasp to read last step's WAVECAR  
+        # also, it is good to prevent overwriting files for parallelizaiton over images
+        fdname = str('0'+str(imgi))
+        if not os.path.exists(fdname): os.mkdir(fdname)
+        os.chdir(fdname)
+        hostfile = open('my_hosts','w')
+        #hostfile.write(self.hosts[imgi]+' slots=8 \n')
+        hostfile.write(host+' \n')
+        hostfile.close()
+        p.u = p.get_potential_energy()
+        p.f = p.get_forces()
+        # solid-state or not
+        if self.ss:
+            stt = p.get_stress()
+        os.chdir("../")
+        p.icell = numpy.linalg.inv(p.get_cell())
+        p.vdir  = p.get_scaled_positions()
+
+        try:
+            p.st
+        except:
+            p.st = numpy.zeros((3,3))
+        # solid-state or not
+        if self.ss:
+            vol = p.get_volume()*(-1)
+            p.st[0][0] = stt[0] * vol
+            p.st[1][1] = stt[1] * vol
+            p.st[2][2] = stt[2] * vol
+            p.st[2][1] = stt[3] * vol
+            p.st[2][0] = stt[4] * vol
+            p.st[1][0] = stt[5] * vol
+            p.st[0][1] = 0.0
+            p.st[0][2] = 0.0
+            p.st[1][2] = 0.0
+            p.st      -= self.express * (-1)*vol
+            p.st      *= self.fixstrain 
+        return p
 
     def forces(self):
         """
@@ -153,7 +177,7 @@ class pssneb:
         pool = Pool(processes=self.numImages-2)              # start several worker processes
         # writing input and do the calculation in images' directories respectly
         mid_images = zip(range(1,self.numImages-1), self.path[1:-1], self.hosts)
-        self.path[1:-1] = pool.map(calpot, mid_images)         
+        self.path[1:-1] = pool.map(self.calpot, mid_images)         
         pool.close()
 
         self.Umax  = self.path[0].u
