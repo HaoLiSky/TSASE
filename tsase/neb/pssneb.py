@@ -7,6 +7,8 @@ mpirun -np 8 --hostfile my_hosts vasp
 Here "8" is the number of cores per host (node). The rest don't need to be changed.
 The number of hosts allocated should be equal to the number of images when submitting the job.
 Only works for SGE job system now, because my_hosts is greped from  $PE_HOSTFILE.
+Parallelizing over images might be less efficient sometimes because of the unbalanced work load between images.
+On clusters with infiniband connections, it is recommended to use the serial version, ssneb.py
 """
 
 import numpy
