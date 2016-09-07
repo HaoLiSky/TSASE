@@ -57,7 +57,9 @@ class ssneb(self, p1, p2, numImages = 7, k = 5.0, tangent = "new",
 
            **parallel** :  bollean, parallelize over images or not
                            If True, force evaluation of each image will run on one processor. The communication between images is realized by mpi4py. The command to run the python script should be:
-                           mpirun -np N python filename.py
+
+                           mpirun -np N python filename.py 
+
                            where N equals the number of intermedia images, excluding the two end pionts.
                            This scheme is suitable for empirical potentials.
                            If the calculator is a DFT code, the user should
