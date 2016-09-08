@@ -1,19 +1,15 @@
 #!/usr/bin/env python
 
-import numpy
-
-from expectra.expectra import Expectra
-from expectra.exafs import exafs_first_shell, exafs_multiple_scattering
+from expectra.cal_exafs import Expectra
 from expectra.io import read_xdatcar, read_con, read_chi
-from expectra.feff import load_chi_dat
 from ase import atoms
+from ase.io.vasp import read_vasp
 
 def main():
-    filename = 'CONTCAR'
-    trajectory = read_con(filename)
-    calc = expectra(atoms=trajectory, kmax = 10.0)
+    trajectory = read_vasp(filename='CONTCAR')
+    calc = Expectra(atoms=trajectory, kmax = 10.0)
     trajectory.set_calculator(calc)
-    chi_devia = trajectory.get_chi_deviation()
+    chi_devia = trajectory.get_potential_energy()
     print(chi_devia)
 if __name__ == '__main__':
     main()
