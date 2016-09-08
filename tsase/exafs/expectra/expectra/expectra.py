@@ -1,8 +1,5 @@
 import mpi4py.MPI
 
-import argparse
-import sys
-
 import numpy
 
 from expectra.exafs import exafs_first_shell, exafs_multiple_scattering
@@ -18,77 +15,6 @@ def mpiexcepthook(type, value, traceback):
     COMM_WORLD.Abort()
 sys.excepthook = mpiexcepthook
 
-'''
-Calculator is the superclass or base class. expectra is the subclass or derived
-calss
-'''
-class expectra(Calculator):
-
-    implemented_properties = ['chi_deviation']
-
-    default_parameters = dict(
-        neighbor_cutoff = 6.0,
-        s02 = 0.89,
-        energy_shift = 3.4,
-        edge = 'L3',
-        absorber = 'Au',
-        skip = 0,
-        exp_chi_fie = 'chi_exp.dat',
-        output_file = 'chi.dat')
-
-    def __int__(self, label='EXAFS', 
-                atoms=None, kmin=0.00, kmax=10.00, chi_deviation=100, **kwargs):
-    """
-    The expectra constructor:
-        kmin, kmax ...........define the k window you are interested on. It is
-        suggested to set them as the values appeared in experimental data
-        atoms.................coordinates or trajectories
-        chi_deviaiton.........used to store the calcuation deviation between
-        experimental and calculated EXAFS spectra
-    """
-    self.lable = label
-    self.atoms = atoms
-    self.kmin = kmin
-    self.kmax = kmax
-    self.chi_deviation = chi_deviation
-    self.parameters = None
-    self.results = None
-
-    Calculator.__init__(self, restart, ignore_bad_restart_file,
-                        label, atoms,
-                        **kwargs)
-
-
-    def set(self, **kwargs):
-        """Set parameters like set(key1=value1, key2=value2,
-        ...)."""
-        changed_parameters = Calculator.set(self, **kwargs)
-        if changed_parameters:
-           self.reset()
-
-
-    def calculate(self, atoms=None, properties=None)
-
-        parameters = self.parameters
-        trajectory = COMM_WORLD.bcast(self.atoms)
-        self.absorber = get_default_absorber(trajectory, parameters)
-        k, chi = exafs_trajectory(parameters, trajectory)
-
-        #load experimental chi data
-        try:
-            k_exp, chi_exp = read_chi(parameters.exp_chi_file) 
-        except:
-            k_exp, chi_exp = load_chi_dat(parameters.exp_chi_file)
-
-        #interpolate chi_exp values based on k values provided in calculated data
-        k_exp, chi_exp = rescale_chi_calc(k, chi_exp, k_exp, self.kmax)
-
-        save_result(k, chi)
-    
-        self.chi_deviation = exp_calc_deviation(chi_exp, chi)
-
-#        return self.chi_deviation
-    
 #need to modify it to save a history of (chi, k)
 def save_result(k, chi):
     if COMM_WORLD.rank != 0: return
@@ -120,6 +46,20 @@ def exafs_trajectory(args, trajectory):
                 args.absorber, args.ignore_elements, args.edge, args.rmax, 
                 trajectory)
 
+    elif args.first_shell:
+        k, chi = exafs_first_shell(args.S02, args.energy_shift, 
+                args.absorber, args.ignore_elements, args.edge, 
+                args.neighbor_cutoff, trajectory)
+    
+    return k, chi
+
+#calculate the deviation of theoretical EXAFS from experimental EXAFS
+def calc_deviation(chi_exp,chi_theory):
+    chi_devi = 0
+    for i in range(0, len(chi_exp)):
+        chi_devi = chi_devi + (chi_exp - chi_theory)**2
+
+    return chi_devi/len(chi_exp)
 
 #linearly interpolate chi values based on k_std value
 def rescale_chi_calc(k_std, chi_src, k_src, kmax):
@@ -143,10 +83,82 @@ def rescale_chi_calc(k_std, chi_src, k_src, kmax):
                 chi_temp.append(numpy.interp(k_std[i],
                                            [k_src[j-1],k_src[j]],
                                        [chi_src[j-1],chi_src[j]]))
-            k_temp.append(k_std[i])
+                k_temp.append(k_std[i])
 
-        elif k_std[i] == k_src[j-1]:
-            chi_temp.append(chi_src[j-1])
-            k_temp.append(k_std[i])
+            elif k_std[i] == k_src[j-1]:
+                chi_temp.append(chi_src[j-1])
+                k_temp.append(k_std[i])
         i += 1
     return k_temp, chi_temp
+
+'''
+Calculator is the superclass. expectra is the subclass
+'''
+class Expectra(Calculator):
+
+    implemented_properties = ['chi_deviation']
+
+    default_parameters = dict(
+        neighbor_cutoff = 6.0,
+        s02 = 0.89,
+        energy_shift = 3.4,
+        edge = 'L3',
+        absorber = 'Au',
+        skip = 0,
+        exp_chi_fie = 'chi_exp.dat',
+        output_file = 'chi.dat')
+
+    def __int__(self, label='EXAFS', 
+                atoms=None, kmin=0.00, kmax=10.00, chi_deviation=100, **kwargs):
+        """
+        The expectra constructor:
+            kmin, kmax ...........define the k window you are interested on. It is
+            suggested to set them as the values appeared in experimental data
+            atoms.................coordinates or trajectories
+            chi_deviaiton.........used to store the calcuation deviation between
+            experimental and calculated EXAFS spectra
+        """
+        self.lable = label
+        self.atoms = atoms
+        self.kmin = kmin
+        self.kmax = kmax
+        self.chi_deviation = chi_deviation
+        self.parameters = None
+        self.results = None
+      
+        Calculator.__init__(self, restart, ignore_bad_restart_file,
+                            label, atoms,
+                            **kwargs)
+      
+
+    def set(self, **kwargs):
+        """Set parameters like set(key1=value1, key2=value2,
+        ...)."""
+        changed_parameters = Calculator.set(self, **kwargs)
+        if changed_parameters:
+           self.reset()
+
+    def get_chi_deviation(self, atoms=None):
+        self.calculate(atoms, 'chi_deviation')
+        return self.chi_deviation
+
+    def calculate(self, atoms=None, properties=None):
+
+        parameters = self.parameters
+        trajectory = COMM_WORLD.bcast(self.atoms)
+        self.absorber = get_default_absorber(trajectory, parameters)
+        k, chi = exafs_trajectory(parameters, trajectory)
+
+        #load experimental chi data
+        try:
+            k_exp, chi_exp = read_chi(parameters.exp_chi_file) 
+        except:
+            k_exp, chi_exp = load_chi_dat(parameters.exp_chi_file)
+
+        #interpolate chi_exp values based on k values provided in calculated data
+        k_exp, chi_exp = rescale_chi_calc(k, chi_exp, k_exp, self.kmax)
+
+        save_result(k, chi)
+    
+        self.chi_deviation = calc_deviation(chi_exp, chi)
+
