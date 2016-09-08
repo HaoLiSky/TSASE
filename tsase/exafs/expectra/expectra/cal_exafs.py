@@ -1,11 +1,18 @@
-import mpi4py.MPI
+#!/usr/bin/env python
 
+import mpi4py.MPI
+from expectra.MPI_Import import mpi_import
 import numpy
 
-from expectra.exafs import exafs_first_shell, exafs_multiple_scattering
-from expectra.io import read_xdatcar, read_con, read_chi
-from expectra.feff import load_chi_dat
-from ase.calculators.calculator import Calculator, all_changes, Parameters
+with mpi_import():
+    import argparse
+    import sys
+
+
+    from expectra.exafs import exafs_first_shell, exafs_multiple_scattering
+    from expectra.io import read_xdatcar, read_con
+    from ase.io import read
+    from ase.calculators.calculator import Calculator, all_changes, Parameters
 
 COMM_WORLD = mpi4py.MPI.COMM_WORLD
 
@@ -137,8 +144,7 @@ class Expectra(Calculator):
         changed_parameters = Calculator.set(self, **kwargs)
         if changed_parameters:
            self.reset()
-
-    def get_chi_deviation(self, atoms=None):
+    def get_potential_energy(self, atoms=None, force_consistent=False):
         self.calculate(atoms, 'chi_deviation')
         return self.chi_deviation
 
