@@ -43,8 +43,8 @@ class minimizer_ssneb:
                 if fPi > fPMax:
                     fPMax = fPi
                 if (not self.band.parallel) or (self.band.parallel and self.band.rank == 0) :
-                    if iterations % 50 == 0:
-                        io.write(str(i)+'.CON',self.band.path[i],format='vasp')
+                    #if iterations % 50 == 0:
+                    io.write(str(i)+'.CON',self.band.path[i],format='vasp')
 
             maxi=self.band.Umaxi
             fci =self.band.path[maxi].st 
