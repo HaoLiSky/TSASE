@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import mpi4py.MPI
 from expectra.MPI_Import import mpi_import
 import numpy
