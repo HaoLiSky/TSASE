@@ -18,7 +18,7 @@ class BasinHopping(Dynamics):
     """
 
     def __init__(self, atoms,
-                 opt_calculator = None
+                 opt_calculator = None,
                  exafs_calculator = None,
                  alpha = 0,
                  temperature=100 * kB,
@@ -29,8 +29,7 @@ class BasinHopping(Dynamics):
                  trajectory='lowest.traj',
                  optimizer_logfile='-',
                  local_minima_trajectory='local_minima.traj',
-                 adjust_cm=True,
-                 pseudo_pot):
+                 adjust_cm=True):
         """Parameters:
 
         atoms: Atoms object
@@ -104,8 +103,7 @@ class BasinHopping(Dynamics):
         if self.logfile is None:
             return
         name = self.__class__.__name__
-        self.logfile.write('%s: step %d, energy %15.6f, chi_deviation %15.6f,
-                           pseudoPot %15.6f, emin %15.6f\n'
+        self.logfile.write('%s: step %d, energy %15.6f, chi_deviation %15.6f, pseudoPot %15.6f, emin %15.6f\n'
                            % (name, step, En, chi_devi_n, Un, Umin))
         self.logfile.flush()
 
