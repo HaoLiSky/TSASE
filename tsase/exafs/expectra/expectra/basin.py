@@ -48,6 +48,10 @@ class BasinHopping(Dynamics):
         self.optimizer = optimizer
         self.fmax = fmax
         self.dr = dr
+        self.opt_calculator = opt_calculator
+        self.exafs_calculator = exafs_calculator
+        self.alpha = alpha
+
         if adjust_cm:
             self.cm = atoms.get_center_of_mass()
         else:
@@ -68,7 +72,7 @@ class BasinHopping(Dynamics):
         self.rmin = self.atoms.get_positions()
         self.positions = self.atoms.get_positions()
         self.call_observers()
-        self.log(-1, self.Umin, self.Umin)
+        self.log(-1, self.Umin, self.chi_deviation, self.Umin,self.Umin)
                 
     def run(self, steps):
         """Hop the basins for defined number of steps."""
