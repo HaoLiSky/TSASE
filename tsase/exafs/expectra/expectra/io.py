@@ -225,3 +225,9 @@ def read_chi(filename):
     chis = numpy.array(chis)
     return ks, chis
 
+def log_chi(step, k, chi, chi_log):
+    chi_log.write("step: %d\n" % (step))
+    for i in xrange(len(k)):
+        chi_log.write("%6.3f %16.8e\n" % (k[i], chi[i]))
+    f.close()
+

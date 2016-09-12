@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 
 from ase.optimize.optimize import Dynamics
@@ -6,7 +7,6 @@ from ase.optimize.fire import FIRE
 from ase.units import kB
 from ase.parallel import world
 from ase.io.trajectory import Trajectory
-
 
 class BasinHopping(Dynamics):
     """Basin hopping algorithm.
@@ -26,7 +26,8 @@ class BasinHopping(Dynamics):
                  optimizer=FIRE,
                  fmax=0.1,
                  dr=0.1,
-                 logfile='-', 
+                 logfile='-',
+                 chi_logfile='chi_log.dat',
                  trajectory='lowest.traj',
                  optimizer_logfile='-',
                  local_minima_trajectory='local_minima.traj',
@@ -52,6 +53,9 @@ class BasinHopping(Dynamics):
         self.opt_calculator = opt_calculator
         self.exafs_calculator = exafs_calculator
         self.alpha = alpha
+        self.chi_logfile = chi_logfile
+        self.k = None
+        self.chi = None
 
         if adjust_cm:
             self.cm = atoms.get_center_of_mass()
@@ -74,9 +78,11 @@ class BasinHopping(Dynamics):
         self.rmin = self.atoms.get_positions()
         self.positions = self.atoms.get_positions()
         self.call_observers()
-        self.log(-1, self.Umin, self.chi_deviation, self.Umin,self.Umin)
-#        print "Initial Energy basin: "
-#        print (self.energy)
+
+        #'logfile' is defined in the superclass Dynamics in 'optimize.py'
+        self.logfile.write('   name      step       energy       chi_deviation  \
+                           pseudoPot       emin       \n')
+#        self.log(-1, self.Umin, self.chi_deviation, self.Umin,self.Umin)
                 
     def run(self, steps):
         """Hop the basins for defined number of steps."""
@@ -86,30 +92,28 @@ class BasinHopping(Dynamics):
         Eo = self.get_energy(ro)
         chi_devi_o = self.get_chi_deviation(ro)
         Uo = Eo + alpha * chi_devi_o
-        print "Uo:"
-        print(Uo)
-        print(Eo)
-#        print "initial position"
-#        print(ro)
         
+        self.chi_log = open(self.chi_logfile, 'w')
+        self.log_chi(-1)
+
         for step in range(steps):
             Un = None
             while Un is None:
                 rn = self.move(ro)
-                chi_devi_n = self.get_chi_deviation(rn)
-#                print "chi"
-#                print(chi_devi_n)
-                print(step)
-                En = self.get_energy(rn)
-#                print(rn)
-#                print(type(En))
-                Un = En + alpha * chi_devi_n
+                if np.sometrue(rn != ro):
+                    chi_devi_n = self.get_chi_deviation(rn)
+                    En = self.get_energy(rn)
+                    Un = En + alpha * chi_devi_n
+                    self.log_chi(step)
+                else:
+                    Un = self.energy + alpha * self.chi_deviation
 
             if Un < self.Umin:
                 # new minimum found
                 self.Umin = Un
                 self.rmin = self.atoms.get_positions()
                 self.call_observers()
+
             self.log(step, En, chi_devi_n, Un, self.Umin)
 
             #accept or reject?
@@ -122,9 +126,17 @@ class BasinHopping(Dynamics):
         if self.logfile is None:
             return
         name = self.__class__.__name__
-        self.logfile.write('%s: step %d, energy %15.6f, chi_deviation %15.6f, pseudoPot %15.6f, emin %15.6f\n'
+        self.logfile.write('%s: %d   %15.6f   %15.6f   %15.6f   %15.6f\n'
                            % (name, step, En, chi_devi_n, Un, Umin))
         self.logfile.flush()
+
+    def log_chi(self, step):
+        self.chi_log.write("step: %d\n" % (step))
+        k = self.k
+        chi = self.chi
+        for i in xrange(len(k)):
+            self.chi_log.write("%6.3f %16.8e\n" % (k[i], chi[i]))
+        self.chi_log.flush()
 
     def move(self, ro):
         """Move atoms by a random step."""
@@ -149,13 +161,8 @@ class BasinHopping(Dynamics):
 
     def get_energy(self, positions):
         """Return the energy of the nearest local minimum."""
-#        if np.sometrue(self.positions != positions):
         self.positions = positions
         self.atoms.set_positions(positions)
-        print(self.atoms.get_positions())
-        cell = self.atoms.get_cell()
-        print "cell is"
-        print(cell)
 
         #opt_calculator can be any calculator compatible with ASE
         """if self.opt_calculator is not None:
@@ -173,9 +180,6 @@ class BasinHopping(Dynamics):
             self.atoms.set_calculator(self.opt_calculator)
             opt = self.optimizer(self.atoms, 
                                  logfile=self.optimizer_logfile)
-#            print "opt type in basin.py"
-#            print(opt.__class__)
-#            print(self.fmax)
             opt.run(fmax=self.fmax)
             if self.lm_trajectory is not None:
                 self.lm_trajectory.write(self.atoms)
@@ -192,13 +196,12 @@ class BasinHopping(Dynamics):
     def get_chi_deviation(self, positions):
         """Return the standard deviation of chi between calculated and
         experimental."""
-#        if np.sometrue(self.positions != positions):
         self.positions = positions
         self.atoms.set_positions(positions)
 
         try:
             self.atoms.set_calculator(self.exafs_calculator)
-            self.chi_deviation = self.atoms.get_potential_energy()
+            self.chi_deviation, self.k, self.chi = self.atoms.get_potential_energy()
         except:
             # Something went wrong.
             # In GPAW the atoms are probably to near to each other.

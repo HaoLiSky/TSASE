@@ -28,6 +28,7 @@ def main():
                       exafs_calculator=exafs_calc,
 #                      temperature=300 * kB,
                       dr=0.5,
+                      logfile='pot_log',
                       optimizer=LBFGS,
                       fmax=0.05)
     bh.run(2)

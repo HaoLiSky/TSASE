@@ -135,6 +135,8 @@ class Expectra(Calculator):
         self.chi_deviation = chi_deviation
         self.parameters = None
         self.results = None
+        self.k = None
+        self.chi =None
       
         Calculator.__init__(self, restart, ignore_bad_restart_file,
                             label, atoms,
@@ -151,7 +153,15 @@ class Expectra(Calculator):
     def get_potential_energy(self, atoms=None, force_consistent=False):
 #        print(type(atoms))
         self.calculate(atoms, 'chi_deviation')
-        return self.chi_deviation
+#        f=open(chi_logfile,'w')
+        return self.chi_deviation, self.k, self.chi
+
+#    def get_k_chi(self):
+#        try:
+#            k, chi = read_chi('chi.dat') 
+#        except:
+#            k, chi = load_chi_dat('chi.dat')
+#        return k, chi
 
     def calculate(self, atoms=None, properties=None):
 
@@ -175,6 +185,9 @@ class Expectra(Calculator):
         #interpolate chi_exp values based on k values provided in calculated data
         k_exp, chi_exp = rescale_chi_calc(k, chi_exp, k_exp, parameters.kmax)
         k, chi = rescale_chi_calc(k, chi, k, parameters.kmax)
+
+        self.k = k
+        self.chi = chi
 
         filename1 = 'chi.dat'
         filename2 = 'rescaled_exp_chi.dat'
