@@ -149,14 +149,14 @@ class Expectra(Calculator):
            self.reset()
 
     def get_potential_energy(self, atoms=None, force_consistent=False):
-        print(type(atoms))
+#        print(type(atoms))
         self.calculate(atoms, 'chi_deviation')
         return self.chi_deviation
 
     def calculate(self, atoms=None, properties=None):
 
         parameters = self.parameters
-        print "atoms: " 
+        print "atoms_expectra: " 
         print(type(atoms))
 #        print(atoms.get_positions())
         trajectory = []
