@@ -4,9 +4,12 @@ sys.path.append("..")
 import os
 
 from ase.test import NotAvailable
+from ase.io import read
+from ase.optimize.lbfgs import LBFGS
+from expectra.aselite import Atoms
 from expectra.cal_exafs import Expectra
 from expectra.io import read_xdatcar, read_con, read_chi
-from ase import *
+#from ase import *
 from expectra.basin import BasinHopping
 from ase.calculators.cp2k import CP2K
 
@@ -24,7 +27,7 @@ inp = """
        MAX_SCF_HISTORY   0
        MAX_DIIS          4
        LEVEL_SHIFT       0.00
-       EPS_SCF           1.000E-05
+       EPS_SCF           1.000E-04
        EPS_SCF_HISTORY   0.000E+00
        EPS_DIIS          1.000E-01
        SCF_GUESS         restart
@@ -55,7 +58,7 @@ inp = """
          TYPE                    NONE
          OPTIMIZER               NONE
          BISECT_TRUST_COUNT      10
-         EPS_SCF                 1.000E-05
+         EPS_SCF                 1.000E-04
          DIIS_BUFFER_LENGTH      3
          EXTRAPOLATION_ORDER     3
          MAX_SCF                 5
@@ -95,16 +98,16 @@ inp = """
        &XC_POTENTIAL
          ENERGY                     NONE
        &END XC_POTENTIAL
-      &vdW_POTENTIAL
-         DISPERSION_FUNCTIONAL PAIR_POTENTIAL
-        &PAIR_POTENTIAL
-          TYPE DFTD3
-          REFERENCE_FUNCTIONAL BLYP
-          CALCULATE_C9_TERM .TRUE.
-          PARAMETER_FILE_NAME /opt/programs/cp2k-3.0/data/dftd3.dat
-          R_CUTOFF 15.0
-        &END PAIR_POTENTIAL
-      &END vdW_POTENTIAL
+#      &vdW_POTENTIAL
+#         DISPERSION_FUNCTIONAL PAIR_POTENTIAL
+#        &PAIR_POTENTIAL
+#          TYPE DFTD3
+#          REFERENCE_FUNCTIONAL BLYP
+#          CALCULATE_C9_TERM .TRUE.
+#          PARAMETER_FILE_NAME /opt/programs/cp2k-3.0/data/dftd3.dat
+#          R_CUTOFF 15.0
+#        &END PAIR_POTENTIAL
+#      &END vdW_POTENTIAL
      &END XC
      &POISSON
        POISSON_SOLVER  periodic
@@ -113,19 +116,9 @@ inp = """
    &END DFT
 
    &SUBSYS
-     &KIND O 
-       BASIS_SET DZVP-MOLOPT-SR-GTH-q6
-       POTENTIAL GTH-BLYP-q6
-     &END KIND
-
-      &KIND H
-       BASIS_SET DZVP-MOLOPT-SR-GTH-q1
-       POTENTIAL GTH-BLYP-q1
-     &END KIND
-
-      &KIND N
-       BASIS_SET DZVP-MOLOPT-SR-GTH-q5
-       POTENTIAL GTH-BLYP-q5
+     &KIND Au
+       BASIS_SET SZV-MOLOPT-SR-GTH-q11
+       POTENTIAL GTH-PBE-q11
      &END KIND
 
    &END SUBSYS
@@ -146,21 +139,23 @@ def main():
                 pseudo_potential=None,
                 stress_tensor=False,
                 xc=None,
-                label='N2O4-NH4', inp=inp)
+                label='Au55', inp=inp)
 
-    p1 = read('reactant.xyz',index=0,format='xyz')
+    p1 = read('geometry.xyz',index=0,format='xyz')
     p1.set_cell([[20,0,0],[0,20,0],[0,0,20]],scale_atoms=False,fix=None)
     p1.set_pbc((True, True, True))
-    filename='CONTCAR'
+#    filename='CONTCAR'
 #    p1 = read_xdatcar(filename)
 #    print(p1[0].get_positions())
-    print(type(p1))
+#    print "p1 type in test.py"
+#    print(type(p1))
     exafs_calc = Expectra(kmax = 10.0)
     bh = BasinHopping(atoms=p1,
+                      opt_calculator = calc,
                       exafs_calculator=exafs_calc,
 #                      temperature=300 * kB,
                       dr=0.5,
-#                      optimizer=LBFGS,
+                      optimizer=LBFGS,
                       fmax=0.1)
     bh.run(2)
 #    p1[0].set_calculator(exafs_calc)
