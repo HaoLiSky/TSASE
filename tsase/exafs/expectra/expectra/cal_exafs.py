@@ -1,29 +1,17 @@
-import mpi4py.MPI
-from expectra.MPI_Import import mpi_import
 import numpy
 
-with mpi_import():
-    import argparse
-    import sys
+import argparse
+import sys
+import os
 
-    from expectra.exafs import exafs_first_shell, exafs_multiple_scattering
-    from expectra.io import read_xdatcar, read_con, read_chi
-    from ase.calculators.calculator import Calculator, all_changes, Parameters
-    from expectra.aselite import Atoms
-    from expectra.feff import load_chi_dat
+from expectra.exafs import exafs_first_shell, exafs_multiple_scattering
+from expectra.io import read_xdatcar, read_con, read_chi
+from ase.calculators.calculator import Calculator, all_changes, Parameters
+from expectra.aselite import Atoms, write_vasp
+from expectra.feff import load_chi_dat
 
-COMM_WORLD = mpi4py.MPI.COMM_WORLD
-
-def mpiexcepthook(type, value, traceback):
-    sys.__excepthook__(type, value, traceback)
-    sys.stderr.write("exception occured on rank %i\n" % COMM_WORLD.rank)
-    COMM_WORLD.Abort()
-sys.excepthook = mpiexcepthook
-
-#need to modify it to save a history of (chi, k)
 def save_result(k, chi, filename):
-    if COMM_WORLD.rank != 0: return
-    print 'saving result to chi.dat'
+    print 'saving rescaled experimental chi data'
     f = open(filename, 'w')
     for i in xrange(len(k)):
         f.write("%6.3f %16.8e\n" % (k[i], chi[i]))
@@ -106,7 +94,8 @@ class Expectra(Calculator):
     implemented_properties = ['chi_deviation']
 
     default_parameters = dict(
-        multiple_scattering = True,
+        ncore = 1,
+        multiple_scattering = ' ',
         ignore_elements = None,
         neighbor_cutoff = 6.0,
         rmax = 6.0,
@@ -115,8 +104,15 @@ class Expectra(Calculator):
         edge = 'L3',
         absorber = 'Au',
         skip = 0,
+        every = 1,
         exp_chi_file = 'chi_exp.dat',
         output_file = 'chi.dat')
+    """
+    set multiple_scattering = '--multiple-scattering' to enalbe multiple
+    scattering calculation. Otherwise first-shell calculation will be
+    conducted.
+    ncore is number of cores used for calcualtion.
+    """
 
     def __int__(self, label='EXAFS', 
                 atoms=None, kmin=0.00, kmax=10.00, chi_deviation=100, **kwargs):
@@ -151,30 +147,45 @@ class Expectra(Calculator):
            self.reset()
 
     def get_potential_energy(self, atoms=None, force_consistent=False):
-#        print(type(atoms))
         self.calculate(atoms, 'chi_deviation')
-#        f=open(chi_logfile,'w')
         return self.chi_deviation, self.k, self.chi
-
-#    def get_k_chi(self):
-#        try:
-#            k, chi = read_chi('chi.dat') 
-#        except:
-#            k, chi = load_chi_dat('chi.dat')
-#        return k, chi
 
     def calculate(self, atoms=None, properties=None):
 
         parameters = self.parameters
-        print "atoms_expectra: " 
-        print(type(atoms))
-#        print(atoms.get_positions())
-        trajectory = []
-        trajectory.append(atoms)
-#        print(type(trajectory))
-        trajectory = COMM_WORLD.bcast(trajectory)
-#        self.absorber = get_default_absorber(trajectory, parameters)
-        k, chi = exafs_trajectory(parameters, trajectory)
+        
+        #write 'CONTCAR' which is required for 'expectra' code
+        con_filename = 'CONTCAR'
+        write_vasp(filename = con_filename, atoms = atoms, direct=True, vasp5=True)
+
+        #prepare the command to run 'expectra'
+        if parameters.ignore_elements is not None:
+            ignore = '--ignore-elements ' + parameters.ignore_elements
+        else:
+            ignore = ''
+        
+        expectra_para = ['mpirun -n', str(parameters.ncore),
+                         'expectra', parameters.multiple_scattering,
+                         '--neighbor-cutoff', str(parameters.neighbor_cutoff),
+                         '--S02', str(parameters.S02),
+                         '--energy-shift', str(parameters.energy_shift),
+                         '--edge', parameters.edge,
+                         '--absorber', parameters.absorber,
+                         ignore,
+                         '--skip', str(parameters.skip),
+                         '--every', str(parameters.every),
+                         con_filename]
+        join_symbol = ' '
+        cmd = join_symbol.join(expectra_para)
+
+        #run 'expectra'
+        os.system(cmd)
+
+        #load calculated chi data
+        try:
+            k, chi = read_chi('chi.dat') 
+        except:
+            k, chi = load_chi_dat('chi.dat')
 
         #load experimental chi data
         try:
@@ -189,9 +200,7 @@ class Expectra(Calculator):
         self.k = k
         self.chi = chi
 
-        filename1 = 'chi.dat'
         filename2 = 'rescaled_exp_chi.dat'
-        save_result(k, chi, filename1)
         save_result(k_exp, chi_exp, filename2)
     
         self.chi_deviation = calc_deviation(chi_exp, chi)
