@@ -21,7 +21,7 @@ class BasinHopping(Dynamics):
     def __init__(self, atoms,
                  opt_calculator = None,
                  exafs_calculator = None,
-                 alpha = 1.0,
+                 ratio = 0.01,
                  temperature=100 * kB,
                  optimizer=FIRE,
                  fmax=0.1,
@@ -52,7 +52,7 @@ class BasinHopping(Dynamics):
         self.dr = dr
         self.opt_calculator = opt_calculator
         self.exafs_calculator = exafs_calculator
-        self.alpha = alpha
+        self.ratio = ratio
         self.chi_logfile = chi_logfile
         self.k = None
         self.chi = None
@@ -80,17 +80,19 @@ class BasinHopping(Dynamics):
         self.call_observers()
 
         #'logfile' is defined in the superclass Dynamics in 'optimize.py'
-        self.logfile.write('   name      step       energy       chi_deviation  \
-                           pseudoPot       emin       \n')
+        self.logfile.write('   name      step       alpha      energy       chi_deviation         pseudoPot        emin \n')
 #        self.log(-1, self.Umin, self.chi_deviation, self.Umin,self.Umin)
                 
     def run(self, steps):
         """Hop the basins for defined number of steps."""
 
-        alpha = self.alpha
+        ratio = self.ratio
         ro = self.positions
         Eo = self.get_energy(ro)
-        chi_devi_o = self.get_chi_deviation(ro)
+        chi_devi_o = self.get_chi_deviation(self.atoms.get_positions())
+
+        alpha = self.get_alpha()
+
         Uo = Eo + alpha * chi_devi_o
         
         self.chi_log = open(self.chi_logfile, 'w')
@@ -101,8 +103,13 @@ class BasinHopping(Dynamics):
             while Un is None:
                 rn = self.move(ro)
                 if np.sometrue(rn != ro):
-                    chi_devi_n = self.get_chi_deviation(rn)
+
                     En = self.get_energy(rn)
+
+                    chi_devi_n = self.get_chi_deviation(self.atoms.get_positions())
+
+                    alpha = self.get_alpha()
+
                     Un = En + alpha * chi_devi_n
                     self.log_chi(step)
                 else:
@@ -114,7 +121,7 @@ class BasinHopping(Dynamics):
                 self.rmin = self.atoms.get_positions()
                 self.call_observers()
 
-            self.log(step, En, chi_devi_n, Un, self.Umin)
+            self.log(step, alpha, En, chi_devi_n, Un, self.Umin)
 
             #accept or reject?
             accept = np.exp((Uo - Un) / self.kT) > np.random.uniform()
@@ -122,12 +129,12 @@ class BasinHopping(Dynamics):
                 ro = rn.copy()
                 Uo = Un
 
-    def log(self, step, En, chi_devi_n, Un, Umin):
+    def log(self, step, alpha, En, chi_devi_n, Un, Umin):
         if self.logfile is None:
             return
         name = self.__class__.__name__
-        self.logfile.write('%s: %d   %15.6f   %15.6f   %15.6f   %15.6f\n'
-                           % (name, step, En, chi_devi_n, Un, Umin))
+        self.logfile.write('%s: %d  %15.6f  %15.6f  %15.6f  %15.6f  %15.6f\n'
+                           % (name, step, alpha, En, chi_devi_n, Un, Umin))
         self.logfile.flush()
 
     def log_chi(self, step):
@@ -152,6 +159,10 @@ class BasinHopping(Dynamics):
         world.broadcast(rn, 0)
         atoms.set_positions(rn)
         return atoms.get_positions()
+
+    def get_alpha(self):
+        alpha = self.energy * self.ratio / self.chi_deviation
+        return alpha
 
     def get_minimum(self):
         """Return minimal energy and configuration."""

@@ -22,16 +22,17 @@ def main():
 #    print(p1[0].get_positions())
 #    print "p1 type in test.py"
 #    print(type(p1))
-    exafs_calc = Expectra(kmax = 10.0)
+    exafs_calc = Expectra(kmax = 14.0)
     bh = BasinHopping(atoms=p1,
                       opt_calculator = EMT(),
                       exafs_calculator=exafs_calc,
+                      ratio = 0.01,
 #                      temperature=300 * kB,
                       dr=0.5,
                       logfile='pot_log',
                       optimizer=LBFGS,
                       fmax=0.05)
-    bh.run(2)
+    bh.run(10)
 #    p1[0].set_calculator(exafs_calc)
 #    chi_devia = p1[0].get_potential_energy()
 #    print(chi_devia)
