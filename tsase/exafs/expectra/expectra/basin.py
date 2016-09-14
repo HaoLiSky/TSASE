@@ -80,7 +80,7 @@ class BasinHopping(Dynamics):
         self.call_observers()
 
         #'logfile' is defined in the superclass Dynamics in 'optimize.py'
-        self.logfile.write('   name      step       alpha      energy       chi_deviation         pseudoPot        emin \n')
+        self.logfile.write('   name      step       alpha      energy         chi_deviation         pseudoPot        Umin \n')
 #        self.log(-1, self.Umin, self.chi_deviation, self.Umin,self.Umin)
                 
     def run(self, steps):
@@ -133,7 +133,7 @@ class BasinHopping(Dynamics):
         if self.logfile is None:
             return
         name = self.__class__.__name__
-        self.logfile.write('%s: %d  %15.6f  %15.6f  %15.6f  %15.6f  %15.6f\n'
+        self.logfile.write('%s: %d  %15.6f  %15.6f  %15.8f  %15.6f  %15.6f\n'
                            % (name, step, alpha, En, chi_devi_n, Un, Umin))
         self.logfile.flush()
 

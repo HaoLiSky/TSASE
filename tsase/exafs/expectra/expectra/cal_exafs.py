@@ -72,15 +72,25 @@ def rescale_chi_calc(k_std, chi_src, k_src, kmin, kmax):
 #      except MyValidationError as exception:
 #          print exception.message
     i = 0   
-    while ( 0 <= i < len(k_std) and kmin < k_std[i] < kmax):
+
+    print(kmin)
+    print "kmax"
+    print(kmax)
+    print(k_std)
+    while ( 0 <= i < len(k_std) and k_std[i] < kmax):
+        if k_std[i] < kmin:
+            i += 1
+            continue
         for j in range(1,len(k_src)):
             if k_src[j-1] < k_std[i] and k_std[i] < k_src[j]:
                 chi_temp.append(numpy.interp(k_std[i],
                                            [k_src[j-1],k_src[j]],
                                        [chi_src[j-1],chi_src[j]]))
                 k_temp.append(k_std[i])
+                print "got rescale if"
 
             elif k_std[i] == k_src[j-1]:
+                print "got elif rescale"
                 chi_temp.append(chi_src[j-1])
                 k_temp.append(k_std[i])
         i += 1
@@ -193,6 +203,8 @@ class Expectra(Calculator):
         except:
             k_exp, chi_exp = load_chi_dat(parameters.exp_chi_file)
 
+        filename2 = 'test_exp_chi.dat'
+        save_result(k, chi, filename2)
         #interpolate chi_exp values based on k values provided in calculated data
         k_exp, chi_exp = rescale_chi_calc(k, chi_exp, k_exp, parameters.kmin,
                                           parameters.kmax)

@@ -20,7 +20,7 @@ def main():
     #set up exafs calculator
     exafs_calc = Expectra(kmax = 14.0,
                           kmin = 2.0,
-                          ncore = 2,
+                          ncore = 1,
                           multiple_scattering =  '--multiple-scattering')
 
     bh = BasinHopping(atoms=p1,
