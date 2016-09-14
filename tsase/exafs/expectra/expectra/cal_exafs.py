@@ -194,8 +194,9 @@ class Expectra(Calculator):
             k_exp, chi_exp = load_chi_dat(parameters.exp_chi_file)
 
         #interpolate chi_exp values based on k values provided in calculated data
-        k_exp, chi_exp = rescale_chi_calc(k, chi_exp, k_exp, self.kmin, self.kmax)
-        k, chi = rescale_chi_calc(k, chi, k, self.kmin, self.kmax)
+        k_exp, chi_exp = rescale_chi_calc(k, chi_exp, k_exp, parameters.kmin,
+                                          parameters.kmax)
+        k, chi = rescale_chi_calc(k, chi, k, parameters.kmin, parameters.kmax)
 
         self.k = k
         self.chi = chi
