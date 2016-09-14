@@ -19,6 +19,7 @@ def main():
 
     #set up exafs calculator
     exafs_calc = Expectra(kmax = 14.0,
+                          kmin = 2.0,
                           ncore = 2,
                           multiple_scattering =  '--multiple-scattering')
 
@@ -31,7 +32,7 @@ def main():
                       optimizer=LBFGS,
                       fmax=0.05)
     #run job
-    bh.run(500)
+    bh.run(1)
 if __name__ == '__main__':
     main()
     
