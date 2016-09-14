@@ -57,7 +57,7 @@ def calc_deviation(chi_exp,chi_theory):
     return chi_devi/len(chi_exp)
 
 #linearly interpolate chi values based on k_std value
-def rescale_chi_calc(k_std, chi_src, k_src, kmax):
+def rescale_chi_calc(k_std, chi_src, k_src, kmin, kmax):
     """
     k_std..........k values used as a standard for the rescaling
     chi_src........chi values required to be rescaled
@@ -72,7 +72,7 @@ def rescale_chi_calc(k_std, chi_src, k_src, kmax):
 #      except MyValidationError as exception:
 #          print exception.message
     i = 0   
-    while ( 0 <= i < len(k_std) and k_std[i] < kmax):
+    while ( 0 <= i < len(k_std) and kmin < k_std[i] < kmax):
         for j in range(1,len(k_src)):
             if k_src[j-1] < k_std[i] and k_std[i] < k_src[j]:
                 chi_temp.append(numpy.interp(k_std[i],
@@ -194,8 +194,8 @@ class Expectra(Calculator):
             k_exp, chi_exp = load_chi_dat(parameters.exp_chi_file)
 
         #interpolate chi_exp values based on k values provided in calculated data
-        k_exp, chi_exp = rescale_chi_calc(k, chi_exp, k_exp, parameters.kmax)
-        k, chi = rescale_chi_calc(k, chi, k, parameters.kmax)
+        k_exp, chi_exp = rescale_chi_calc(k, chi_exp, k_exp, self.kmin, self.kmax)
+        k, chi = rescale_chi_calc(k, chi, k, self.kmin, self.kmax)
 
         self.k = k
         self.chi = chi
