@@ -56,6 +56,16 @@ def calc_deviation(chi_exp,chi_theory):
 
     return chi_devi/len(chi_exp)
 
+def calc_area(chi_exp,chi_theory):
+    if len(chi_exp) != len(chi_theory):
+        print "Warning: number of points in chi_exp and chi_theory is not equal"
+        
+    chi_area = 0.00
+    for i in range(0, len(chi_exp)):
+        chi_area = chi_area + numpy.absolute(chi_exp[i] - chi_theory[i])
+
+    return chi_area
+
 #linearly interpolate chi values based on k_std value
 def rescale_chi_calc(k_std, chi_src, k_src, kmin, kmax):
     """
@@ -73,10 +83,6 @@ def rescale_chi_calc(k_std, chi_src, k_src, kmin, kmax):
 #          print exception.message
     i = 0   
 
-    print(kmin)
-    print "kmax"
-    print(kmax)
-    print(k_std)
     while ( 0 <= i < len(k_std) and k_std[i] < kmax):
         if k_std[i] < kmin:
             i += 1
@@ -87,10 +93,8 @@ def rescale_chi_calc(k_std, chi_src, k_src, kmin, kmax):
                                            [k_src[j-1],k_src[j]],
                                        [chi_src[j-1],chi_src[j]]))
                 k_temp.append(k_std[i])
-                print "got rescale if"
 
             elif k_std[i] == k_src[j-1]:
-                print "got elif rescale"
                 chi_temp.append(chi_src[j-1])
                 k_temp.append(k_std[i])
         i += 1
@@ -101,7 +105,7 @@ Calculator is the superclass. expectra is the subclass
 '''
 class Expectra(Calculator):
 
-    implemented_properties = ['chi_deviation']
+    implemented_properties = ['chi_deviation', 'chi_area']
 
     default_parameters = dict(
         ncore = 1,
@@ -125,7 +129,8 @@ class Expectra(Calculator):
     """
 
     def __int__(self, label='EXAFS', 
-                atoms=None, kmin=0.00, kmax=10.00, chi_deviation=100, **kwargs):
+                atoms=None, kmin=0.00, kmax=10.00, chi_deviation=100, chi_area
+                = 100, **kwargs):
         """
         The expectra constructor:
             kmin, kmax ...........define the k window you are interested on. It is
@@ -139,6 +144,7 @@ class Expectra(Calculator):
         self.kmin = kmin
         self.kmax = kmax
         self.chi_deviation = chi_deviation
+        self.chi_area = chi_area
         self.parameters = None
         self.results = None
         self.k = None
@@ -156,9 +162,13 @@ class Expectra(Calculator):
         if changed_parameters:
            self.reset()
 
-    def get_potential_energy(self, atoms=None, force_consistent=False):
-        self.calculate(atoms, 'chi_deviation')
-        return self.chi_deviation, self.k, self.chi
+    def get_potential_energy(self, atoms=None, properties=None):
+        if properties is None:
+            self.calculate(atoms, 'chi_area')
+            return self.chi_area, self.k, self.chi
+        else:
+            self.calculate(atoms, 'chi_deviation')
+            return self.chi_deviation, self.k, self.chi
 
     def calculate(self, atoms=None, properties=None):
 
@@ -215,6 +225,10 @@ class Expectra(Calculator):
 
         filename2 = 'rescaled_exp_chi.dat'
         save_result(k_exp, chi_exp, filename2)
-    
-        self.chi_deviation = calc_deviation(chi_exp, chi)
+
+
+        if properties == 'chi_area':
+            self.chi_area = calc_area(chi_exp, chi)
+        else:
+            self.chi_deviation = calc_deviation(chi_exp, chi)
 

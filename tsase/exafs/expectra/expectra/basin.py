@@ -98,6 +98,8 @@ class BasinHopping(Dynamics):
         self.chi_log = open(self.chi_logfile, 'w')
         self.log_chi(-1)
 
+        self.log(-1, alpha, Eo, chi_devi_o, Uo, self.Umin)
+
         for step in range(steps):
             Un = None
             while Un is None:
@@ -108,7 +110,7 @@ class BasinHopping(Dynamics):
 
                     chi_devi_n = self.get_chi_deviation(self.atoms.get_positions())
 
-                    alpha = self.get_alpha()
+                    alpha_dynam = self.get_alpha()
 
                     Un = En + alpha * chi_devi_n
                     self.log_chi(step)
@@ -121,7 +123,7 @@ class BasinHopping(Dynamics):
                 self.rmin = self.atoms.get_positions()
                 self.call_observers()
 
-            self.log(step, alpha, En, chi_devi_n, Un, self.Umin)
+            self.log(step, alpha_dynam, En, chi_devi_n, Un, self.Umin)
 
             #accept or reject?
             accept = np.exp((Uo - Un) / self.kT) > np.random.uniform()

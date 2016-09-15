@@ -20,19 +20,19 @@ def main():
     #set up exafs calculator
     exafs_calc = Expectra(kmax = 14.0,
                           kmin = 2.0,
-                          ncore = 1,
+                          ncore = 2,
                           multiple_scattering =  '--multiple-scattering')
 
     bh = BasinHopping(atoms=p1,
                       opt_calculator = EMT(),
                       exafs_calculator=exafs_calc,
-                      ratio = 0.01,
+                      ratio = 0.1,
                       dr=0.5,
                       logfile='pot_log',
                       optimizer=LBFGS,
                       fmax=0.05)
     #run job
-    bh.run(1)
+    bh.run(2)
 if __name__ == '__main__':
     main()
     
