@@ -80,7 +80,7 @@ class BasinHopping(Dynamics):
         self.call_observers()
 
         #'logfile' is defined in the superclass Dynamics in 'optimize.py'
-        self.logfile.write('   name      step       alpha      energy         chi_deviation         pseudoPot        Umin \n')
+        self.logfile.write('   name      step accept       alpha      energy         chi_deviation         pseudoPot        Umin \n')
 #        self.log(-1, self.Umin, self.chi_deviation, self.Umin,self.Umin)
                 
     def run(self, steps):
@@ -98,7 +98,7 @@ class BasinHopping(Dynamics):
         self.chi_log = open(self.chi_logfile, 'w')
         self.log_chi(-1)
 
-        self.log(-1, alpha, Eo, chi_devi_o, Uo, self.Umin)
+        self.log(-1,'Yes', alpha, Eo, chi_devi_o, Uo, self.Umin)
 
         for step in range(steps):
             Un = None
@@ -123,20 +123,20 @@ class BasinHopping(Dynamics):
                 self.rmin = self.atoms.get_positions()
                 self.call_observers()
 
-            self.log(step, alpha_dynam, En, chi_devi_n, Un, self.Umin)
 
             #accept or reject?
             accept = np.exp((Uo - Un) / self.kT) > np.random.uniform()
             if accept:
                 ro = rn.copy()
                 Uo = Un
+            self.log(step, accept, alpha_dynam, En, chi_devi_n, Un, self.Umin)
 
-    def log(self, step, alpha, En, chi_devi_n, Un, Umin):
+    def log(self, step, accept, alpha, En, chi_devi_n, Un, Umin):
         if self.logfile is None:
             return
         name = self.__class__.__name__
-        self.logfile.write('%s: %d  %15.6f  %15.6f  %15.8f  %15.6f  %15.6f\n'
-                           % (name, step, alpha, En, chi_devi_n, Un, Umin))
+        self.logfile.write('%s: %d  %s  %15.6f  %15.6f  %15.8f  %15.6f  %15.6f\n'
+                           % (name, step, accept, alpha, En, chi_devi_n, Un, Umin))
         self.logfile.flush()
 
     def log_chi(self, step):
