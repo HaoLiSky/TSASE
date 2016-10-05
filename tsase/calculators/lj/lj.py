@@ -32,7 +32,7 @@ class lj:
     def calculation_required(self, atoms, quantities):
         if atoms != self.atoms or self.atoms == None:
             return True
-        if self.f == None or self.u == None or atoms == None:
+        if self.f is None or self.u is None or atoms is None:
             return True
         return False
 
