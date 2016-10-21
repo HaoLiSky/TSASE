@@ -155,7 +155,7 @@ class Optimizer(Dynamics):
 
     def converged_PE(self, forces=None):
         """Did the optimization converge?"""
-        return self.atoms.get_potential_energy() < self.fmax
+        return self.atoms.get_potential_energy() < self.emax
 
     def bgsd_check(self,  forces=None):
         if forces is None:
