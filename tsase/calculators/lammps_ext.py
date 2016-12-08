@@ -26,6 +26,7 @@
 import os 
 import shutil
 import shlex
+import time
 from subprocess import Popen, PIPE
 from threading import Thread
 from re import compile as re_compile, IGNORECASE
@@ -125,10 +126,11 @@ class LAMMPS:
         else:
             self.tmp_dir=os.path.realpath(tmp_dir)
             if not os.path.isdir(self.tmp_dir):
-                os.mkdir(self.tmp_dir, 0755)
+                os.mkdir(self.tmp_dir, 0o755)
         
         for f in files:
-            shutil.copy(f, os.path.join(self.tmp_dir, f))
+            shutil.copy(f, os.path.join(self.tmp_dir, os.path.basename(f)))
+#            shutil.copy(f, os.path.join(self.tmp_dir, f))
 
     def clean(self, force=False):
 
@@ -164,13 +166,27 @@ class LAMMPS:
                                          'pyz','pxz','pxy')])*(-1e-4*GPa)
 
     def update(self, atoms):
-        # TODO: check if (re-)calculation is necessary
-        self.calculate(atoms)
-        for i in range(len(atoms)):
-            atoms[i].charge = self.charges[i]
+        if not hasattr(self,'atoms') or self.atoms != atoms:
+            self.calculate(atoms)
+            for i in range(len(atoms)):
+                atoms[i].charge = self.charges[i]
 
     def calculate(self, atoms):
         self.atoms = atoms.copy()
+        pbc = self.atoms.get_pbc()
+        if all(pbc):
+            cell = self.atoms.get_cell()
+        elif not any(pbc):
+            # large enough cell for non-periodic calculation -
+            # LAMMPS shrink-wraps automatically via input command
+            #       "periodic s s s"
+            # below
+            cell = 2 * np.max(np.abs(self.atoms.get_positions())) * np.eye(3)
+        else:
+            print("WARNING: semi-periodic ASE cell detected -")
+            print("         translation to proper LAMMPS input cell might fail")
+            cell = self.atoms.get_cell()
+        self.prism = prism(cell)
         self.run()
 
     def _lmp_alive(self):
@@ -205,7 +221,7 @@ class LAMMPS:
             lammps_options = shlex.split(os.environ['LAMMPS_OPTIONS'])
         else:
             #lammps_options = shlex.split('-echo log -screen none')
-            # xph: save screen output to tmp. If comb3 used, "screen none" crushes
+            # xph: save screen output to tmp. If comb3 used, "screen none" crashes
             lammps_options = shlex.split('-echo log -screen tmp')
 
 
@@ -303,7 +319,7 @@ class LAMMPS:
         else:
             write_charge = False
         write_lammps_data(lammps_data, self.atoms, self.specorder, 
-                          force_skew=self.always_triclinic, write_charge=write_charge)
+                          force_skew=self.always_triclinic, prismobj=self.prism, write_charge=write_charge)
 
     def write_lammps_in(self, lammps_in=None, lammps_trj=None, lammps_data=None):
         """Method which writes a LAMMPS in file with run parameters and settings."""
@@ -347,7 +363,7 @@ class LAMMPS:
                 f.write(''.join(['# %.16f %.16f %.16f\n' % tuple(x)
                                  for x in self.atoms.get_cell()]))
 
-            p = prism(self.atoms.get_cell())
+            p = self.prism
             f.write('lattice sc 1.0\n')
             xhi, yhi, zhi, xy, xz, yz = p.get_lammps_prism_str()
             if self.always_triclinic or p.is_skewed():
@@ -362,7 +378,7 @@ class LAMMPS:
             symbols = self.atoms.get_chemical_symbols()
             if self.specorder is None:
                 # By default, atom types in alphabetic order
-                species = sorted(list(set(symbols)))
+                species = sorted(set(symbols))
             else:
                 # By request, specific atom type ordering
                 species = self.specorder
@@ -592,7 +608,8 @@ class LAMMPS:
         if self.atoms:
             cell_atoms = self.atoms.get_cell()
 
-            rotation_lammps2ase = np.dot(np.linalg.inv(np.array(cell)), cell_atoms)
+#            rotation_lammps2ase = np.dot(np.linalg.inv(np.array(cell)), cell_atoms)
+            rotation_lammps2ase = np.linalg.inv(self.prism.R)
 #           print "rotation_lammps2ase:"
 #           print rotation_lammps2ase
 #           print np.transpose(rotation_lammps2ase)
@@ -605,8 +622,7 @@ class LAMMPS:
             forces_atoms = np.array( [np.dot(np.array(f), rotation_lammps2ase) for f in forces] )
 
         if (set_atoms):
-            # assume periodic boundary conditions here (like also below in write_lammps) <- TODO:?!
-            self.atoms = Atoms(type_atoms, positions=positions_atoms, cell=cell_atoms, pbc=True)
+            self.atoms = Atoms(type_atoms, positions=positions_atoms, cell=cell_atoms)
 
         self.forces = forces_atoms
 
@@ -731,7 +747,7 @@ class prism:
         d = [x % (1-self.dir_prec) for x in 
              map(dec.Decimal, map(repr, np.mod(self.car2dir(v) + self.eps, 1.0)))]
         return tuple([self.f2qs(x) for x in 
-                      self.dir2car(map(float, d))])
+                      self.dir2car(list(map(float, d)))])
         
     def get_lammps_prism(self):
         A = self.A
@@ -756,8 +772,8 @@ class prism:
         axy, axz, ayz = [np.abs(x) for x in prism[3:]]
         return (axy >= acc) or (axz >= acc) or (ayz >= acc)
         
-
-def write_lammps_data(fileobj, atoms, specorder=[], force_skew=False, write_charge=False):
+def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False, write_charge=False
+                      prismobj=None, velocities=False):
     """Method which writes atomic structure data to a LAMMPS data file."""
     if isinstance(fileobj, str):
         f = paropen(fileobj, 'w')
@@ -781,7 +797,7 @@ def write_lammps_data(fileobj, atoms, specorder=[], force_skew=False, write_char
     if specorder is None:
         # This way it is assured that LAMMPS atom types are always
         # assigned predictively according to the alphabetic order 
-        species = sorted(list(set(symbols)))
+        species = sorted(set(symbols))
     else:
         # To index elements in the LAMMPS data file (indices must
         # correspond to order in the potential file)
@@ -789,7 +805,10 @@ def write_lammps_data(fileobj, atoms, specorder=[], force_skew=False, write_char
     n_atom_types = len(species)
     f.write('%d  atom types\n' % n_atom_types)
 
-    p = prism(atoms.get_cell())
+    if prismobj is None:
+        p = prism(atoms.get_cell())
+    else:
+        p = prismobj
     xhi, yhi, zhi, xy, xz, yz = p.get_lammps_prism_str()
 
     f.write('0.0 %s  xlo xhi\n' % xhi)
@@ -814,6 +833,11 @@ def write_lammps_data(fileobj, atoms, specorder=[], force_skew=False, write_char
             s = species.index(symbols[i]) + 1
             f.write('%6d %3d %s %s %s\n' % ((i+1, s)+tuple(r)))
     
+    if velocities and atoms.get_velocities() is not None:
+        f.write('\n\nVelocities \n\n')
+        for i, v in enumerate(atoms.get_velocities()):
+            f.write('%6d %s %s %s\n' % ((i+1,)+tuple(v)))
+
     if close_file:
         f.close()
 
@@ -836,14 +860,14 @@ if __name__ == '__main__':
                      cell=[a0]*3,
                      pbc=True)
         # test get_forces
-        print 'forces for a = %f' % a0
-        print calc.get_forces(bulk)
+        print('forces for a = %f' % a0)
+        print(calc.get_forces(bulk))
         # single points for various lattice constants
         bulk.set_calculator(calc)
         for n in range(-5,5,1):
             a = a0 * (1 + n/100.0)
             bulk.set_cell([a]*3)
-            print 'a : %f , total energy : %f' % (a, bulk.get_potential_energy())
+            print('a : %f , total energy : %f' % (a, bulk.get_potential_energy()))
 
     calc.clean()
 
