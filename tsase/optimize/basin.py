@@ -1,7 +1,6 @@
 import numpy as np
 
 from ase.optimize.optimize import Dynamics
-from ase.optimize.fire import FIRE
 from tsase.optimize.sdlbfgs import SDLBFGS
 from ase.units import kB
 from ase.parallel import world
@@ -24,6 +23,7 @@ class BasinHopping(Dynamics):
                  optimizer=SDLBFGS,
                  fmax=0.1,
                  dr=0.1,
+                 active_ratio = 1.0, #define the number of atoms moved each time
                  logfile='-', 
                  trajectory=None,
                  optimizer_logfile='-',
@@ -32,11 +32,10 @@ class BasinHopping(Dynamics):
                  mss=0.2,
                  minenergy=None,
                  distribution='uniform',
-                 adjust_step_size=None,
-                 adjust_every = None,
+                 adjust_step_size = None,
                  target_ratio = 0.5,
                  adjust_fraction = 0.05,
-                 significant_structure = False,  # displace from minimum at each move
+                 significant_structure = False,  # displace from minimum if accept
                  significant_structure2 = False, # displace from global minimum found so far at each move
                  pushapart = 0.4,
                  jumpmax=None
@@ -46,6 +45,8 @@ class BasinHopping(Dynamics):
         self.optimizer = optimizer
         self.fmax = fmax
         self.dr = dr
+        self.active_ratio = active_ratio
+
         if adjust_cm:
             self.cm = atoms.get_center_of_mass()
         else:
@@ -57,8 +58,7 @@ class BasinHopping(Dynamics):
             tsase.io.write_con(self.lm_trajectory,atoms,w='w')
         self.minenergy = minenergy
         self.distribution = distribution
-        self.adjust_step = adjust_step_size
-        self.adjust_every = adjust_every
+        self.adjust_step_zie = adjust_step_size
         self.target_ratio = target_ratio
         self.adjust_fraction = adjust_fraction
         self.significant_structure = significant_structure
@@ -106,7 +106,10 @@ class BasinHopping(Dynamics):
                 acceptnum += 1.
                 recentaccept += 1.
                 rejectnum = 0
-                if self.significant_structure2 == True:
+                #Lei: update structure with accepted local minimum
+                #if self.significant_structure2 == True:
+                #    ro = self.local_min_pos.copy()
+                if self.significant_structure == True:
                     ro = self.local_min_pos.copy()
                 else:
                     ro = rn.copy()
@@ -118,10 +121,11 @@ class BasinHopping(Dynamics):
             if self.minenergy != None:
                 if Eo < self.minenergy:
                     break
-            if self.adjust_step == True:
-                if step % self.adjust_every == 0:
+            #Lei: merge two parameters 'adjust_every' and 'adjust_step_size' as one
+            if self.adjust_step_size in not None:
+                if step % self.adjust_step_size == 0:
                     ratio = float(acceptnum)/float(self.steps)
-                    ratio = float(recentaccept)/float(self.adjust_every)
+                    ratio = float(recentaccept)/float(self.adjust_step_size)
                     recentaccept = 0.
                     if ratio > self.target_ratio:
                        self.dr = self.dr * (1+self.adjust_fraction)
@@ -139,29 +143,41 @@ class BasinHopping(Dynamics):
     def move(self, ro):
         """Move atoms by a random step."""
         atoms = self.atoms
-        if self.distribution == 'uniform':
-            disp = np.random.uniform(-self.dr, self.dr, (len(atoms), 3))
-        elif self.distribution == 'gaussian':
-            disp = np.random.normal(0,self.dr,size=(len(atoms), 3))
-        elif self.distribution == 'linear':
-            distgeo = self.get_dist_geo_center()
-            disp = np.zeros(np.shape(atoms.get_positions()))
-            for i in range(len(disp)):
-                maxdist = self.dr*distgeo[i]
-            #    disp[i] = np.random.normal(0,maxdist,3)
-                disp[i] = np.random.uniform(-maxdist,maxdist,3)
-        elif self.distribution == 'quadratic':
-            distgeo = self.get_dist_geo_center()
-            disp = np.zeros(np.shape(atoms.get_positions()))
-            for i in range(len(disp)):
-                maxdist = self.dr*distgeo[i]*distgeo[i]
-            #    disp[i] = np.random.normal(0,maxdist,3)
-                disp[i] = np.random.uniform(-maxdist,maxdist,3)
-        else:
-            disp = np.random.uniform(-1*self.dr, self.dr, (len(atoms), 3))
-        if self.significant_structure == True:
-            rn = self.local_min_pos + disp
-        elif self.significant_structure2 == True:
+        disp = np.zeros(np.shape(atoms.get_positions()))
+        while np.alltrue(disp == np.zeros(np.shape(atoms.get_positions()))):
+            if self.distribution == 'uniform':
+                disp = np.random.uniform(-self.dr, self.dr, (len(atoms), 3))
+            elif self.distribution == 'gaussian':
+                disp = np.random.normal(0,self.dr,size=(len(atoms), 3))
+            elif self.distribution == 'linear':
+                distgeo = self.get_dist_geo_center()
+                disp = np.zeros(np.shape(atoms.get_positions()))
+                for i in range(len(disp)):
+                    maxdist = self.dr*distgeo[i]
+                #    disp[i] = np.random.normal(0,maxdist,3)
+                    disp[i] = np.random.uniform(-maxdist,maxdist,3)
+            elif self.distribution == 'quadratic':
+                distgeo = self.get_dist_geo_center()
+                disp = np.zeros(np.shape(atoms.get_positions()))
+                for i in range(len(disp)):
+                    maxdist = self.dr*distgeo[i]*distgeo[i]
+                #    disp[i] = np.random.normal(0,maxdist,3)
+                    disp[i] = np.random.uniform(-maxdist,maxdist,3)
+            else:
+                disp = np.random.uniform(-1*self.dr, self.dr, (len(atoms), 3))
+
+            #Lei: set all other disp to zero except those selected to move
+            #     the number of atoms that can be moved is defined by int(active_ratio * len(atoms))
+            if self.active_ratio is not None:
+               fix_space = len(atoms) - int(self.active_ratio * len(atoms))
+               fix_atoms = random.sample(range(len(atoms)), fix_space)
+               for i in range(len(fix_atoms)):
+                   disp[fix_atoms[i]] = (0.0, 0.0, 0.0)
+
+        #Lei: suppose to only update 'ro' with local minimum when accept == true
+        #if self.significant_structure == True:
+        #    rn = self.local_min_pos + disp
+        if self.significant_structure2 == True:
             ro,reng = self.get_minimum()
             rn = ro + disp
         else:
@@ -190,9 +206,16 @@ class BasinHopping(Dynamics):
             self.atoms.set_positions(positions)
  
             try:
-                opt = self.optimizer(self.atoms,
-                                         logfile=self.optimizer_logfile,
-                                        maxstep=self.mss)
+               #Lei: enable 'FIRE' optimizer
+               if self.optimizer.__name__ == "FIRE":
+                  opt = self.optimizer(self.atoms,
+                                       maxmove = 1.0,
+                                       dt = 0.2, dtmax = 1.0,
+                                           logfile=self.optimizer_logfile)
+               else:
+                  opt = self.optimizer(self.atoms,
+                                           logfile=self.optimizer_logfile,
+                                           maxstep=self.mss)
                 #    opt = self.optimizer(self.atoms, 
                 #                     logfile=self.optimizer_logfile,
                 #                     maxstep=self.mss)
