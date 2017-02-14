@@ -73,6 +73,7 @@ class BasinHopping(Dynamics):
         self.Emin = self.get_energy(self.atoms.get_positions()) or 1.e32 
         self.rmin = self.atoms.get_positions()
         self.positions = self.atoms.get_positions()
+        self.local_min_pos = self.atoms.get_positions()
         self.call_observers()
         self.log(-1, self.Emin, self.Emin,self.dr)
                 
