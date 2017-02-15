@@ -5,6 +5,7 @@ from tsase.optimize.sdlbfgs import SDLBFGS
 from ase.units import kB
 from ase.parallel import world
 from ase.io.trajectory import PickleTrajectory
+import random
 import tsase
 import sys
 
@@ -58,7 +59,7 @@ class BasinHopping(Dynamics):
             tsase.io.write_con(self.lm_trajectory,atoms,w='w')
         self.minenergy = minenergy
         self.distribution = distribution
-        self.adjust_step_zie = adjust_step_size
+        self.adjust_step_size = adjust_step_size
         self.target_ratio = target_ratio
         self.adjust_fraction = adjust_fraction
         self.significant_structure = significant_structure
@@ -123,7 +124,7 @@ class BasinHopping(Dynamics):
                 if Eo < self.minenergy:
                     break
             #Lei: merge two parameters 'adjust_every' and 'adjust_step_size' as one
-            if self.adjust_step_size in not None:
+            if self.adjust_step_size is not None:
                 if step % self.adjust_step_size == 0:
                     ratio = float(acceptnum)/float(self.steps)
                     ratio = float(recentaccept)/float(self.adjust_step_size)
@@ -220,9 +221,9 @@ class BasinHopping(Dynamics):
                 #    opt = self.optimizer(self.atoms, 
                 #                     logfile=self.optimizer_logfile,
                 #                     maxstep=self.mss)
-                opt.run(fmax=self.fmax)
-                self.energy = self.atoms.get_potential_energy()
-                self.local_min_pos = self.atoms.get_positions()
+               opt.run(fmax=self.fmax)
+               self.energy = self.atoms.get_potential_energy()
+               self.local_min_pos = self.atoms.get_positions()
             except:
                 # Something went wrong.
                 # In GPAW the atoms are probably to near to each other.
