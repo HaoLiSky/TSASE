@@ -23,8 +23,11 @@ class BasinHopping(Dynamics):
                  temperature=100 * kB,
                  optimizer=SDLBFGS,
                  fmax=0.1,
+                 move_atoms = True,
                  dr=0.1,
-                 active_ratio = 1.0, #define the number of atoms moved each time
+                 swap_atoms = False, 
+                 elements_lib = None, #elements which will be swapped, i.e., elements_lib = ['Au', 'Rh']
+                 active_ratio = 1.0, #define the number of atoms moved or swapped each time
                  logfile='-', 
                  trajectory=None,
                  optimizer_logfile='-',
@@ -45,7 +48,10 @@ class BasinHopping(Dynamics):
         self.kT = temperature
         self.optimizer = optimizer
         self.fmax = fmax
+        self.move_atoms = move_atoms
         self.dr = dr
+        self.swap_atoms = swap_atoms
+        self.elements_lib = elements_lib
         self.active_ratio = active_ratio
 
         if adjust_cm:
@@ -71,7 +77,7 @@ class BasinHopping(Dynamics):
 
     def initialize(self):
         self.positions = 0.0 * self.atoms.get_positions()
-        self.Emin = self.get_energy(self.atoms.get_positions()) or 1.e32 
+        self.Emin = self.get_energy(self.atoms.get_positions(), self.atoms.get_chemical_symbols()) or 1.e32 
         self.rmin = self.atoms.get_positions()
         self.positions = self.atoms.get_positions()
         self.local_min_pos = self.atoms.get_positions()
@@ -82,7 +88,9 @@ class BasinHopping(Dynamics):
         """Hop the basins for defined number of steps."""
         self.steps = 0
         ro = self.positions
-        Eo = self.get_energy(ro)
+        symbol_o = self.atoms.get_chemical_symbols()
+
+        Eo = self.get_energy(ro, symbol_o)
         acceptnum = 0
         recentaccept = 0
         rejectnum = 0
@@ -90,8 +98,15 @@ class BasinHopping(Dynamics):
             En = None
             self.steps += 1
             while En is None:
-                rn = self.move(ro)
-                En = self.get_energy(rn)
+                if self.move_atoms:
+                   rn = self.move(ro)
+                   symbol_n = symbol_o
+                if self.swap_atoms:
+                   symbol_n = self.random_swap(symbol_o)
+                   rn = ro
+
+                En = self.get_energy(rn, symbol_n)
+
             if En < self.Emin:
                 self.Emin = En
                 self.rmin = self.atoms.get_positions()
@@ -115,6 +130,10 @@ class BasinHopping(Dynamics):
                     ro = self.local_min_pos.copy()
                 else:
                     ro = rn.copy()
+
+                if self.swap_atoms:
+                    symbol_o = symbol_n
+
                 Eo = En
                 if self.lm_trajectory is not None:
                     tsase.io.write_con(self.lm_trajectory,self.atoms,w='a')
@@ -194,6 +213,44 @@ class BasinHopping(Dynamics):
         atoms.set_positions(rn)
         return atoms.get_positions()
 
+    def random_swap(self, symbols):
+        atoms = self.atoms
+        elements_lib = self.elements_lib
+        swap_space = int(self.active_ratio * len(atoms))
+        atoms.set_chemical_symbols(symbols)
+        chemical_symbols = atoms.get_chemical_symbols()
+        spec_index=[]
+        elements_numb=[]
+
+        #sort index based on element kind and count the number of each kind of element
+        for i in range(len(elements_lib)):
+            spec_index.append([])
+            elements_numb.append(0)
+        for i in xrange(len(atoms)):
+            for j in range (len(elements_lib)):
+                if chemical_symbols[i] == elements_lib[j]:
+                   spec_index[j].append(i)
+                   elements_numb[j] += 1
+
+        print "Elements_numb:", elements_numb
+        if swap_space > min(elements_numb):
+           swap_space = min(elements_numb)
+        #swap elements
+        index_zero=random.sample(spec_index[0], swap_space)
+        index_one=random.sample(spec_index[1], swap_space)
+        for i in xrange(swap_space):
+            chemical_symbols[index_zero[i]]=elements_lib[1]
+            chemical_symbols[index_one[i]]=elements_lib[0]
+
+        #Following codes used to test if swapping is successful
+        #counter = 0
+        #for i in range(len(chemical_symbols)):
+        #    if chemical_symbols[i] != symbols[i]:
+        #      counter += 1
+        #print "different atoms:", counter
+
+        return chemical_symbols
+
     def get_minimum(self):
         """Return minimal energy and configuration."""
         atoms = self.atoms.copy()
@@ -201,12 +258,12 @@ class BasinHopping(Dynamics):
         print 'get_minimum',self.Emin
         return self.Emin, atoms
 
-    def get_energy(self, positions):
+    def get_energy(self, positions, symbols):
         """Return the energy of the nearest local minimum."""
-        if np.sometrue(self.positions != positions):
+        if np.sometrue(self.positions != positions) or self.swap_atoms:
             self.positions = positions
             self.atoms.set_positions(positions)
- 
+            self.atoms.set_chemical_symbols(symbols)
             try:
                #Lei: enable 'FIRE' optimizer
                if self.optimizer.__name__ == "FIRE":
