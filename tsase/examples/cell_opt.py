@@ -33,7 +33,7 @@ calc = Vasp(prec = 'Normal',
             ldau      = True,
             ldautype  = 2,
             ldauprint = 2,
-	        ldau_luj = {'Ca':{'L':-1,'U':0,'J':0},'Ir':{'L':2, 'U':3.75, 'J':1.0},'O':{'L':-1,'U':0,'J':0}},
+            ldau_luj = {'Ca':{'L':-1,'U':0,'J':0},'Ir':{'L':2, 'U':3.75, 'J':1.0},'O':{'L':-1,'U':0,'J':0}},
             lmaxmix   = 4
               )
 p1.set_calculator(calc)
