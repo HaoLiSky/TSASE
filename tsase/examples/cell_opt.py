@@ -41,7 +41,7 @@ p1.set_calculator(calc)
 pstress = p1.get_cell()*0.0
 pstress[2][0] = 3.0
 
-p1box = mushybox(p1,pstress)
+p1box = mushybox(p1,express=pstress)
 print len(p1box)
 print p1box.jacobian
 print p1box.get_potential_energy()
