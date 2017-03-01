@@ -40,12 +40,12 @@ for p in p2:
 
 # set calculator to LAMMPS in tsase. ASE's LAMMPS calculator doesn't write charge information into data file.
 pair_coeff = [ '1 1 0.00145 1.98', '2 2 0.00128 5.24' ]
-parameters = { 'pair_style':'lj/cut/coul/long 10.0 10.0', 'pair_coeff':pair_coeff, 'kspace_style':'ewald/n 1.0e-8', 'atom_style':'charge','mass':['1 1','2 1'], 'pair_modify':'table 12 mix arithmetic'}
+parameters = { 'pair_style':'lj/cut/coul/long 10.0 10.0', 'pair_coeff':pair_coeff, 'kspace_style':'ewald 1.0e-8', 'atom_style':'charge','mass':['1 1','2 1'], 'pair_modify':'table 12 mix arithmetic'}
 calc = LAMMPS(parameters=parameters, tmp_dir='trash')
 
 # or set calculator to VASP
-#calc = Vasp(prec = 'Accurate',
-#            ediff = 1e-6,
+#calc = Vasp(prec = 'Normal',
+#            ediff = 1e-5,
 #            kpts = (6,6,6),
 #            voskown = 1,
 #            lcharg = False,
@@ -59,11 +59,13 @@ p2.set_calculator(calc)
 
 # external stress applied in the unit of GPa
 stress=numpy.zeros((3,3))
-stress[2,2] = -5.0  #negative is tension
+#stress[2,2] = -1.0  #negative is tension
 
 # initialize the band 
 nim = 7  # number of images, including end points
-band = neb.ssneb(p1, p2, numImages = nim, method = 'ci', express = stress)
+# no climbing image first
+band = neb.ssneb(p1, p2, numImages = nim, express = stress)
+#band = neb.ssneb(p1, p2, numImages = nim, method = 'ci', express = stress)
 '''
 #-------------- substitute for the above line if parallelize over image ------------------
 band = neb.ssneb(p1, p2, numImages = nim, method = 'ci', express = stress, parallel = True)
@@ -77,7 +79,7 @@ band = neb.ssneb(p1, p2, numImages = nim, method = 'ci', express = stress, paral
 #    band.path[i].set_cell(b.get_cell())
 
 
-#opt = neb.qm_ssneb(band, maxmove = 0.20, dt = 0.05)
-opt = neb.fire_ssneb(band, maxmove =0.2, dtmax = 0.1, dt=0.1)
-opt.minimize(forceConverged=0.001, maxIterations = 1000)
+#opt = neb.qm_ssneb(band, maxmove = 0.10, dt = 0.05)
+opt = neb.fire_ssneb(band, maxmove =0.1, dtmax = 0.1, dt=0.1)
+opt.minimize(forceConverged=0.01, maxIterations = 300)
 
