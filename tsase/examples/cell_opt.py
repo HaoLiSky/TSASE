@@ -42,11 +42,10 @@ pstress = p1.get_cell()*0.0
 pstress[2][0] = 3.0
 
 p1box = mushybox(p1,express=pstress)
-print len(p1box)
-print p1box.jacobian
-print p1box.get_potential_energy()
 
-dyn = FIRE(p1box)
-#dyn = MDMin(p1box)
-dyn.run(fmax=0.01)
+dyn = FIRE(p1box,maxmove = 0.1, dt = 0.1, dtmax = 0.1)
+#dyn = MDMin(p1box, dt=0.1)
+dyn.run(fmax=0.01, steps=100)
+
+write("CONTCAR",p,format='vasp')
 
