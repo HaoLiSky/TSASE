@@ -26,12 +26,12 @@ class mushybox(Atoms):
            print "warning: xy, xz, yz components of the external pressure will be set to zero"
         self.fixstrain = fixstrain
 
-        Atoms.__init__(self,atomsx)
         cell       = atomsx.get_cell()
         vol        = atomsx.get_volume()
         self.natom = atomsx.get_number_of_atoms()
         avglen     = (vol/self.natom)**(1.0/3.0)
         self.jacobian = avglen * self.natom**0.5
+        Atoms.__init__(self,atomsx)
 
     def get_positions(self):
         r    = self.atomsx.get_positions()*0.0
