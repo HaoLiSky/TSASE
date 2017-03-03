@@ -196,7 +196,8 @@ class MinimaHopping:
 
         # No prior minima found?
         self._read_minima()
-        if len(self._minima) == 0:
+        #if len(self._minima) == 0:
+	if self._previous_energy is None:
             self._log('msg', 'Found a new minimum.')
             self._log('msg', 'Accepted new minimum.')
             self._record_minimum()
@@ -384,7 +385,8 @@ class MinimaHopping:
         xi = np.random.standard_normal((len(masses), 3))
         if N is not None:
             xi = N
-            momenta = xi * np.sqrt(3 * len(masses) * masses * temp)[:, np.newaxis]
+            #momenta = 3 * len(masses) * xi * np.sqrt(2 * masses * temp)[:, np.newaxis]
+            momenta = xi * np.sqrt((3/2) * len(masses) * masses * (self._temperature * units.kB))[:, np.newaxis]
         else:
             momenta = xi * np.sqrt(masses * temp)[:, np.newaxis]
         communicator.broadcast(xi, 0)
@@ -432,7 +434,7 @@ class ModifiedDimer:
         return diff / np.linalg.norm(diff)
 
     def gradientDimer(self,p,count,dimer_a,dimer_d,dimer_steps):
-        localOpt = tsase.optimize.SDLBFGS(p)
+        localOpt = tsase.optimize.SDLBFGS(p,logfile = None)
         localOpt.run()
         x = p.get_positions()
 	a = dimer_a

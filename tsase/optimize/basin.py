@@ -33,7 +33,7 @@ class BasinHopping(Dynamics):
                  optimizer_logfile='-',
                  local_minima_trajectory='local_minima.con',
                  adjust_cm=True,
-                 mss=0.2,
+                 mss=0.05,
                  minenergy=None,
                  distribution='uniform',
                  adjust_step_size = None,
@@ -42,7 +42,7 @@ class BasinHopping(Dynamics):
                  significant_structure = False,  # displace from minimum if accept
                  significant_structure2 = False, # displace from global minimum found so far at each move
                  pushapart = 0.4,
-                 jumpmax=None
+                 jumpmax=5000
                  ):
         Dynamics.__init__(self, atoms, logfile, trajectory)
         self.kT = temperature
