@@ -40,7 +40,7 @@ class BasinHopping(Dynamics):
                  target_ratio = 0.5,
                  adjust_fraction = 0.05,
                  significant_structure = False,  # displace from minimum if accept
-                 significant_structure2 = False, # displace from global minimum found so far at each move
+              #   significant_structure2 = False, # displace from global minimum found so far at each move
                  pushapart = 0.4,
                  jumpmax=5000
                  ):
@@ -69,7 +69,7 @@ class BasinHopping(Dynamics):
         self.target_ratio = target_ratio
         self.adjust_fraction = adjust_fraction
         self.significant_structure = significant_structure
-        self.significant_structure2 = significant_structure2
+   #     self.significant_structure2 = significant_structure2
         self.pushapart = pushapart
         self.jumpmax = jumpmax
         self.mss = mss
@@ -77,12 +77,12 @@ class BasinHopping(Dynamics):
 
     def initialize(self):
         self.positions = 0.0 * self.atoms.get_positions()
-        self.Emin = self.get_energy(self.atoms.get_positions(), self.atoms.get_chemical_symbols()) or 1.e32 
-        self.rmin = self.atoms.get_positions()
+        self.E_global_min = self.get_energy(self.atoms.get_positions(), self.atoms.get_chemical_symbols()) or 1.e32 
+        self.r_global_min = self.atoms.get_positions()
         self.positions = self.atoms.get_positions()
         self.local_min_pos = self.atoms.get_positions()
         self.call_observers()
-        self.log(-1, self.Emin, self.Emin,self.dr)
+        self.log(-1, self.E_global_min, self.E_global_min,self.dr)
                 
     def run(self, steps):
         """Hop the basins for defined number of steps."""
@@ -107,11 +107,11 @@ class BasinHopping(Dynamics):
 
                 En = self.get_energy(rn, symbol_n)
 
-            if En < self.Emin:
-                self.Emin = En
-                self.rmin = self.atoms.get_positions()
+            if En < self.E_global_min:
+                self.E_global_min = En
+                self.r_global_min = self.atoms.get_positions()
                 self.call_observers()
-            self.log(step, En, self.Emin,self.dr)
+            self.log(step, En, self.E_global_min,self.dr)
             if Eo >= En:
                 accept = True
             else:
@@ -196,11 +196,11 @@ class BasinHopping(Dynamics):
                    disp[fix_atoms[i]] = (0.0, 0.0, 0.0)
 
         #Lei: suppose to only update 'ro' with local minimum when accept == true
-        #if self.significant_structure == True:
-        #    rn = self.local_min_pos + disp
-        if self.significant_structure2 == True:
-            ro,reng = self.get_minimum()
-            rn = ro + disp
+        if self.significant_structure == True:
+            rn = self.local_min_pos + disp
+    #    if self.significant_structure2 == True:
+    #        ro,reng = self.get_minimum()
+    #        rn = ro + disp
         else:
             rn = ro + disp
         rn = self.push_apart(rn)
@@ -252,11 +252,11 @@ class BasinHopping(Dynamics):
         return chemical_symbols
 
     def get_minimum(self):
-        """Return minimal energy and configuration."""
+        """Return gloabl minimal energy and configuration."""
         atoms = self.atoms.copy()
-        atoms.set_positions(self.rmin)
-        print 'get_minimum',self.Emin
-        return self.Emin, atoms
+        atoms.set_positions(self.r_global_min)
+        print 'get_minimum',self.E_global_min
+        return self.E_global_min, atoms
 
     def get_energy(self, positions, symbols):
         """Return the energy of the nearest local minimum."""
