@@ -12,9 +12,9 @@ from ase.md import VelocityVerlet
 from ase.md import MDLogger
 import tsase
 import sys
-import atoms as geometry
+#import atoms as geometry
 import eon.fileio as fileio
-import write_con as write
+#import write_con as write
 
 class Hopping(Dynamics):
     """Basin hopping algorithm.
@@ -36,15 +36,15 @@ class Hopping(Dynamics):
                  optimizer_logfile='-',
                  local_minima_trajectory='local_minima.con',
                  adjust_cm=True,
-                 mss=0.05,
+                 mss=0.1,
                  minenergy=None,
                  distribution='uniform',
                  adjust_step_size=None,
-                 adjust_every = None,
+                 adjust_every =10,
                  target_ratio = 0.5,
                  adjust_fraction = 0.05,
                  significant_structure = True,  # displace from minimum at each move
-                 significant_structure2 = False, # displace from global minimum found so far at each move
+# JD: removing this flag;    significant_structure2 = False, # displace from global minimum found so far at each move
                  pushapart = 0.4,
                  jumpmax=10,
                  jmp = 7, # number of jump steps taken in BHOJ
@@ -65,7 +65,7 @@ class Hopping(Dynamics):
         	 alpha1 = 0.98,  # energy threshold adjustment parameter
         	 alpha2 = 1. / 0.98,  # energy threshold adjustment parameter
 		 minima_threshold = 2,  # round energies to how many decimal place
-                 use_geometry = True,
+                 use_geometry = False,
                  eps_r = 0.1,
                  confile_directory = "confiles" # cannot be a directory that exists
                  
@@ -91,7 +91,7 @@ class Hopping(Dynamics):
         self.target_ratio = target_ratio
         self.adjust_fraction = adjust_fraction
         self.significant_structure = significant_structure
-        self.significant_structure2 = significant_structure2
+#        self.significant_structure2 = significant_structure2
         self.pushapart = pushapart
         self.jumpmax = jumpmax
         self.jmp = jmp
@@ -462,13 +462,14 @@ class Hopping(Dynamics):
                     disp[i] = np.random.uniform(-maxdist,maxdist,3)
             else:
                 disp = np.random.uniform(-1*self.dr, self.dr, (len(self.atoms), 3))
-            if self.significant_structure == True:
-                rn = self.local_min_pos + disp
-            elif self.significant_structure2 == True:
-                ro = self.get_minimum()
-                rn = ro + disp
-            else:
-                rn = ro + disp
+       # JD: Removed to be consistent with the corrected basin.py
+       #     if self.significant_structure == True:
+       #         rn = self.local_min_pos + disp
+       #     elif self.significant_structure2 == True:
+       #         ro = self.get_minimum()
+       #         rn = ro + disp
+       #     else:
+            rn = ro + disp
             rn = self.push_apart(rn)
             self.atoms.set_positions(rn)
             if self.cm is not None:
@@ -479,6 +480,8 @@ class Hopping(Dynamics):
             dimer = ModifiedDimer()
             N = dimer(self.atoms, self.dimer_a, self.dimer_d, self.dimer_steps)
             self._molecular_dynamics(step, N)
+        # JD: Add displacement to ro at each step regardless of significant structure flag
+        rn = ro + disp
         rn = self.atoms.get_positions()
         world.broadcast(rn, 0)
         self.atoms.set_positions(rn)
@@ -621,7 +624,8 @@ class Hopping(Dynamics):
                 acceptnum += 1.
                 recentaccept += 1.
                 rejectnum = 0
-                if self.significant_structure2 == True:
+                ## JD: made edit to set ro to local minima if we accept the configuration.  eliminating significant_structure 2 flag
+                if self.significant_structure == True:
                     ro = self.local_min_pos.copy()
                 else:
                     ro = rn.copy()
