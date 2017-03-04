@@ -196,13 +196,13 @@ class BasinHopping(Dynamics):
                    disp[fix_atoms[i]] = (0.0, 0.0, 0.0)
 
         #Lei: suppose to only update 'ro' with local minimum when accept == true
-        if self.significant_structure == True:
-            rn = self.local_min_pos + disp
+    #    if self.significant_structure == True:
+    #        rn = self.local_min_pos + disp
     #    if self.significant_structure2 == True:
     #        ro,reng = self.get_minimum()
     #        rn = ro + disp
-        else:
-            rn = ro + disp
+    #    else:
+        rn = ro + disp
         rn = self.push_apart(rn)
         atoms.set_positions(rn)
         if self.cm is not None:
