@@ -475,13 +475,17 @@ class Hopping(Dynamics):
             if self.cm is not None:
                 cm = self.atoms.get_center_of_mass()
                 self.atoms.translate(self.cm - cm)
+            # RB: I think this was the intended spot to update rn
+            rn = ro + disp
         else :
             # Move atoms using Dimer and an MD step
             dimer = ModifiedDimer()
             N = dimer(self.atoms, self.dimer_a, self.dimer_d, self.dimer_steps)
             self._molecular_dynamics(step, N)
         # JD: Add displacement to ro at each step regardless of significant structure flag
-  #      rn = ro + disp
+        # RB: disp is defined for bh not mh, so update rn in bh move only 
+        #rn = ro + disp
+
         rn = self.atoms.get_positions()
         world.broadcast(rn, 0)
         self.atoms.set_positions(rn)
