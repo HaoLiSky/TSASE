@@ -481,7 +481,7 @@ class Hopping(Dynamics):
             N = dimer(self.atoms, self.dimer_a, self.dimer_d, self.dimer_steps)
             self._molecular_dynamics(step, N)
         # JD: Add displacement to ro at each step regardless of significant structure flag
-        rn = ro + disp
+  #      rn = ro + disp
         rn = self.atoms.get_positions()
         world.broadcast(rn, 0)
         self.atoms.set_positions(rn)
