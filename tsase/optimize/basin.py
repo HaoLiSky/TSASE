@@ -5,6 +5,7 @@ from tsase.optimize.sdlbfgs import SDLBFGS
 from ase.units import kB
 from ase.parallel import world
 from ase.io.trajectory import PickleTrajectory
+from tsase.atoms_operator import rot_match
 import random
 import tsase
 import sys
@@ -28,6 +29,9 @@ class BasinHopping(Dynamics):
                  swap_atoms = False, 
                  elements_lib = None, #elements which will be swapped, i.e., elements_lib = ['Au', 'Rh']
                  active_ratio = 1.0, #define the number of atoms moved or swapped each time
+                 visited_configs = {}, # {'state_number': [energy, atoms, repeats], ...},
+                 comp_eps_e = 1.e-4, #criterion to determine if two configurations are identtical in energy 
+                 comp_eps_r = 0.02, #criterion to determine if two configurations are identical in geometry
                  logfile='-', 
                  trajectory=None,
                  optimizer_logfile='-',
@@ -53,6 +57,9 @@ class BasinHopping(Dynamics):
         self.swap_atoms = swap_atoms
         self.elements_lib = elements_lib
         self.active_ratio = active_ratio
+        self.visited_configs = visited_configs
+        self.comp_eps_e = comp_eps_e
+        self.comp_eps_r = comp_eps_r
 
         if adjust_cm:
             self.cm = atoms.get_center_of_mass()
@@ -250,6 +257,29 @@ class BasinHopping(Dynamics):
         #print "different atoms:", counter
 
         return chemical_symbols
+
+    def config_memo(self, step):
+        """Add the new config if it is not visited before:
+           Compare energies first, then compare geometries
+        """
+        repeated = False
+        #print "visited_configs:",self.visited_configs
+        if self.visited_configs:
+           for state in self.visited_configs:
+               if abs(self.energy - self.visited_configs[state][0]) < self.comp_eps_e:
+                  if rot_match(self.visited_configs[state][1], self.atoms, self.comp_eps_r):
+                     print "Found a repeat of state:", state
+                     repeated = True
+                     self.visited_configs[state][2] += 1
+                     return repeated, state
+
+        #a new state is found or visited_configs is empty
+        #Note: chi_deviation is not calculated yet
+        if not repeated:
+           new_state = str(step)
+           self.visited_configs[new_state] = [self.energy, self.atoms, 1]
+        return repeated, new_state
+
 
     def get_minimum(self):
         """Return gloabl minimal energy and configuration."""
