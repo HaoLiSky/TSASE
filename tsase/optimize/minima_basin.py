@@ -29,8 +29,8 @@ class Hopping(Dynamics):
     def __init__(self, atoms,
 		 temperature=100, # K, initial temperature 
                  optimizer=SDLBFGS,
-                 fmax=0.05,
-                 dr=0.4,
+                 fmax=0.01,
+                 dr=0.45,
                  logfile='-', 
                  trajectory=None,
                  optimizer_logfile='-',
@@ -38,24 +38,27 @@ class Hopping(Dynamics):
                  adjust_cm=True,
                  mss=0.1,
                  minenergy=None,
-                 distribution='uniform',
-                 adjust_step_size=None,
+                 distribution='uniform', # make md the distribution for MH move
+                 adjust_step_size=1,
                  adjust_every =10,
                  target_ratio = 0.5,
-                 adjust_fraction = 0.05,
+                 adjust_fraction = 0.025,
                  significant_structure = True,  # displace from minimum at each move
 # JD: removing this flag;    significant_structure2 = False, # displace from global minimum found so far at each move
                  pushapart = 0.4,
                  jumpmax=10,
                  jmp = 7, # number of jump steps taken in BHOJ
-    		 molecular_dynamics = False, # trial move using md when true
+                 global_jump = 10, # threshold of times to visit the same PE before we make a global jump
+                 global_reset = False, # reset all of the history counts after a jump
+                 jump_distribution = 'uniform',
 		 dimer_a = 0.001,
 		 dimer_d = 0.01,
 		 dimer_steps = 20,
 		 timestep = 0.1, # moleculare dynamics time step
 		 mdmin = 2, # number of minima to pass in md before stopping
 		 history_weight = 0.0, # the weight factor of history >= 0 
-                 adjust_temp = True, # dynamically adjust the temperature in BH acceptance
+                 adjust_temp = False, # dynamically adjust the temperature in BH acceptance
+                 accept_temp = None, # seperate temperature to use for BH acceptance
 		 minimaHopping_acceptance = False, # use MH acceptance criteria instead of BH
                  minimaHopping_history = True, # use history in MH acceptance criteria
 		 beta1 = 1.04, # temperature adjustment parameter
@@ -95,14 +98,17 @@ class Hopping(Dynamics):
         self.pushapart = pushapart
         self.jumpmax = jumpmax
         self.jmp = jmp
+        self.jump_distribution = jump_distribution
+        self.global_jump = global_jump
+        self.global_reset = global_reset
 	self.dimer_a = dimer_a
-	self.molecular_dynamics = molecular_dynamics
 	self.dimer_d = dimer_d
 	self.dimer_steps = dimer_steps
 	self.timestep = timestep
 	self.mdmin = mdmin
 	self.w = history_weight
         self.adjust_temp = adjust_temp
+        self.accept_temp = accept_temp
 	self.mh_accept = minimaHopping_acceptance
 	self.mh_history = minimaHopping_history
 	self.beta1 = beta1
@@ -145,7 +151,8 @@ class Hopping(Dynamics):
         name = self.__class__.__name__
         self.logfile.write('%s: step %d, energy %15.6f, emin %15.6f'
                            % (name, step, En, Emin))
-	if not self.molecular_dynamics:
+	#if not self.molecular_dynamics:
+        if self.distribution != 'molecular_dynamics':
             self.logfile.write(', dr %15.6f'
                                % (dr))
 	self.logfile.write(', Temperature %12.4f' % (self.temperature))
@@ -366,15 +373,17 @@ class Hopping(Dynamics):
             self.MaxwellBoltzmannDistribution(N,
                                          temp=self.temperature * kB,
                                          force_temp=True)
-        if (step > 1):
-            os.remove('md.log')
-            os.remove('md.traj')
+        #if (step > 1):
+        #    os.remove('md.log')
+        #    os.remove('md.traj')
         traj = io.Trajectory('md.traj', 'a', self.atoms)
         dyn = VelocityVerlet(self.atoms, dt=self.timestep * units.fs)
         log = MDLogger(dyn, self.atoms, 'md.log',
                        header=True, stress=False, peratom=False)
         dyn.attach(log, interval=1)
         dyn.attach(traj, interval=1)
+        os.remove('md.log')
+        os.remove('md.traj')
         while mincount < self.mdmin:
             dyn.run(1)
             energies.append(self.atoms.get_potential_energy())
@@ -441,20 +450,21 @@ class Hopping(Dynamics):
                 break
         return positions
 
-    def move(self, step, ro):
+    def move(self, step, ro, distribution):
         """Move atoms by a random step."""
-        if not self.molecular_dynamics:
-            if self.distribution == 'uniform':
+        if distribution != 'molecular_dynamics':
+        #if not self.molecular_dynamics:
+            if distribution == 'uniform':
                 disp = np.random.uniform(-self.dr, self.dr, (len(self.atoms), 3))
-            elif self.distribution == 'gaussian':
+            elif distribution == 'gaussian':
                 disp = np.random.normal(0,self.dr,size=(len(self.atoms), 3))
-            elif self.distribution == 'linear':
+            elif distribution == 'linear':
                 distgeo = self.get_dist_geo_center()
                 disp = np.zeros(np.shape(self.atoms.get_positions()))
                 for i in range(len(disp)):
                     maxdist = self.dr*distgeo[i]
                     disp[i] = np.random.uniform(-maxdist,maxdist,3)
-            elif self.distribution == 'quadratic':
+            elif distribution == 'quadratic':
                 distgeo = self.get_dist_geo_center()
                 disp = np.zeros(np.shape(self.atoms.get_positions()))
                 for i in range(len(disp)):
@@ -498,11 +508,11 @@ class Hopping(Dynamics):
         for step in range(steps):
             positionsOld = self.atoms.get_positions()
             En = None
-            rn = self.move(step,ro)
+            rn = self.move(step,ro, self.distribution)
             En = self.get_energy(rn)
             self.steps += 1
             while En is None:
-                rn = self.move(step,ro)
+                rn = self.move(step,ro, self.distribtion)
                 self.atoms.set_positions(rn)
                 En = self.get_energy(rn)
             if En < self.Emin:
@@ -513,7 +523,12 @@ class Hopping(Dynamics):
             match = None
             countEo = 0
             countEn = 0
-            if self.use_geo:
+            # find energy match first even if using geometry comparision
+            # because it is computationlly cheaper to only compare geometries
+            # for structures that have the same potential energy
+            match, countEn, countEo = self.find_ene_match(En, Eo)
+            if self.use_geo and (match is not None):
+            #if self.use_geo:
                 match = self.find_match()
             else:
                 match, countEn, countEo = self.find_ene_match(En, Eo)
@@ -537,7 +552,8 @@ class Hopping(Dynamics):
             if self.jumpmax and (rejectnum > self.jumpmax):
                 #JMP???
                 for i in range(0,self.jmp):
-                    rn = self.move(step,rn)
+                    rn = self.move(step,rn, self.jump_distribution)
+                En = self.get_energy(rn)
                 accept = True
             if accept:
                 rejectnum = 0
@@ -545,8 +561,15 @@ class Hopping(Dynamics):
                 if self.use_geo:
                     new_con = self.update_con(match)
                     lastcon = new_con
-                else:
-                    self.update_minima(En, Eo)
+                #else:
+                self.update_minima(En, Eo)
+                if self.global_jump and (self.minima[round(En,self.minima_threshold)] > self.global_jump):
+                    for i in range(0,self.jmp):
+                        rn = self.move(step,rn, self.jump_distribution)
+                    if self.global_reset:
+                        # This may cause an error. Need to test!
+                        self.minima = {}
+                    En = self.get_energy(rn)
                 Eo = En
                 if self.lm_trajectory is not None:
                     tsase.io.write_con(self.lm_trajectory,self.atoms,w='a')
@@ -571,7 +594,7 @@ class Hopping(Dynamics):
             self.steps += 1
             lastcon = "none"
             while En is None:
-                rn = self.move(step,ro)
+                rn = self.move(step,ro, self.distribution)
                 En = self.get_energy(rn)
             if En < self.Emin:
                 self.Emin = En
@@ -581,7 +604,9 @@ class Hopping(Dynamics):
             match = None
             countEo = 0
             countEn = 0
-            if self.use_geo:
+            match, countEn, countEo = self.find_ene_match(En, Eo)
+            if self.use_geo and (match is not None):
+            #if self.use_geo:
                 match = self.find_match()
             else:
                 match, countEn, countEo = self.find_ene_match(En, Eo)
@@ -612,6 +637,8 @@ class Hopping(Dynamics):
                 else:
                     ho = countEo / steps
                 kT = self.temperature * kB
+                if self.accept_temp is not None:
+                    kT = self.accept_temp * kB
                 # occasionally overflowing the floating point :(
                 #accept = np.exp(((Eo - En) + (self.w * (ho - hn))) / kT) > np.random.uniform()
                 val = ((Eo - En) + (self.w * (ho - hn))) / kT
@@ -622,7 +649,8 @@ class Hopping(Dynamics):
             if self.jumpmax and rejectnum > self.jumpmax:
                 #JMP???
                 for i in range(0,self.jmp):
-                    rn = self.move(step,rn)
+                    rn = self.move(step,rn, self.jump_distribution)
+                En = self.get_energy(rn)
                 accept = True
             if accept:
                 acceptnum += 1.
@@ -636,8 +664,15 @@ class Hopping(Dynamics):
                 if self.use_geo:
                     new_con = self.update_con(match)
                     lastcon = new_con
-                else:
-                    self.update_minima(En, Eo)
+                #else:
+                self.update_minima(En, Eo)
+                if self.global_jump and (self.minima[round(En,self.minima_threshold)] > self.global_jump):
+                    for i in range(0,self.jmp):
+                        rn = self.move(step,rn, self.jump_distribution)
+       	      	    if self.global_reset: 
+       	       	       	# This may cause an error. Need	to test!
+      	       	       	self.minima = {}
+          	    En = self.get_energy(rn)
                 Eo = En
                 if self.lm_trajectory is not None:
                     tsase.io.write_con(self.lm_trajectory,self.atoms,w='a')

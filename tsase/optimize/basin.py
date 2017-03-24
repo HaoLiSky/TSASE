@@ -5,7 +5,7 @@ from tsase.optimize.sdlbfgs import SDLBFGS
 from ase.units import kB
 from ase.parallel import world
 from ase.io.trajectory import PickleTrajectory
-from tsase.atoms_operator import rot_match
+#from tsase.atoms_operator import rot_match
 import random
 import tsase
 import sys
