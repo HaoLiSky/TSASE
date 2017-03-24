@@ -16,5 +16,6 @@ Henkelman Group (UT Austin)
 * Penghao Xiao
 * Juliana Duncan
 * Shannon Stauffer 
+* Rileigh Bandy
 
 .. _ASE: https://wiki.fysik.dtu.dk/ase/overview.html

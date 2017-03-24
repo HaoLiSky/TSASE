@@ -19,6 +19,7 @@ Our TSASE (pronounced "sassy") library is an extension to ASE for transistion st
    tem
    kdb
    optimizer
+   global_optimizer
    scripts 
    structures
    md
