@@ -11,10 +11,6 @@ Our TSASE (pronounced "sassy") library is an extension to ASE for transistion st
    download
    calculators 
    saddle_search
-   bgsd
-   ssdimer
-   lanczos
-   ssneb
    svm
    tem
    kdb
