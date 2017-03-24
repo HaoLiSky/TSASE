@@ -43,9 +43,9 @@ Below outlines the features of this combined GO software:
 
                  'uniform': a uniform random number is selected in the interval [-dr,dr]
 
-                 'linear': a uniform random number is selected in the interval [-dr*d,dr*d] where d is the distance from the geometric center of a cluster
+                 'linear': a uniform random number is selected in the interval [-dr*d,dr*d] where d is the distance from the geometric center of a cluste [#Kim08_144702]
 
-                 'quadratic': a uniform random number is selected in the interval [-dr*d*d,dr*d*d] where d is the distance from the geometric center of a cluster
+                 'quadratic': a uniform random number is selected in the interval [-dr*d*d,dr*d*d] where d is the distance from the geometric center of a cluster [#Kim08_144702]
     
     **adjust_step_size**: adjust the step size after this many Monte Carlo steps so that a target_ratio of steps are accepted.
 
@@ -57,21 +57,21 @@ Below outlines the features of this combined GO software:
 
         default: 0.05
 
-    **significant_structure** : displace from the optimized structures after each acceptance
+    **significant_structure** : displace from the optimized structures after each acceptance [#White98_463]
 
     **pushapart** : push atoms apart until all atoms are no closer than this distance
 
-    **jumpmax** : after this number of consecutive rejected jumps, accept the following move.  This allows for a more global search of the potential energy surface.
+    **jumpmax** : after this number of consecutive rejected jumps, accept the following move.  This allows for a more global search of the potential energy surface. [#Iwamatsu04_396]
 
-    **jmp** : number of consecutive accepted moves when occassionally jumping. 
+    **jmp** : number of consecutive accepted moves when occassionally jumping. [#Iwamatsu04_396] 
 
     **molecular_dynamics** : set to True when your trial move is molecular_dynamics
 
-    **dimer_a** : dimer ajustment parameter; scalar for forces in optimization
+    **dimer_a** : dimer ajustment parameter; scalar for forces in optimization [#Shonborn09_144108]
 
-    **dimer_d** : dimer adjustment parameter; distance between two images in the dimer
+    **dimer_d** : dimer adjustment parameter; distance between two images in the dimer [#Shonborn09_144108]
 
-    **dimer_steps** : dimer adjustment parameter; number of dimer iterations
+    **dimer_steps** : dimer adjustment parameter; number of dimer iterations [#Shonborn09_144108]
 
     **timestep** : timestep in fs
 
@@ -133,4 +133,7 @@ Minima Hopping
 .. rubric:: References
 .. [#Wales97_5111] D. J. Wales, J. P. K. Doye, "Global Optimization by Basin-Hopping and the Lowest Energy Structures of Lennard-Jones Clusters Containing up to 110 Atoms", *J. Phys. Chem.* **101**,5111-5116 (1997).
 .. [#Goedecker04_9911] S. Goedecker, "Minima hopping: An efficient search method for the global minimum of the potential energy surface of complex molecular systems", *J. Chem. Phys.* **120**, 9911 (2004).
-.. [#Shonborn09_144108] S. Shonborn, S. Goedecker, S. Roy, and A. Oganov, "The performance of minima hopping and evolutionary algorithms for cluster structure prediction", *J. Chem. Phys.* **130**, 144108 (2009). 
+.. [#Shonborn09_144108] S. Shonborn, S. Goedecker, S. Roy, and A. Oganov, "The performance of minima hopping and evolutionary algorithms for cluster structure prediction", *J. Chem. Phys.* **130**, 144108 (2009).
+..[#White98_463] White, Ronald P., and Howard R. Mayne. "An investigation of two approaches to basin hopping minimization for atomic and molecular clusters." *Chemical Physics Letters*, 463-468 (1998).
+..[#Kim08_144702] Kim, Hyoung Gyu, Si Kyung Choi, and Hyuck Mo Lee. "New algorithm in the basin hopping Monte Carlo to find the global minimum structure of unary and binary metallic nanoclusters." *J. Chem. Phys.*, 144702 (2008).
+..[#Iwamatsu04_396] Iwamatsu, Masao, and Yutaka Okabe. "Basin hopping with occasional jumping." *Chem. Phys. Lett.*, 396-400 (2004).
