@@ -33,7 +33,7 @@ Below outlines the features of this combined GO software:
 
     **mss** : maximum stepsize for the local optimization
     
-    **minenergy** : the BH algorithm stops when a configuration if found with a lower potential energy than this value 
+    **minenergy** : the BH algorithm stops when a configuration is found with a lower potential energy than this value 
 
     **distribution** : the distribution used for the displacement of each atom
 
@@ -75,7 +75,7 @@ Below outlines the features of this combined GO software:
 
     **timestep** : timestep in fs
 
-    **mdmin** : number of times pass minima to stop MD simulation
+    **mdmin** : number of times the dynamics need to pass a minima to stop the MD simulation
 
     **history_weight** : 
 
