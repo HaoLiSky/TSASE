@@ -45,7 +45,7 @@ Below outlines the features of this combined GO software:
 
                  'linear': a uniform random number is selected in the interval [-dr*d,dr*d] where d is the distance from the geometric center of a cluste [#Kim08_144702]
 
-                 'quadratic': a uniform random number is selected in the interval [-dr*d*d,dr*d*d] where d is the distance from the geometric center of a cluster [#Kim08_144702]
+                 'quadratic': a uniform random number is selected in the interval [-dr*d*d,dr*d*d] where d is the distance from the geometric center of a cluster [#Kim08_144702]_
     
     **adjust_step_size**: adjust the step size after this many Monte Carlo steps so that a target_ratio of steps are accepted.
 
@@ -57,21 +57,21 @@ Below outlines the features of this combined GO software:
 
         default: 0.05
 
-    **significant_structure** : displace from the optimized structures after each acceptance [#White98_463]
+    **significant_structure** : displace from the optimized structures after each acceptance [#White98_463]_
 
     **pushapart** : push atoms apart until all atoms are no closer than this distance
 
-    **jumpmax** : after this number of consecutive rejected jumps, accept the following move.  This allows for a more global search of the potential energy surface. [#Iwamatsu04_396]
+    **jumpmax** : after this number of consecutive rejected jumps, accept the following move.  This allows for a more global search of the potential energy surface. [#Iwamatsu04_396]_
 
-    **jmp** : number of consecutive accepted moves when occassionally jumping. [#Iwamatsu04_396] 
+    **jmp** : number of consecutive accepted moves when occassionally jumping. [#Iwamatsu04_396]_ 
 
     **molecular_dynamics** : set to True when your trial move is molecular_dynamics
 
-    **dimer_a** : dimer ajustment parameter; scalar for forces in optimization [#Shonborn09_144108]
+    **dimer_a** : dimer ajustment parameter; scalar for forces in optimization [#Shonborn09_144108]_
 
-    **dimer_d** : dimer adjustment parameter; distance between two images in the dimer [#Shonborn09_144108]
+    **dimer_d** : dimer adjustment parameter; distance between two images in the dimer [#Shonborn09_144108]_
 
-    **dimer_steps** : dimer adjustment parameter; number of dimer iterations [#Shonborn09_144108]
+    **dimer_steps** : dimer adjustment parameter; number of dimer iterations [#Shonborn09_144108]_
 
     **timestep** : timestep in fs
 
