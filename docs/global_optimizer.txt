@@ -8,7 +8,7 @@ Global Optimizers
 Combined Basin and Minima Hopping
 ---------------------------------
 
-TSASE contains a software package which combines features from multiple global optimization (GO) methods.  In this software package, you can select a move type (dynamics versus random), an acceptance criteria, and whether to utilize history.  
+TSASE contains a software package which combines features from multiple global optimization (GO) methods including Basin Hopping [#Wales97_5111]_ and Minimia Hopping [#Goedecker04_9911]_.  In this software package, you can select a move type (dynamics versus random), an acceptance criteria, and whether to utilize history.  
 
 Below outlines the features of this combined GO software:
 
@@ -133,7 +133,7 @@ Minima Hopping
 .. rubric:: References
 .. [#Wales97_5111] D. J. Wales, J. P. K. Doye, "Global Optimization by Basin-Hopping and the Lowest Energy Structures of Lennard-Jones Clusters Containing up to 110 Atoms", *J. Phys. Chem.* **101**,5111-5116 (1997).
 .. [#Goedecker04_9911] S. Goedecker, "Minima hopping: An efficient search method for the global minimum of the potential energy surface of complex molecular systems", *J. Chem. Phys.* **120**, 9911 (2004).
-.. [#Shonborn09_144108] S. Shonborn, S. Goedecker, S. Roy, and A. Oganov, "The performance of minima hopping and evolutionary algorithms for cluster structure prediction", *J. Chem. Phys.* **130**, 144108 (2009).
-.. [#White98_463] R. P. White, and H. R. Mayne. "An investigation of two approaches to basin hopping minimization for atomic and molecular clusters." *Chemical Physics Letters*, 463-468 (1998).
 .. [#Kim08_144702] H. G. Kim, S. K. Choi, and H. M. Lee. "New algorithm in the basin hopping Monte Carlo to find the global minimum structure of unary and binary metallic nanoclusters." *J. Chem. Phys.*, 144702 (2008).
+.. [#White98_463] R. P. White, and H. R. Mayne. "An investigation of two approaches to basin hopping minimization for atomic and molecular clusters." *Chemical Physics Letters*, 463-468 (1998).
 .. [#Iwamatsu04_396] M. Iwamatsu, and Y. Okabe. "Basin hopping with occasional jumping." *Chem. Phys. Lett.*, 396-400 (2004).
+.. [#Shonborn09_144108] S. Shonborn, S. Goedecker, S. Roy, and A. Oganov, "The performance of minima hopping and evolutionary algorithms for cluster structure prediction", *J. Chem. Phys.* **130**, 144108 (2009).
