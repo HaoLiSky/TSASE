@@ -27,13 +27,15 @@ Below outlines the features of this combined GO software:
 
     **fmax** : magnitude of the L2 norm used as the convergence criteria for local optimization
 
-    **dr** : maximum displacement in each degree of freedom for Monte Carlo trial moves
-
     **adjust_cm** : fix the center of mass
 
     **mss** : maximum stepsize for the local optimization
-    
-    **minenergy** : the BH algorithm stops when a configuration is found with a lower potential energy than this value 
+
+    **minenergy** : the BH algorithm stops when a configuration is found with a lower potential energy than this value
+
+    **pushapart** : push atoms apart until all atoms are no closer than this distance
+
+    ***Move Type*** 
 
     **distribution** : the distribution used for the displacement of each atom
 
@@ -46,7 +48,13 @@ Below outlines the features of this combined GO software:
                  'linear': a uniform random number is selected in the interval [-dr*d,dr*d] where d is the distance from the geometric center of a cluste [#Kim08_144702]_
 
                  'quadratic': a uniform random number is selected in the interval [-dr*d*d,dr*d*d] where d is the distance from the geometric center of a cluster [#Kim08_144702]_
+
+                 'molecular_dynamics': Molecular dynamics move type
+
+    ***Random Move Parameters***
     
+    **dr** : maximum displacement in each degree of freedom for Monte Carlo trial moves
+
     **adjust_step_size**: adjust the step size after this many Monte Carlo steps so that a target_ratio of steps are accepted.
 
         default is 'None' and step size will not be adjusted. Any positive integer will turn on this feature
@@ -59,7 +67,7 @@ Below outlines the features of this combined GO software:
 
     **significant_structure** : displace from the optimized structures after each acceptance [#White98_463]_
 
-    **pushapart** : push atoms apart until all atoms are no closer than this distance
+    ***Occasional Jumping***
 
     **jumpmax** : after this number of consecutive rejected jumps, accept the following move.  This allows for a more global search of the potential energy surface. [#Iwamatsu04_396]_
 
