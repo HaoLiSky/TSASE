@@ -15,7 +15,7 @@ molecular dynamics (MD). More Implementation of details with citation.
 [#Pozun12_174101]_
 
 Usage
-=====
+-----
 
 The function below takes a labeled training set of two classes (e.g. reactant and products) and applies the two
 class support vecort machine algorithm.  Parameters are selected using cross validation, which requires a test training set.  
@@ -72,7 +72,7 @@ find a hypersurface enclosing the region where the system is most probable.  A b
 by finding the closest distance to this hypersurface. 
 
 Usage
-=====
+-----
 
 Given a training set obtained from high temperature MD the following function can be used to find the OCSVM hypersurface:
 	
