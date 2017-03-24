@@ -79,11 +79,11 @@ Below outlines the features of this combined GO software:
 
     **history_weight** : 
 
-    **adjust_temp** :
+    **adjust_temp** : dynamically adjust the temperature in BH acceptance
 
-    **minimaHopping_acceptance** :
+    **minimaHopping_acceptance** : This flag specifies to use the MH acceptance criteria instead of BH acceptance
 
-    **minimaHopping_history** :
+    **minimaHopping_history** : use history in MH acceptance criteria
 
     **beta1** : 1.04, temperature adjustment parameter
 
@@ -96,11 +96,6 @@ Below outlines the features of this combined GO software:
     **alpha1** : 0.98, energy threshold adjustment parameter
 
     **alpha2** : 1./0.98, energy threshold adjustment parameter
-
-
-
-
-TSASE holds the following global optimization routines:
 
 Basin Hopping
 -------------
