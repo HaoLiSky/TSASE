@@ -84,36 +84,35 @@ MDMin
 Global Optimizers
 ==================
 
-TSASE holds the following global optimization routines:
+TSASE contains a software package which combines features from multiple global optimization (GO) methods.  In this software package, you can select a move type (dynamics versus random), an acceptance criteria, and whether to utilize history.  
 
-Basin Hopping
--------------
-    Below outlines the features of the basin hoppping implementation. 
+Below outlines the features of this combined GO software:
 
-    class ``tsase.optimizer.`` **BasinHopping** (self, atoms, temperature=100 * kB, optimizer=SDLBFGS, fmax=0.1,dr=0.1, active_ratio=1.0, adjust_cm=True, mss=0.2, minenergy=None, distribution='uniform', significant_structure = False, pushapart = 0.4,jumpmax=15,adjust_step_size=None, target_ratio = 0.5, adjust_fraction = 0.05)
+    class ``tsase.optimizer.`` **BasinHopping** (self, atoms, temperature=100, optimizer=SDLBFGS, fmax=0.05, dr=0.4, 
+    adjust_cm=True, mss=0.1, minenergy=None, distribution='uniform', adjust_step_size=None, adjust_every =10, target_ratio = 0.5, 
+    adjust_fraction = 0.05, significant_structure = True,  pushapart = 0.4, jumpmax=10, jmp = 7,
+    molecular_dynamics = False, dimer_a = 0.001, dimer_d = 0.01, dimer_steps = 20, timestep = 0.1, mdmin = 2,
+    history_weight = 0.0, adjust_temp = True, minimaHopping_acceptance = False, minimaHopping_history = True,
+    beta1 = 1.04, beta2 = 1.04, beta3 = 1.0 / 1.04, Ediff0 = 0.5, alpha1 = 0.98, alpha2 = 1. / 0.98)
 
     **atoms** : atoms object defining the PES
 
-    **temperature** : temperature in kT
+    **temperature** : temperature in Kelvin
 
-    **optimizer** : local optimizer 
-    
+    **optimizer** : local optimizer
+
     **fmax** : magnitude of the L2 norm used as the convergence criteria for local optimization
 
     **dr** : maximum displacement in each degree of freedom for Monte Carlo trial moves
 
-    **active_ratio** : define the number of atoms that will move for each Monte Carlo trial. It will take the integer part of (active_ratio * total_number_of_atoms).
-            
-                       Default: 1.0 (all atoms will move)
-
     **adjust_cm** : fix the center of mass
 
     **mss** : maximum stepsize for the local optimization
+    
+    **minenergy** : the BH algorithm stops when a configuration if found with a lower potential energy than this value 
 
-    **minenergy** : the BH algorithm stops when a configuration if found with a lower potential energy than this value
+    **distribution** : the distribution used for the displacement of each atom
 
-    **distribution** : the distribution used for the displacement of each atom 
-        
         default: uniform
 
         options: 'gaussian': the parameter dr serves as the standard deviation of the gaussian distribution
@@ -123,33 +122,44 @@ Basin Hopping
                  'linear': a uniform random number is selected in the interval [-dr*d,dr*d] where d is the distance from the geometric center of a cluster
 
                  'quadratic': a uniform random number is selected in the interval [-dr*d*d,dr*d*d] where d is the distance from the geometric center of a cluster
-                  
-    **significant_structure** : displace from the optimized structures after each acceptance
-
-    **pushapart** : push atoms apart until all atoms are no closer than this distance 
-
-    **jumpmax** : after this number of consecutive rejected jumps, accept the following move.  This allows for a more global search of the potential energy surface.  
-
+    
     **adjust_step_size**: adjust the step size after this many Monte Carlo steps so that a target_ratio of steps are accepted.
 
-                          Default is 'None' and step size will not be adjusted. Any positive integer will turn on this feature
+        default is 'None' and step size will not be adjusted. Any positive integer will turn on this feature
 
     **target_ratio**: specified ratio of accepted steps. Default: 0.5
 
     **adjust_fraction**: the fraction by which to change the step size in order to meet the target acceptance ratio
 
-                         Default: 0.05
+        default: 0.05
 
+    **significant_structure** : displace from the optimized structures after each acceptance
 
-Minima Hopping
---------------
-    Below outlines the features of the minima hoppping implementation.
+    **pushapart** : push atoms apart until all atoms are no closer than this distance
 
-    class ``tsase.optimizer.`` **MinimaHopping** (self, atoms, T0, beta1, beta2, beta3, Ediff0, alpha1, alpha2, mdmin, logfile, minima_threshold, timestep, optimizer, minima_traj, fmax, dimer_a, dimer_d, dimer_steps)
-    
-    **atoms** : atoms object defining the PES
+    **jumpmax** : after this number of consecutive rejected jumps, accept the following move.  This allows for a more global search of the potential energy surface.
 
-    **T0** : 1000. K, initial temperature
+    **jmp** : number of consecutive accepted moves when occassionally jumping. 
+
+    **molecular_dynamics** : set to True when your trial move is molecular_dynamics
+
+    **dimer_a** : dimer ajustment parameter; scalar for forces in optimization
+
+    **dimer_d** : dimer adjustment parameter; distance between two images in the dimer
+
+    **dimer_steps** : dimer adjustment parameter; number of dimer iterations
+
+    **timestep** : timestep in fs
+
+    **mdmin** : number of times pass minima to stop MD simulation
+
+    **history_weight** : 
+
+    **adjust_temp** :
+
+    **minimaHopping_acceptance** :
+
+    **minimaHopping_history** :
 
     **beta1** : 1.04, temperature adjustment parameter
 
@@ -163,26 +173,27 @@ Minima Hopping
 
     **alpha2** : 1./0.98, energy threshold adjustment parameter
 
-    **mdmin** : 2, number of minima to stop MD simulation
 
-    **logfile** : 'hop.log', text log
 
-    **minima_threshold** : 0.01 Å, threshold for identical configurations
 
-    **timestep** : 0.1 fs, timestep for MD simulation
+TSASE holds the following global optimization routines:
 
-    **optimizer** : QuasiNewton, local optimizer
+Basin Hopping
+-------------
+    Below outlines the features of the basin hoppping implementation. All flags are equivalent to the description above except for those defined below 
 
-    **minima_traj** : 'minima.traj', storage file for accepted minima
+    class ``tsase.optimizer.`` **BasinHopping** (self, atoms, temperature=100 * kB, optimizer=SDLBFGS, fmax=0.1,dr=0.1, active_ratio=1.0, adjust_cm=True, mss=0.2, minenergy=None, distribution='uniform', significant_structure = False, pushapart = 0.4,jumpmax=15,adjust_step_size=None, target_ratio = 0.5, adjust_fraction = 0.05)
 
-    **fmax** 0.05 eV/Å, max force for optimizations
 
-    **dimer_a** : 0.001, dimer ajustment parameter
+    **temperature** : temperature in kT
 
-    **dimer_d** : 0.01, dimer adjustment parameter
 
-    **dimer_steps** : 40, number of dimer iterations
+Minima Hopping
+--------------
+    Below outlines the features of the minima hoppping implementation.
 
+    class ``tsase.optimizer.`` **MinimaHopping** (self, atoms, T0, beta1, beta2, beta3, Ediff0, alpha1, alpha2, mdmin, logfile, minima_threshold, timestep, optimizer, minima_traj, fmax, dimer_a, dimer_d, dimer_steps)
+    
     Below is an example script of how to use this optimizer:
 
     .. code-block:: none
