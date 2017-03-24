@@ -35,7 +35,7 @@ Below outlines the features of this combined GO software:
 
     **pushapart** : push atoms apart until all atoms are no closer than this distance
 
-    :underline:`Move Type` 
+    *Move Type* 
 
     **distribution** : the distribution used for the displacement of each atom
 
@@ -51,7 +51,7 @@ Below outlines the features of this combined GO software:
 
                  'molecular_dynamics': Molecular dynamics move type
 
-    :underline: `Random Move Parameters`
+    *Random Move Parameters*
     
     **dr** : maximum displacement in each degree of freedom for Monte Carlo trial moves
 
@@ -67,13 +67,13 @@ Below outlines the features of this combined GO software:
 
     **significant_structure** : displace from the optimized structures after each acceptance [#White98_463]_
 
-    :underline: `Occasional Jumping`
+    *Occasional Jumping*
 
     **jumpmax** : after this number of consecutive rejected jumps, accept the following move.  This allows for a more global search of the potential energy surface. [#Iwamatsu04_396]_
 
     **jmp** : number of consecutive accepted moves when occassionally jumping. [#Iwamatsu04_396]_ 
 
-    :underline: `General Minima Hopping Flags`
+    *General Minima Hopping Flags*
 
     **dimer_a** : dimer ajustment parameter; scalar for forces in optimization [#Shonborn09_144108]_
 
