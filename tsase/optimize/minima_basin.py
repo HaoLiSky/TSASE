@@ -409,12 +409,17 @@ class Hopping(Dynamics):
  
             try:
                 if self.optimizer == QuasiNewton:
-		    opt = self.optimizer(self.atoms,
-				         logfile=self.optimizer_logfile)
-		else:
+                        opt = self.optimizer(self.atoms,
+                        logfile=self.optimizer_logfile)
+                elif self.optimizer.__name__ == "FIRE":
+                        opt = self.optimizer(self.atoms,
+                                            maxmove = self.mss,
+                                            dt = 0.2, dtmax = 1.0,
+                                            logfile=self.optimizer_logfile)
+                else:
                     opt = self.optimizer(self.atoms,
-                                         logfile=self.optimizer_logfile)
-                #                        maxstep=self.mss)
+                                         logfile=self.optimizer_logfile
+                                         maxstep=self.mss)
                 #    opt = self.optimizer(self.atoms, 
                 #                     logfile=self.optimizer_logfile,
                 #                     maxstep=self.mss)
