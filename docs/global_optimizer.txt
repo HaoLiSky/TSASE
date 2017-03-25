@@ -19,6 +19,8 @@ Below outlines the features of this combined GO software:
     history_weight = 0.0, adjust_temp = True, minimaHopping_acceptance = False, minimaHopping_history = True,
     beta1 = 1.04, beta2 = 1.04, beta3 = 1.0 / 1.04, Ediff0 = 0.5, alpha1 = 0.98, alpha2 = 1. / 0.98)
 
+*General GO parameters*
+
     **atoms** : atoms object defining the PES
 
     **temperature** : temperature in Kelvin
@@ -35,7 +37,7 @@ Below outlines the features of this combined GO software:
 
     **pushapart** : push atoms apart until all atoms are no closer than this distance
 
-    *Move Type* 
+*Selecting Move Type* 
 
     **distribution** : the distribution used for the displacement of each atom
 
@@ -51,7 +53,7 @@ Below outlines the features of this combined GO software:
 
                  'molecular_dynamics': Molecular dynamics move type
 
-    *Random Move Parameters*
+*Random Move Parameters*
     
     **dr** : maximum displacement in each degree of freedom for Monte Carlo trial moves
 
@@ -67,31 +69,35 @@ Below outlines the features of this combined GO software:
 
     **significant_structure** : displace from the optimized structures after each acceptance [#White98_463]_
 
-    *Occasional Jumping*
+*Dynamic Move Parameters*
 
-    **jumpmax** : after this number of consecutive rejected jumps, accept the following move.  This allows for a more global search of the potential energy surface. [#Iwamatsu04_396]_
-
-    **jmp** : number of consecutive accepted moves when occassionally jumping. [#Iwamatsu04_396]_ 
-
-    *General Minima Hopping Flags*
-
+    **timestep** : timestep in fs
+    
     **dimer_a** : dimer ajustment parameter; scalar for forces in optimization [#Shonborn09_144108]_
 
     **dimer_d** : dimer adjustment parameter; distance between two images in the dimer [#Shonborn09_144108]_
 
     **dimer_steps** : dimer adjustment parameter; number of dimer iterations [#Shonborn09_144108]_
 
-    **timestep** : timestep in fs
+*Occasional Jumping*
+
+    **jump_distribution** : options are same as the distribution flag ('uniform', 'molecular dynamics', etc.)
+
+    **jumpmax** : after this number of consecutive rejected jumps, accept the following move.  This allows for a more global search of the potential energy surface. [#Iwamatsu04_396]_
+
+    **jmp** : number of consecutive accepted moves when occassionally jumping. [#Iwamatsu04_396]_ 
+
+*Selecting Acceptance Criteria
+
+    **acceptance_criteria** : This flag specifies which acceptance criteria to use. True for  MH or False for BH
+
+*General Minima Hopping Flags*
 
     **mdmin** : number of times the dynamics need to pass a minima to stop the MD simulation
 
     **history_weight** : weight factor for BH history [#Rossi09_084208]_
 
     **adjust_temp** : dynamically adjust the temperature in BH acceptance
-
-    **acceptance_criteria** : This flag specifies which acceptance criteria to use. True for  MH or False for BH
-
-    **minimaHopping_history** : use history in MH acceptance criteria
 
     **beta1** : 1.04, temperature adjustment parameter
 
@@ -107,7 +113,7 @@ Below outlines the features of this combined GO software:
 
 Basin Hopping
 -------------
-    Below outlines the features of the basin hoppping implementation. All flags are equivalent to the description above except for those defined below 
+    Below outlines the features of the basin hoppping implementation. All flags are equivalent to the description above except for those defined below. 
 
     class ``tsase.optimizer.`` **BasinHopping** (self, atoms, temperature=100 * kB, optimizer=SDLBFGS, fmax=0.1,dr=0.1, active_ratio=1.0, adjust_cm=True, mss=0.2, minenergy=None, distribution='uniform', significant_structure = False, pushapart = 0.4,jumpmax=15,adjust_step_size=None, target_ratio = 0.5, adjust_fraction = 0.05)
 
@@ -117,7 +123,8 @@ Basin Hopping
 
 Minima Hopping
 --------------
-    Below outlines the features of the minima hoppping implementation.
+    Below outlines the features of the minima hoppping implementation. All flags are equivalent to the description in the combined GO method.
+    
 
     class ``tsase.optimizer.`` **MinimaHopping** (self, atoms, T0, beta1, beta2, beta3, Ediff0, alpha1, alpha2, mdmin, logfile, minima_threshold, timestep, optimizer, minima_traj, fmax, dimer_a, dimer_d, dimer_steps)
     
