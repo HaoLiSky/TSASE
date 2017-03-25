@@ -121,7 +121,9 @@ Below outlines the features of this combined GO software:
 
     **minimaHopping_history** : set to True if using MH history components otherwise set to False 
 
-<img src="GOtable.png">
+.. figure::  GOtable.png
+   :align:   center
+
 
 Basin Hopping
 -------------
