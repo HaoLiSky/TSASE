@@ -60,7 +60,7 @@ class Hopping(Dynamics):
                  history_num = 0, # number of previously accepted minima to keep track of for BH history
                  adjust_temp = False, # dynamically adjust the temperature in BH acceptance
                  accept_temp = None, # seperate temperature to use for BH acceptance
-		 minimaHopping_acceptance = False, # use MH acceptance criteria instead of BH
+		 acceptance_criteria = False, # True = BH; False = MH
                  minimaHopping_history = True, # use history in MH acceptance criteria
 		 beta1 = 1.04, # temperature adjustment parameter
 		 beta2 = 1.04, # temperature adjustment parameter
@@ -111,7 +111,7 @@ class Hopping(Dynamics):
         self.history_num = history_num
         self.adjust_temp = adjust_temp
         self.accept_temp = accept_temp
-	self.mh_accept = minimaHopping_acceptance
+	self.mh_accept = acceptance_criteria
 	self.mh_history = minimaHopping_history
 	self.beta1 = beta1
 	self.beta2 = beta2
