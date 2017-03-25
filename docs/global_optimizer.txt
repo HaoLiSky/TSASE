@@ -101,7 +101,7 @@ Below outlines the features of this combined GO software:
 
     **history_weight** : weight factor for BH history, set to 0.0 to turn off history [#Rossi09_084208]_
 
-    **history_num** : number of previously accepted minima to keep track of for BH history
+    **history_num** : limit of previously accepted minima to keep track of for BH history, set to 0 to keep track of all accepted minima
 
 *Minima Hopping Acceptance Parameters*
 
@@ -121,6 +121,7 @@ Below outlines the features of this combined GO software:
 
     **minimaHopping_history** : set to True if using MH history components otherwise set to False 
 
+<img src="GOtable.png">
 
 Basin Hopping
 -------------
