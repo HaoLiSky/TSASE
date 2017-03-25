@@ -85,11 +85,11 @@ Below outlines the features of this combined GO software:
 
     **mdmin** : number of times the dynamics need to pass a minima to stop the MD simulation
 
-    **history_weight** : 
+    **history_weight** : weight factor for BH history [#Rossi09_084208]_
 
     **adjust_temp** : dynamically adjust the temperature in BH acceptance
 
-    **minimaHopping_acceptance** : This flag specifies to use the MH acceptance criteria instead of BH acceptance
+    **acceptance_criteria** : This flag specifies which acceptance criteria to use. True for  MH or False for BH
 
     **minimaHopping_history** : use history in MH acceptance criteria
 
