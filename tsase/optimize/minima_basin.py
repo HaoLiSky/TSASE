@@ -39,8 +39,7 @@ class Hopping(Dynamics):
                  mss=0.1,
                  minenergy=None,
                  distribution='uniform', # make md the distribution for MH move
-                 adjust_step_size=1,
-                 adjust_every =10,
+                 adjust_step_size=10,
                  target_ratio = 0.5,
                  adjust_fraction = 0.025,
                  significant_structure = True,  # displace from minimum at each move
@@ -91,7 +90,6 @@ class Hopping(Dynamics):
         self.minenergy = minenergy
         self.distribution = distribution
         self.adjust_step = adjust_step_size
-        self.adjust_every = adjust_every
         self.target_ratio = target_ratio
         self.adjust_fraction = adjust_fraction
         self.significant_structure = significant_structure
@@ -693,11 +691,11 @@ class Hopping(Dynamics):
                 if Eo < self.minenergy:
                     #print "geo: ", self.cons.values()
                     break
-            if self.adjust_step == True:
-                if step % self.adjust_every == 0:
+            if self.adjust_step_size is not None:
+                if step % self.adjust_step_size == 0:
                     #ratio = float(acceptnum)/float(self.steps)
                     ratio = float(acceptnum)/float(steps)
-                    ratio = float(recentaccept)/float(self.adjust_every)
+                    ratio = float(recentaccept)/float(self.adjust_step_size)
                     recentaccept = 0.
                     if ratio > self.target_ratio:
                        self.dr = self.dr * (1+self.adjust_fraction)
