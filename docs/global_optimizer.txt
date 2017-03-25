@@ -123,7 +123,8 @@ Below outlines the features of this combined GO software:
 
 .. figure::  GOtable.png
    :align:   center
-   :width:   50 %
+   :width:   70 %
+
 
 Basin Hopping
 -------------
