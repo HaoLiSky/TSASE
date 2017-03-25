@@ -15,9 +15,9 @@ Below outlines the features of this combined GO software:
     class ``tsase.optimizer.`` **Hopping** (self, atoms, temperature=100, optimizer=SDLBFGS, fmax=0.05, dr=0.4, 
     adjust_cm=True, mss=0.1, minenergy=None, distribution='uniform', adjust_step_size=None, adjust_every =10, target_ratio = 0.5, 
     adjust_fraction = 0.05, significant_structure = True,  pushapart = 0.4, jumpmax=10, jmp = 7,
-    molecular_dynamics = False, dimer_a = 0.001, dimer_d = 0.01, dimer_steps = 20, timestep = 0.1, mdmin = 2,
-    history_weight = 0.0, adjust_temp = True, minimaHopping_acceptance = False, minimaHopping_history = True,
-    beta1 = 1.04, beta2 = 1.04, beta3 = 1.0 / 1.04, Ediff0 = 0.5, alpha1 = 0.98, alpha2 = 1. / 0.98)
+    global_jump = 10, global_reset = False, jump_distribution = 'uniform', dimer_a = 0.001, dimer_d = 0.01, dimer_steps = 20, 
+    timestep = 0.1, mdmin = 2, history_weight = 0.0, history_num = 0, adjust_temp = True, accept_temp = None, acceptance_criteria = False,  
+    minimaHopping_history = True, beta1 = 1.04, beta2 = 1.04, beta3 = 1.0 / 1.04, Ediff0 = 0.5, alpha1 = 0.98, alpha2 = 1. / 0.98)
 
 *General GO parameters*
 
@@ -85,19 +85,27 @@ Below outlines the features of this combined GO software:
 
     **jumpmax** : after this number of consecutive rejected jumps, accept the following move.  This allows for a more global search of the potential energy surface. [#Iwamatsu04_396]_
 
-    **jmp** : number of consecutive accepted moves when occassionally jumping. [#Iwamatsu04_396]_ 
+    **jmp** : number of consecutive accepted moves when occassionally jumping. [#Iwamatsu04_396]_
 
-*Selecting Acceptance Criteria
+    **global_reset** : reset history if an occasional jump is taken (True)
+
+*Selecting Acceptance Criteria*
 
     **acceptance_criteria** : This flag specifies which acceptance criteria to use. True for  MH or False for BH
 
-*General Minima Hopping Flags*
+*BH Acceptance Parameters*
 
-    **mdmin** : number of times the dynamics need to pass a minima to stop the MD simulation
-
-    **history_weight** : weight factor for BH history [#Rossi09_084208]_
+    **accept_temp** : seperate temperature to use for BH acceptance
 
     **adjust_temp** : dynamically adjust the temperature in BH acceptance
+
+    **history_weight** : weight factor for BH history, set to 0.0 to turn off history [#Rossi09_084208]_
+
+    **history_num** : number of previously accepted minima to keep track of for BH history
+
+*Minima Hopping Acceptance Parameters*
+
+    **mdmin** : number of times the dynamics need to pass a minima to stop the MD simulation
 
     **beta1** : 1.04, temperature adjustment parameter
 
@@ -110,6 +118,9 @@ Below outlines the features of this combined GO software:
     **alpha1** : 0.98, energy threshold adjustment parameter
 
     **alpha2** : 1./0.98, energy threshold adjustment parameter
+
+    **minimaHopping_history** : set to True if using MH history components otherwise set to False 
+
 
 Basin Hopping
 -------------
