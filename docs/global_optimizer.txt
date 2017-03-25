@@ -25,7 +25,7 @@ Below outlines the features of this combined GO software:
 
     **temperature** : temperature in Kelvin
 
-    **optimizer** : local optimizer
+    **optimizer** : local optimizer (QuasiNewton, FIRE, SDLBFGS)
 
     **fmax** : magnitude of the L2 norm used as the convergence criteria for local optimization
 
