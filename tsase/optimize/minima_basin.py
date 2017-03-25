@@ -691,11 +691,11 @@ class Hopping(Dynamics):
                 if Eo < self.minenergy:
                     #print "geo: ", self.cons.values()
                     break
-            if self.adjust_step_size is not None:
-                if step % self.adjust_step_size == 0:
+            if self.adjust_step is not None:
+                if step % self.adjust_step == 0:
                     #ratio = float(acceptnum)/float(self.steps)
                     ratio = float(acceptnum)/float(steps)
-                    ratio = float(recentaccept)/float(self.adjust_step_size)
+                    ratio = float(recentaccept)/float(self.adjust_step)
                     recentaccept = 0.
                     if ratio > self.target_ratio:
                        self.dr = self.dr * (1+self.adjust_fraction)
