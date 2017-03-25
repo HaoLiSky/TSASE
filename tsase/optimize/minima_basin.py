@@ -56,7 +56,8 @@ class Hopping(Dynamics):
 		 dimer_steps = 20,
 		 timestep = 0.1, # moleculare dynamics time step
 		 mdmin = 2, # number of minima to pass in md before stopping
-		 history_weight = 0.0, # the weight factor of history >= 0 
+		 history_weight = 0.0, # the weight factor of BH history >= 0
+                 history_num = 0, # number of previously accepted minima to keep track of for BH history
                  adjust_temp = False, # dynamically adjust the temperature in BH acceptance
                  accept_temp = None, # seperate temperature to use for BH acceptance
 		 minimaHopping_acceptance = False, # use MH acceptance criteria instead of BH
@@ -107,6 +108,7 @@ class Hopping(Dynamics):
 	self.timestep = timestep
 	self.mdmin = mdmin
 	self.w = history_weight
+        self.history_num = history_num
         self.adjust_temp = adjust_temp
         self.accept_temp = accept_temp
 	self.mh_accept = minimaHopping_acceptance
@@ -130,9 +132,13 @@ class Hopping(Dynamics):
         # keys will be the potential energy rounded to self.minima_threshold digits left of the decimal
         # values will be number of times the potential energy has been visited 
 	self.minima = {}
+        # list with fixed size that will store history_num previous minima
+        self.temp_minima = [0] * self.history_num
         # dictionary for geometry comparison
         # keys = "#.con", values = # visits
         self.cons = {}
+        # number of moves that have been accepted in the run
+        self.num_moves = 0.0
         self.initialize()
 
     def initialize(self):
@@ -373,9 +379,6 @@ class Hopping(Dynamics):
             self.MaxwellBoltzmannDistribution(N,
                                          temp=self.temperature * kB,
                                          force_temp=True)
-        #if (step > 1):
-        #    os.remove('md.log')
-        #    os.remove('md.traj')
         traj = io.Trajectory('md.traj', 'a', self.atoms)
         dyn = VelocityVerlet(self.atoms, dt=self.timestep * units.fs)
         log = MDLogger(dyn, self.atoms, 'md.log',
@@ -557,6 +560,7 @@ class Hopping(Dynamics):
                 accept = True
             if accept:
                 rejectnum = 0
+                self.num_moves += 1
                 ro = rn
                 if self.use_geo:
                     new_con = self.update_con(match)
@@ -604,13 +608,12 @@ class Hopping(Dynamics):
             match = None
             countEo = 0
             countEn = 0
+            approxEn = round(En,self.minima_threshold)
+            approxEo = round(Eo,self.minima_threshold)
             match, countEn, countEo = self.find_ene_match(En, Eo)
-            if self.use_geo and (match is not None):
-            #if self.use_geo:
+            if self.use_geo and match:
                 match = self.find_match()
-            else:
-                match, countEn, countEo = self.find_ene_match(En, Eo)
-            if self.adjust_temp and match is not None:
+            if self.adjust_temp and match:
                 if (self.use_geo and match == lastcon) or match == 1:
                 # re-found last minimum
                     self.temperature *= self.beta1
@@ -627,15 +630,19 @@ class Hopping(Dynamics):
                 totalMin = len(self.minima)
                 hn = 0
                 ho = 0
-                if match is not None:
-                    if self.use_geo:
-                        hn = self.cons[match] / step
-                    else:
-                        hn = countEn / step
-                if self.use_geo and lastcon != "none":
-                    ho = self.cons[lastcon] / step
-                else:
-                    ho = countEo / steps
+                # no history if the run has not accepted any previous moves (num_moves == 0)
+                if self.num_moves:
+                    if match:
+                        if self.history_num:
+                            hn = self.temp_minima.count(approxEn) / self.num_moves
+                            ho = self.temp_minima.count(approxEo) / self.num_moves
+                        elif self.use_geo:
+                            hn = self.cons[match] / self.num_moves
+                            if lastcon != "none":
+                                ho = self.cons[lastcon] / self.num_moves
+                        else:
+                            hn = countEn / self.num_moves
+                            ho = countEo / self.num_moves
                 kT = self.temperature * kB
                 if self.accept_temp is not None:
                     kT = self.accept_temp * kB
@@ -656,6 +663,7 @@ class Hopping(Dynamics):
                 acceptnum += 1.
                 recentaccept += 1.
                 rejectnum = 0
+                self.num_moves += 1
                 ## JD: made edit to set ro to local minima if we accept the configuration.  eliminating significant_structure 2 flag
                 if self.significant_structure == True:
                     ro = self.local_min_pos.copy()
@@ -664,9 +672,11 @@ class Hopping(Dynamics):
                 if self.use_geo:
                     new_con = self.update_con(match)
                     lastcon = new_con
-                #else:
                 self.update_minima(En, Eo)
-                if self.global_jump and (self.minima[round(En,self.minima_threshold)] > self.global_jump):
+                # update temp_minima
+                if self.history_num:
+                    self.temp_minima[int(self.num_moves) % self.history_num] = approxEn
+                if self.global_jump and (self.minima[approxEn] > self.global_jump):
                     for i in range(0,self.jmp):
                         rn = self.move(step,rn, self.jump_distribution)
        	      	    if self.global_reset: 
