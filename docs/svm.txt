@@ -59,8 +59,6 @@ class ``tsase.svm.`` **svm_dynamics** ( calc, selSVM, k=1.0, addgradient=True)
 	**addgradient** : option to add the gradient for the biased sampling 
 
 
-.. [#Pozun12_174101] Z. D. Pozun, K. Hansen, D. Sheppard, M. Rupp, K.-R. Müller, and G. Henkelman, Optimizing transition states via kernel-based machine learning, J. Chem. Phys. 136, 174101 `DOI <http://dx.doi.org/10.1063/1.4707167>`_
-
 Accelerated Molecular Dynamics with Support Vector Machines
 ============================================================
 
@@ -69,7 +67,7 @@ that goes to zero at the TST divding surface is added to the potential energy la
 between states.  A method was developed using one-class support vector machine (OCSVM) to generate a bias 
 potential for the hyperdynamics. By running high temperature MD constrained to a reactant state, OCSVM can 
 find a hypersurface enclosing the region where the system is most probable.  A bias potential is constructed 
-by finding the closest distance to this hypersurface. 
+by finding the closest distance to this hypersurface. More Implementation of details with citation [#Xiao15_244104]_. 
 
 Usage
 -----
@@ -84,7 +82,7 @@ def ``tsase.svm.`` **learn_ocsvm** (datapoints,gam,nu):
 
 	**nu** : This parameter defines a lower bound on the fraction of support vectors and an upper bound on the fraction of outliers
 
-The following class runs molecular dynamics on the biased potential energy surface given a ocsvm hypersurface obtained from the function above: 
+The following class runs molecular dynamics on the biased potential energy surface given a ocsvm hypersurface obtained from the function above.   
 
 class ``tsase.svm.`` **ocsvm_dynamics** ( p, clf, csda_cc=0.001, cdsa_maxstep=1.0, w=1.0, B=1.0, fixcm=False,dt=1.0, kT=0.1)
 
@@ -107,4 +105,6 @@ class ``tsase.svm.`` **ocsvm_dynamics** ( p, clf, csda_cc=0.001, cdsa_maxstep=1.
 	**kT** : temperature in kT; this is need to calculate appropriate boost factor and renormalization of the time
 
 
-         
+.. [#Pozun12_174101] Z. D. Pozun, K. Hansen, D. Sheppard, M. Rupp, K.-R. Müller, and G. Henkelman, Optimizing transition states via kernel-based machine learning, J. Chem. Phys. 136, 174101 `DOI <http://dx.doi.org/10.1063/1.4707167>`_
+
+.. [#Xiao15_244104] P. Xiao, J. Duncan, L. Zhang, and G. Henkelman, Ridge-Based Bias Potentials to Accelerate Molecular Dynamics, J. Chem. Phys. 143, H3061 (2015) 
