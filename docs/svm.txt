@@ -11,7 +11,7 @@ Optimizing Transition State Theory Dividing Surfaces
 A method for optimizing Transition State Theory (TST) divding surfaces was developed using
 two-class support vector machines (SVM) that does not require prior knowledge of the system.
 The TST dividing surface is optimized by a cycle of machine learning and refinement by using 
-molecular dynamics (MD). More Implementation of details with citation.
+molecular dynamics (MD). More implementation details with citation.
 [#Pozun12_174101]_
 
 Usage
@@ -67,7 +67,7 @@ that goes to zero at the TST divding surface is added to the potential energy la
 between states.  A method was developed using one-class support vector machine (OCSVM) to generate a bias 
 potential for the hyperdynamics. By running high temperature MD constrained to a reactant state, OCSVM can 
 find a hypersurface enclosing the region where the system is most probable.  A bias potential is constructed 
-by finding the closest distance to this hypersurface. More Implementation of details with citation [#Xiao15_244104]_. 
+by finding the closest distance to this hypersurface. More implementation of details with citation [#Xiao15_244104]_. 
 
 Usage
 -----
