@@ -129,13 +129,13 @@ Below is an example script of how to use this optimizer:
 
     .. code-block:: none
 
-        from tsase.optimize.minima_basin import Hopping
+        from tsase.optimize.minima_basin imporg Hopping
 
         lj = tsase.calculators.lj(cutoff=35.0)
         system = tsase.io.read_con('lj38-cluster.con')
         system.set_calculator(lj)
-        opt = Hopping(atoms=system)
-        opt(totalsteps=10000, maxtemp=200000, minEnergy=-173.918427)
+        opt = Hopping(atoms=system, minEnergy=-173.918427)
+        opt(10000)
 
 Basin Hopping
 -------------
