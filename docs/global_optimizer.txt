@@ -129,7 +129,7 @@ Below is an example script of how to use this optimizer:
 
     .. code-block:: none
 
-        from tsase.optimize.minima_basin imporg Hopping
+        from tsase.optimize.minima_basin import Hopping
 
         lj = tsase.calculators.lj(cutoff=35.0)
         system = tsase.io.read_con('lj38-cluster.con')
