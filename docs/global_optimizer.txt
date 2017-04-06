@@ -125,6 +125,17 @@ Below outlines the features of this combined GO software:
    :align:   center
    :width:   80 %
 
+    Below is an example script of how to use this optimizer:
+
+    .. code-block:: none
+
+    from tsase.optimize.minima_basin import Hopping
+
+    lj = tsase.calculators.lj(cutoff=35.0)
+    system = tsase.io.read_con('lj38-cluster.con')
+    system.set_calculator(lj)
+    opt = Hopping(atoms=system)
+    opt(totalsteps=10000, maxtemp=200000, minEnergy=-173.918427)
 
 Basin Hopping
 -------------
