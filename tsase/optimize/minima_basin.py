@@ -418,7 +418,7 @@ class Hopping(Dynamics):
                                             logfile=self.optimizer_logfile)
                 else:
                     opt = self.optimizer(self.atoms,
-                                         logfile=self.optimizer_logfile
+                                         logfile=self.optimizer_logfile,
                                          maxstep=self.mss)
                 #    opt = self.optimizer(self.atoms, 
                 #                     logfile=self.optimizer_logfile,
