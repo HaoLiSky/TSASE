@@ -45,9 +45,9 @@ class Hopping(Dynamics):
                  significant_structure = True,  # displace from minimum at each move
 # JD: removing this flag;    significant_structure2 = False, # displace from global minimum found so far at each move
                  pushapart = 0.4,
-                 jumpmax=10,
+                 jumpmax = None,
                  jmp = 7, # number of jump steps taken in BHOJ
-                 global_jump = 10, # threshold of times to visit the same PE before we make a global jump
+                 global_jump = None, # threshold of times to visit the same PE before we make a global jump
                  global_reset = False, # reset all of the history counts after a jump
                  jump_distribution = 'uniform',
 		 dimer_a = 0.001,
@@ -56,7 +56,7 @@ class Hopping(Dynamics):
 		 timestep = 0.1, # moleculare dynamics time step
 		 mdmin = 2, # number of minima to pass in md before stopping
 		 history_weight = 0.0, # the weight factor of BH history >= 0
-                 history_num = 0, # number of previously accepted minima to keep track of for BH history
+                 history_num = 0, # number of previously accepted minima to keep track of for BH history, set to 0 to keep track of all minima
                  adjust_temp = False, # dynamically adjust the temperature in BH acceptance
                  accept_temp = None, # seperate temperature to use for BH acceptance
 		 acceptance_criteria = False, # True = BH; False = MH
@@ -71,7 +71,6 @@ class Hopping(Dynamics):
                  use_geometry = False,
                  eps_r = 0.1,
                  confile_directory = "confiles" # cannot be a directory that exists
-                 
                  ):
         Dynamics.__init__(self, atoms, logfile, trajectory)
 	self.temperature = temperature
@@ -121,6 +120,8 @@ class Hopping(Dynamics):
         self.use_geo = use_geometry
         self.eps_r = eps_r
         self.con_dir = confile_directory
+        self.global_minima = [] # an array of the current global minimum for every MC step
+        self.local_minima = [] # an array of the current local minimum for every MC step
 
         # when a MD sim. has passed a local minimum:
         self.passedminimum = PassedMinimum()
@@ -582,6 +583,8 @@ class Hopping(Dynamics):
                     tsase.io.write_con(self.lm_trajectory,self.atoms,w='a')
             else:
                 self.atoms.set_positions(positionsOld)
+            self.local_minima = np.append(self.local_minima, self.atoms.get_potential_energy())
+            self.global_minima = np.append(self.global_minima, self.Emin)
             if self.minenergy is not None:
                 if Eo < self.minenergy:
                     #print "geo: ", self.cons.values()
@@ -589,7 +592,7 @@ class Hopping(Dynamics):
             if maxtemp and maxtemp < self.temperature:
                   break
 
-    def acceptance_BH(self, steps, ro, Eo):
+    def acceptance_BH(self, steps, ro, Eo, maxtemp):
         """Boltzmann acceptance criteria for basin hopping."""
         acceptnum = 0
         recentaccept = 0
@@ -692,6 +695,8 @@ class Hopping(Dynamics):
             else:
                 rejectnum += 1
                 self.atoms.set_positions(positionsOld)
+            self.local_minima = np.append(self.local_minima, self.atoms.get_potential_energy())
+            self.global_minima = np.append(self.global_minima, self.Emin)
             if self.minenergy != None:
                 if Eo < self.minenergy:
                     #print "geo: ", self.cons.values()
@@ -706,6 +711,8 @@ class Hopping(Dynamics):
                        self.dr = self.dr * (1+self.adjust_fraction)
                     elif ratio < self.target_ratio:
                         self.dr = self.dr * (1-self.adjust_fraction)
+            if maxtemp and maxtemp < self.temperature:
+                  break
 
     def run(self, steps, maxtemp = None):
         """Hop the basins for defined number of steps."""
@@ -715,9 +722,10 @@ class Hopping(Dynamics):
         if self.mh_accept:
             self.acceptance_MH(steps, ro, Eo, maxtemp)
         else:
-            self.acceptance_BH(steps, ro, Eo)
-        print "geo: ", self.cons.values()
+            self.acceptance_BH(steps, ro, Eo, maxtemp)
+        #print "geo: ", self.cons.values()
         self.get_minimum()
+        return self.global_minima, self.local_minima
 
     def get_dist_geo_center(self):
         position = self.atoms.get_positions()
