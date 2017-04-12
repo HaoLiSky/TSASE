@@ -89,6 +89,10 @@ Below outlines the features of this combined GO software:
 
     **global_reset** : reset history if an occasional jump is taken (True)
 
+    **global_jump** : Makes global move after visiting a state for *global_jump* number of times; Set to None to turn off
+    
+    **global_reset** : Resets the history after a global move is taken if this flag is set to True
+
 *Selecting Acceptance Criteria*
 
     **acceptance_criteria** : This flag specifies which acceptance criteria to use. True for  MH or False for BH
