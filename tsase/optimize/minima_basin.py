@@ -478,6 +478,8 @@ class Hopping(Dynamics):
                     maxdist = self.dr*distgeo[i]*distgeo[i]
                     disp[i] = np.random.uniform(-maxdist,maxdist,3)
             else:
+                print 'distribution flag has typo'
+                sys.exit()
                 disp = np.random.uniform(-1*self.dr, self.dr, (len(self.atoms), 3))
        # JD: Removed to be consistent with the corrected basin.py
        #     if self.significant_structure == True:
