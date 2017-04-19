@@ -83,7 +83,7 @@ Below outlines the features of this combined GO software:
 
     **jump_distribution** : options are same as the distribution flag ('uniform', 'molecular dynamics', etc.)
 
-    **jumpmax** : after this number of consecutive rejected jumps, accept the following move.  This allows for a more global search of the potential energy surface. [#Iwamatsu04_396]_
+    **jumpmax** : after this number of consecutive rejected Monte Carlo or Minima Hopping moves, accept the following *jmp* moves.  This allows for a more global search of the potential energy surface. [#Iwamatsu04_396]_
 
     **jmp** : number of consecutive accepted moves when occassionally jumping. [#Iwamatsu04_396]_
 
