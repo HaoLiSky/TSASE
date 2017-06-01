@@ -12,6 +12,7 @@ from ase.md import VelocityVerlet
 from ase.md import MDLogger
 import tsase
 import sys
+import atoms_operator as geometry
 #import atoms as geometry
 import eon.fileio as fileio
 #import write_con as write
@@ -50,6 +51,7 @@ class Hopping(Dynamics):
                  global_jump = None, # threshold of times to visit the same PE before we make a global jump
                  global_reset = False, # reset all of the history counts after a jump
                  jump_distribution = 'uniform',
+                 dimer_method = True, # True uses an iterative dimer method before molecular dynamics
 		 dimer_a = 0.001,
 		 dimer_d = 0.01,
 		 dimer_steps = 20,
@@ -99,6 +101,7 @@ class Hopping(Dynamics):
         self.jump_distribution = jump_distribution
         self.global_jump = global_jump
         self.global_reset = global_reset
+        self.dimer_method = dimer_method
 	self.dimer_a = dimer_a
 	self.dimer_d = dimer_d
 	self.dimer_steps = dimer_steps
@@ -201,117 +204,20 @@ class Hopping(Dynamics):
             self.minima[approxEn] = 1
             return True, approxEn, approxEo
 
-    def pbc(self, r, box, ibox = None):
-        """
-        Applies periodic boundary conditions.
-        Parameters:
-        r:      the vector the boundary conditions are applied to
-        box:    the box that defines the boundary conditions
-        ibox:   the inverse of the box. This will be calcluated if not provided.
-        """
-        if ibox is None:
-            ibox = np.linalg.inv(box)
-        vdir = np.dot(r, ibox)
-        vdir = (vdir % 1.0 + 1.5) % 1.0 - 0.5
-        return np.dot(vdir, box)
-
-    def per_atom_norm(self, v, box, ibox = None):
-        '''
-        Returns a length N numpy array containing per atom distance
-        v:	an Nx3 numpy array
-        box:    box matrix that defines the boundary conditions
-        ibox:   the inverse of the box. will be calculated if not provided
-        '''
-        diff = self.pbc(v, box, ibox)
-        return np.sqrt(np.sum(diff**2.0, axis=1))
-
-    def rot_match(self, a, b, eps_r):
-        """Taken from eon software package. Determines if
-        atoms a is the same geometry as atoms b."""
-        if not (a.free.all() and b.free.all()):
-            print "Comparing structures with frozen atoms with rotational matching; check_rotation may be set incorrectly"
-        acm = sum(a.r)/len(a)
-        bcm = sum(b.r)/len(b)
-
-        ta = a.copy()
-        tb = b.copy()
-        ta.r -= acm
-        tb.r -= bcm
-
-        #Horn, J. Opt. Soc. Am. A, 1987
-        m = np.dot(tb.r.transpose(), ta.r)
-        sxx = m[0][0]
-        sxy = m[0][1]
-        sxz = m[0][2]
-        syx = m[1][0]
-        syy = m[1][1]
-        syz = m[1][2]
-        szx = m[2][0]
-        szy = m[2][1]
-        szz = m[2][2]
-
-        n = np.zeros((4,4))
-        n[0][1] = syz-szy
-        n[0][2] = szx-sxz
-        n[0][3] = sxy-syx
-
-        n[1][2] = sxy+syx
-        n[1][3] = szx+sxz
-
-        n[2][3] = syz + szy
-
-        n += n.transpose()
-
-        n[0][0] = sxx + syy + szz
-        n[1][1] = sxx-syy-szz
-        n[2][2] = -sxx + syy -szz
-        n[3][3] = -sxx -syy + szz
-
-        w,v = np.linalg.eig(n)
-        maxw = 0
-        maxv = 0
-        for i in range(len(w)):
-            if w[i] > maxw:
-                maxw = w[i]
-                maxv = v[:,i]
-
-        R = np.zeros((3,3))
-
-        aa = maxv[0]**2
-        bb = maxv[1]**2
-        cc = maxv[2]**2
-        dd = maxv[3]**2
-        ab = maxv[0]*maxv[1]
-        ac = maxv[0]*maxv[2]
-        ad = maxv[0]*maxv[3]
-        bc = maxv[1]*maxv[2]
-        bd = maxv[1]*maxv[3]
-        cd = maxv[2]*maxv[3]
-
-        R[0][0] = aa + bb - cc - dd
-        R[0][1] = 2*(bc-ad)
-        R[0][2] = 2*(bd+ac)
-        R[1][0] = 2*(bc+ad)
-        R[1][1] = aa - bb + cc - dd
-        R[1][2] = 2*(cd-ab)
-        R[2][0] = 2*(bd-ac)
-        R[2][1] = 2*(cd+ab)
-        R[2][2] = aa - bb - cc + dd
-        tb.r = np.dot(tb.r, R.transpose())
-
-        dist = max(self.per_atom_norm(ta.r - tb.r, ta.box))
-        return dist < eps_r
-
     def find_match(self):
         """ determines if atoms is the same geometry as any previously visited minima."""
         new_con = str(len(self.cons.keys())) + ".con"
         tsase.io.write_con(new_con, self.atoms, w='w')
-        a = fileio.loadcon(new_con)
+        #a = fileio.loadcon(new_con)
+        a = tsase.io.read_con(new_con)
         for k in self.cons.keys():
-            b = fileio.loadcon(k)
+            b = tsase.io.read_con(k)
+            #b = fileio.loadcon(k)
             #same, r = geometry.identical(a, b, self.eps_r)
             #same = geometry.match(a, b, self.eps_r, 1.5, True, True, False)
-            same = self.rot_match(a, b, self.eps_r)
+            #same = self.rot_match(a, b, self.eps_r)
+            #same = geometry.rot_match(a, b, self.eps_r)
+            same = geometry.get_mappings(a,b,self.eps_r,0.2)
             #print "r", r
             if same:
                 os.remove(new_con)
@@ -498,8 +404,10 @@ class Hopping(Dynamics):
             rn = ro + disp
         else :
             # Move atoms using Dimer and an MD step
-            dimer = ModifiedDimer()
-            N = dimer(self.atoms, self.dimer_a, self.dimer_d, self.dimer_steps)
+            N = None
+            if self.dimer_method:
+                dimer = ModifiedDimer()
+                N = dimer(self.atoms, self.dimer_a, self.dimer_d, self.dimer_steps)
             self._molecular_dynamics(step, N)
         # JD: Add displacement to ro at each step regardless of significant structure flag
         # RB: disp is defined for bh not mh, so update rn in bh move only 
@@ -537,7 +445,6 @@ class Hopping(Dynamics):
             # for structures that have the same potential energy
             match, countEn, countEo = self.find_ene_match(En, Eo)
             if self.use_geo and (match is not None):
-            #if self.use_geo:
                 match = self.find_match()
             else:
                 match, countEn, countEo = self.find_ene_match(En, Eo)
