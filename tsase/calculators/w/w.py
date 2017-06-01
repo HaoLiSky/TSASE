@@ -1,7 +1,7 @@
 
 import os
 
-from ase.calculators.lammps import LAMMPS
+from ase.calculators.lammpsrun import LAMMPS
 
 def w(cmd = None):
     cwd = os.getcwd()
