@@ -85,6 +85,8 @@ class LAMMPS:
         self.keep_alive = keep_alive
         self.keep_tmp_files = keep_tmp_files
         self.no_data_file = no_data_file
+        self.flag_real_units = False
+
         if tmp_dir is not None:
             # If tmp_dir is pointing somewhere, don't remove stuff!
             self.keep_tmp_files = True
@@ -141,11 +143,17 @@ class LAMMPS:
 
     def get_potential_energy(self, atoms):
         self.update(atoms)
-        return self.thermo_content[-1]['pe']
+        if self.flag_real_units:
+            return self.thermo_content[-1]['pe']*0.043364115308771 #convert Kcal/mol to eV
+        else:
+            return self.thermo_content[-1]['pe']
 
     def get_forces(self, atoms):
         self.update(atoms)
-        return self.forces.copy()
+        if self.flag_real_units:
+            return self.forces.copy()*0.043364115308771 #convert Kcal/mol/A to eV/A
+        else:
+            return self.forces.copy()
 
     # xph: update charges in each atom
     def get_charges(self, atoms):
@@ -161,8 +169,12 @@ class LAMMPS:
     def get_stress(self, atoms):
         self.update(atoms)
         tc = self.thermo_content[-1]
-        # 1 bar (used by lammps for metal units) = 1e-4 GPa
-        return np.array([tc[i] for i in ('pxx','pyy','pzz',
+        if self.flag_real_units:
+            return np.array([tc[i] for i in ('pxx','pyy','pzz',
+                                         'pyz','pxz','pxy')])*(-1e-4*GPa)/0.986923267 #convert atm to bar 
+        else:    
+            # 1 bar (used by lammps for metal units) = 1e-4 GPa
+            return np.array([tc[i] for i in ('pxx','pyy','pzz',
                                          'pyz','pxz','pxy')])*(-1e-4*GPa)
 
     def update(self, atoms):
@@ -342,7 +354,12 @@ class LAMMPS:
 
         parameters = self.parameters
         pbc = self.atoms.get_pbc()
-        f.write('units metal \n')
+        # zd: reaxFF require real units
+        if ('units' in parameters):
+            f.write('units %s \n' % parameters['units'])
+            self.flag_real_units=True
+        else:
+            f.write('units metal \n')
         if ('boundary' in parameters):
             f.write('boundary %s \n' % parameters['boundary'])
         else:
@@ -772,7 +789,7 @@ class prism:
         axy, axz, ayz = [np.abs(x) for x in prism[3:]]
         return (axy >= acc) or (axz >= acc) or (ayz >= acc)
         
-def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False, write_charge=False
+def write_lammps_data(fileobj, atoms, specorder=None, force_skew=False, write_charge=False,
                       prismobj=None, velocities=False):
     """Method which writes atomic structure data to a LAMMPS data file."""
     if isinstance(fileobj, str):

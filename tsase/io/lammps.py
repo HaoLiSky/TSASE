@@ -18,7 +18,7 @@ def write_lammps(filename, atoms):
     symbols = atoms.get_chemical_symbols()
     elements = list(set(symbols))
     elements.sort()
-    cell = np.tril(atoms.cell)
+    cell = numpy.tril(atoms.cell)
     f.write(' %d atom types\n\n' % len(elements))
     f.write(' 0.0 %12.6f xlo xhi\n' % cell[0][0])
     f.write(' 0.0 %12.6f ylo yhi\n' % cell[1][1])
