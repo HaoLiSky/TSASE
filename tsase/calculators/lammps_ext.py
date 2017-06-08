@@ -141,7 +141,7 @@ class LAMMPS:
         if not self.keep_tmp_files:
             shutil.rmtree(self.tmp_dir)
 
-    def get_potential_energy(self, atoms):
+    def get_potential_energy(self, atoms, force_consistent=False):
         self.update(atoms)
         if self.flag_real_units:
             return self.thermo_content[-1]['pe']*0.043364115308771 #convert Kcal/mol to eV
