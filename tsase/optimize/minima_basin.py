@@ -39,18 +39,17 @@ class Hopping(Dynamics):
                  adjust_cm=True,
                  mss=0.1,
                  minenergy=None,
-                 distribution='uniform', # make md the distribution for MH move
+                 distribution='uniform', # The distribution to use in trial move. Make "molecular_dynamics" the distribution for MH trial move
                  adjust_step_size=10,
                  target_ratio = 0.5,
                  adjust_fraction = 0.025,
                  significant_structure = True,  # displace from minimum at each move
-# JD: removing this flag;    significant_structure2 = False, # displace from global minimum found so far at each move
                  pushapart = 0.4,
-                 jumpmax = None,
-                 jmp = 7, # number of jump steps taken in BHOJ
-                 global_jump = None, # threshold of times to visit the same PE before we make a global jump
-                 global_reset = False, # reset all of the history counts after a jump
-                 jump_distribution = 'uniform',
+                 jumpmax = None, # number of previously rejected MC steps before taking an OJ move; None = no OJ move
+                 jmp = 7, # number of jump steps taken in OJ
+                 global_jump = None, # number of times to visit the same PE before we take an OJ; None = no global jump
+                 global_reset = False, # True = reset all of the history counts after a jump (basically delete the history and start fresh)
+                 jump_distribution = 'uniform', # The distribution to use in OJ move. Same options as distribution flag 
                  dimer_method = True, # True uses an iterative dimer method before molecular dynamics
 		 dimer_a = 0.001,
 		 dimer_d = 0.01,
@@ -70,9 +69,10 @@ class Hopping(Dynamics):
         	 alpha1 = 0.98,  # energy threshold adjustment parameter
         	 alpha2 = 1. / 0.98,  # energy threshold adjustment parameter
 		 minima_threshold = 2,  # round energies to how many decimal place
-                 use_geometry = False,
-                 eps_r = 0.1,
-                 confile_directory = "confiles" # cannot be a directory that exists
+                 use_geometry = False, # True = compare geometry of systems when they have the same PE when determining if they are the same atoms configuration
+                 eps_r = 0.1, # positional difference to consider atoms in the same location
+                 confile_directory = "confiles", # Creates a new directory for all of the geometry .con files. Cannot be a directory that exists
+                 keep_minima_arrays = False # True = keep track of all local and global minima visited in local_minima and global_minima
                  ):
         Dynamics.__init__(self, atoms, logfile, trajectory)
 	self.temperature = temperature
@@ -94,7 +94,6 @@ class Hopping(Dynamics):
         self.target_ratio = target_ratio
         self.adjust_fraction = adjust_fraction
         self.significant_structure = significant_structure
-#        self.significant_structure2 = significant_structure2
         self.pushapart = pushapart
         self.jumpmax = jumpmax
         self.jmp = jmp
@@ -123,6 +122,7 @@ class Hopping(Dynamics):
         self.use_geo = use_geometry
         self.eps_r = eps_r
         self.con_dir = confile_directory
+        self.keep_minima_arrays = keep_minima_arrays
         self.global_minima = [] # an array of the current global minimum for every MC step
         self.local_minima = [] # an array of the current local minimum for every MC step
 
@@ -139,8 +139,8 @@ class Hopping(Dynamics):
         # dictionary for geometry comparison
         # keys = "#.con", values = # visits
         self.cons = {}
-        # number of moves that have been accepted in the run
-        self.num_moves = 0.0
+        # number of Monte Carlo moves that have been accepted in the run
+        self.num_accepted_moves = 0.0
         self.initialize()
 
     def initialize(self):
@@ -172,7 +172,7 @@ class Hopping(Dynamics):
        	                   % (self.w))
         self.logfile.flush()
 
-    def find_ene_match(self, En, Eo):
+    def find_energy_match(self, En, Eo):
         """ determines if En is the same PE as any previously visited minima."""
         approxEn = round(En,self.minima_threshold)
         approxEo = round(Eo,self.minima_threshold)
@@ -206,25 +206,23 @@ class Hopping(Dynamics):
 
     def find_match(self):
         """ determines if atoms is the same geometry as any previously visited minima."""
-        new_con = str(len(self.cons.keys())) + ".con"
-        tsase.io.write_con(new_con, self.atoms, w='w')
-        #a = fileio.loadcon(new_con)
-        a = tsase.io.read_con(new_con)
+        #new_con = str(len(self.cons.keys())) + ".con"
+        #tsase.io.write_con(new_con, self.atoms, w='w')
+        #a = tsase.io.read_con(new_con)
         for k in self.cons.keys():
             b = tsase.io.read_con(k)
-            #b = fileio.loadcon(k)
             #same, r = geometry.identical(a, b, self.eps_r)
             #same = geometry.match(a, b, self.eps_r, 1.5, True, True, False)
             #same = self.rot_match(a, b, self.eps_r)
             #same = geometry.rot_match(a, b, self.eps_r)
-            same = geometry.get_mappings(a,b,self.eps_r,0.2)
-            #print "r", r
+            #same = geometry.get_mappings(a,b,self.eps_r,0.2)
+            same = geometry.rot_match(self.atoms, b, eps_r)
             if same:
-                os.remove(new_con)
+                #os.remove(new_con)
                 #print "match", k
                 return k
         # atoms is unvisited local minima 
-        os.remove(new_con)
+        #os.remove(new_con)
         return None
 
     def update_con(self, confile):
@@ -340,7 +338,6 @@ class Hopping(Dynamics):
                 # In GPAW the atoms are probably to near to each other.
                 return None
         
-        #return self.energy
         return self.atoms.get_potential_energy()
 
     def push_apart(self,positions):
@@ -366,7 +363,6 @@ class Hopping(Dynamics):
     def move(self, step, ro, distribution):
         """Move atoms by a random step."""
         if distribution != 'molecular_dynamics':
-        #if not self.molecular_dynamics:
             if distribution == 'uniform':
                 disp = np.random.uniform(-self.dr, self.dr, (len(self.atoms), 3))
             elif distribution == 'gaussian':
@@ -387,21 +383,15 @@ class Hopping(Dynamics):
                 print 'distribution flag has typo'
                 sys.exit()
                 disp = np.random.uniform(-1*self.dr, self.dr, (len(self.atoms), 3))
-       # JD: Removed to be consistent with the corrected basin.py
-       #     if self.significant_structure == True:
-       #         rn = self.local_min_pos + disp
-       #     elif self.significant_structure2 == True:
-       #         ro = self.get_minimum()
-       #         rn = ro + disp
-       #     else:
             rn = ro + disp
             rn = self.push_apart(rn)
             self.atoms.set_positions(rn)
             if self.cm is not None:
                 cm = self.atoms.get_center_of_mass()
                 self.atoms.translate(self.cm - cm)
-            # RB: I think this was the intended spot to update rn
-            rn = ro + disp
+            # RB: this rn might be redundnt since we set it before finding center of mass
+            #rn = ro + disp
+
         else :
             # Move atoms using Dimer and an MD step
             N = None
@@ -409,14 +399,14 @@ class Hopping(Dynamics):
                 dimer = ModifiedDimer()
                 N = dimer(self.atoms, self.dimer_a, self.dimer_d, self.dimer_steps)
             self._molecular_dynamics(step, N)
-        # JD: Add displacement to ro at each step regardless of significant structure flag
-        # RB: disp is defined for bh not mh, so update rn in bh move only 
-        #rn = ro + disp
 
         rn = self.atoms.get_positions()
         world.broadcast(rn, 0)
-        self.atoms.set_positions(rn)
-        return self.atoms.get_positions()
+        # RB: test to see if resetting postions right here is redundant
+        # self.atoms.set_positions(rn)
+        # return self.atoms.get_positions()
+        # returning rn should be equivalent but cheaper
+        return rn
 
     def acceptance_MH(self, steps, ro, Eo, maxtemp):
         """Adjusts parameters and positions based  on minima hopping acceptance criteria."""
@@ -424,15 +414,12 @@ class Hopping(Dynamics):
         lastcon = "none"
         for step in range(steps):
             positionsOld = self.atoms.get_positions()
-            En = None
             rn = self.move(step,ro, self.distribution)
             En = self.get_energy(rn)
             self.steps += 1
-            while En is None:
-                rn = self.move(step,ro, self.distribtion)
-                self.atoms.set_positions(rn)
-                En = self.get_energy(rn)
             if En < self.Emin:
+                # RB: MH acceptance will always accept a move that is lower in PE.
+                # Double check and correct if wrong!
                 self.Emin = En
                 self.rmin = self.atoms.get_positions()
                 self.call_observers()
@@ -443,11 +430,12 @@ class Hopping(Dynamics):
             # find energy match first even if using geometry comparision
             # because it is computationlly cheaper to only compare geometries
             # for structures that have the same potential energy
-            match, countEn, countEo = self.find_ene_match(En, Eo)
+            match, countEn, countEo = self.find_energy_match(En, Eo)
             if self.use_geo and (match is not None):
                 match = self.find_match()
-            else:
-                match, countEn, countEo = self.find_ene_match(En, Eo)
+            # RB: this seems redundant
+            #else:
+            #    match, countEn, countEo = self.find_energy_match(En, Eo)
             if match is not None:
                 if (self.use_geo and match == lastcon) or match == 1:
                 # re-found last minimum
@@ -458,6 +446,7 @@ class Hopping(Dynamics):
             else:
             # must have found a new minimum
                 self.temperature *= self.beta3
+
             accept = False
             if (En < (Eo + self.Ediff)):
                 self.Ediff *= self.alpha1
@@ -473,13 +462,13 @@ class Hopping(Dynamics):
                 accept = True
             if accept:
                 rejectnum = 0
-                self.num_moves += 1
+                self.num_accepted_moves += 1
                 ro = rn
                 if self.use_geo:
                     new_con = self.update_con(match)
                     lastcon = new_con
-                #else:
                 self.update_minima(En, Eo)
+                # if global_jump is turned on (not 0) and we have visited the current local minimum too many times, take an OJ 
                 if self.global_jump and (self.minima[round(En,self.minima_threshold)] > self.global_jump):
                     for i in range(0,self.jmp):
                         rn = self.move(step,rn, self.jump_distribution)
@@ -491,9 +480,13 @@ class Hopping(Dynamics):
                 if self.lm_trajectory is not None:
                     tsase.io.write_con(self.lm_trajectory,self.atoms,w='a')
             else:
+                # rejected this MC step reset atoms positions
                 self.atoms.set_positions(positionsOld)
-            self.local_minima = np.append(self.local_minima, self.atoms.get_potential_energy())
-            self.global_minima = np.append(self.global_minima, self.Emin)
+            if self.keep_minima_arrays:
+                self.local_minima = np.put(self.local_minima, step, self.atoms.get_potential_energy())
+                self.global_minima = np.put(self.global_minima, step, self.Emin)
+                #self.local_minima = np.append(self.local_minima, self.atoms.get_potential_energy())
+                #self.global_minima = np.append(self.global_minima, self.Emin)
             if self.minenergy is not None:
                 if Eo < self.minenergy:
                     #print "geo: ", self.cons.values()
@@ -525,7 +518,7 @@ class Hopping(Dynamics):
             countEn = 0
             approxEn = round(En,self.minima_threshold)
             approxEo = round(Eo,self.minima_threshold)
-            match, countEn, countEo = self.find_ene_match(En, Eo)
+            match, countEn, countEo = self.find_energy_match(En, Eo)
             if self.use_geo and match:
                 match = self.find_match()
             if self.adjust_temp and match:
@@ -538,26 +531,32 @@ class Hopping(Dynamics):
             elif self.adjust_temp:
             # must have found a new minimum
                 self.temperature *= self.beta3
-            accept = False;
+
+            accept = False
             if Eo >= En and self.w == 0.0:
                 accept = True
             else:
                 totalMin = len(self.minima)
                 hn = 0
                 ho = 0
-                # no history if the run has not accepted any previous moves (num_moves == 0)
-                if self.num_moves:
+                # no history if the run has not accepted any previous moves (num_accepted_moves == 0)
+                # RB: Modify for keeping track of select number of recent history
+                if self.num_accepted_moves:
                     if match:
                         if self.history_num:
-                            hn = self.temp_minima.count(approxEn) / self.num_moves
-                            ho = self.temp_minima.count(approxEo) / self.num_moves
+                            moves = min(self.num_accepted_moves, self.history_num)
+                            hn = self.temp_minima.count(approxEn) / moves
+                            ho = self.temp_minima.count(approxEo) / moves
+                        # RB: currently geometry comparison is not compatible with keeping track of select recent history
+                        # It is going to be a little complicated to remove .con files or correcly update the counts for files
+                        # We can think of a good execution before I try to add it in.
                         elif self.use_geo:
-                            hn = self.cons[match] / self.num_moves
+                            hn = self.cons[match] / self.num_accepted_moves
                             if lastcon != "none":
-                                ho = self.cons[lastcon] / self.num_moves
+                                ho = self.cons[lastcon] / self.num_accepted_moves
                         else:
-                            hn = countEn / self.num_moves
-                            ho = countEo / self.num_moves
+                            hn = countEn / self.num_accepted_moves
+                            ho = countEo / self.num_accepted_moves
                 kT = self.temperature * kB
                 if self.accept_temp is not None:
                     kT = self.accept_temp * kB
@@ -566,7 +565,8 @@ class Hopping(Dynamics):
                 val = ((Eo - En) + (self.w * (ho - hn))) / kT
                 if val < 1.0:
                     accept = np.exp(val) > np.random.uniform()
-                else: # accept the new position
+                else:
+                    # accept the new position
                     accept = True;
             if self.jumpmax and rejectnum > self.jumpmax:
                 #JMP???
@@ -578,7 +578,7 @@ class Hopping(Dynamics):
                 acceptnum += 1.
                 recentaccept += 1.
                 rejectnum = 0
-                self.num_moves += 1
+                self.num_accepted_moves += 1
                 ## JD: made edit to set ro to local minima if we accept the configuration.  eliminating significant_structure 2 flag
                 if self.significant_structure == True:
                     ro = self.local_min_pos.copy()
@@ -590,7 +590,7 @@ class Hopping(Dynamics):
                 self.update_minima(En, Eo)
                 # update temp_minima
                 if self.history_num:
-                    self.temp_minima[int(self.num_moves) % self.history_num] = approxEn
+                    self.temp_minima[int(self.num_accepted_moves) % self.history_num] = approxEn
                 if self.global_jump and (self.minima[approxEn] > self.global_jump):
                     for i in range(0,self.jmp):
                         rn = self.move(step,rn, self.jump_distribution)
@@ -628,13 +628,16 @@ class Hopping(Dynamics):
         self.steps = 0
         ro = self.positions
         Eo = self.get_energy(ro)
+        if self.keep_minima_arrays:
+            self.global_minima = np.zeros(steps + 1)
+            self.local_minima = np.zeros(steps + 1)
         if self.mh_accept:
             self.acceptance_MH(steps, ro, Eo, maxtemp)
         else:
             self.acceptance_BH(steps, ro, Eo, maxtemp)
-        #print "geo: ", self.cons.values()
         self.get_minimum()
-        return self.global_minima, self.local_minima
+        # RB: Don't need to return the arrays because they are self. values
+        #return self.global_minima, self.local_minima
 
     def get_dist_geo_center(self):
         position = self.atoms.get_positions()

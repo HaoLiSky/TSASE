@@ -37,6 +37,8 @@ Below outlines the features of this combined GO software:
 
     **pushapart** : push atoms apart until all atoms are no closer than this distance
 
+    **keep_minima_arrays** : True: creates global_minima and local_minima arrays of length maximum number of Monte Carlo steps; this will result in extra zeros at the end of the array if the run finishes before the maximum number of Monte Carlo steps are taken
+
 *Selecting Move Type* 
 
     **distribution** : the distribution used for the displacement of each atom
@@ -89,9 +91,8 @@ Below outlines the features of this combined GO software:
 
     **global_reset** : reset history if an occasional jump is taken (True)
 
-    **global_jump** : Makes global move after visiting a state for *global_jump* number of times; Set to None to turn off
+    **global_jump** : After visiting a state for *global_jump* number of times, accept the following *jmp* moves of *jump_distribution*. Set to None to turn off.
     
-    **global_reset** : Resets the history after a global move is taken if this flag is set to True
 
 *Selecting Acceptance Criteria*
 
