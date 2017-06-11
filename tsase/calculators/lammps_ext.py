@@ -160,7 +160,7 @@ class LAMMPS:
         if not hasattr(self, 'charges'):
             print "no charges assigned to atoms initially, stop"
             sys.exit()
-        elif self.charges == None:
+        elif self.charges is None:
             self.update(atoms)
         # xph: print is good, but something wrong with the return 
         # print self.charges.copy()
@@ -323,7 +323,7 @@ class LAMMPS:
 
     def write_lammps_data(self, lammps_data=None):
         """Method which writes a LAMMPS data file with atomic structure."""
-        if (lammps_data == None):
+        if (lammps_data is None):
             lammps_data = 'data.' + self.label
         # xph: write charge or not
         if hasattr(self, 'charges'):
@@ -470,7 +470,7 @@ class LAMMPS:
     def read_lammps_log(self, lammps_log=None, PotEng_first=False):
         """Method which reads a LAMMPS output log file."""
 
-        if (lammps_log == None):
+        if (lammps_log is None):
             lammps_log = self.label + '.log'
 
         if isinstance(lammps_log, str):
@@ -505,7 +505,7 @@ class LAMMPS:
 
     def read_lammps_trj(self, lammps_trj=None, set_atoms=False):
         """Method which reads a LAMMPS dump file."""
-        if (lammps_trj == None):
+        if (lammps_trj is None):
             lammps_trj = self.label + '.lammpstrj'
 
         f = paropen(lammps_trj, 'r')
