@@ -357,7 +357,8 @@ class LAMMPS:
         # zd: reaxFF require real units
         if ('units' in parameters):
             f.write('units %s \n' % parameters['units'])
-            self.flag_real_units=True
+            if parameters['units'] == "real":
+                self.flag_real_units=True
         else:
             f.write('units metal \n')
         if ('boundary' in parameters):

@@ -231,9 +231,10 @@ End LAMMPSlib Interface Documentation
 
         # xph: cannot set pair_coeff before simulation box is defined. To avoid setting 
         #      pair_coeff repeatedly, an atoms object has to be provided for initialization
-        if atoms == None: 
-            print "Please assign an atoms object by setting 'atoms = ' for LAMMPSlib initialization"
+        if atoms is None: 
+            print  "Please assign an atoms object by setting 'atoms = ' for LAMMPSlib initialization"
             raise
+            
 
         # xph: if the cell is not lower triangular, it is difficult to map the forces back.
         #      It is easier to rotate outside the calculator. 
@@ -318,7 +319,15 @@ End LAMMPSlib Interface Documentation
 
         # Extract the forces and energy
 #        if 'energy' in properties:
-        self.results['energy'] = self.lmp.extract_variable('pe', None, 0)
+     
+        flag_real_units=False
+        if 'units real' in self.parameters.lammps_header:
+            flag_real_units=True
+         
+        if flag_real_units:
+            self.results['energy'] = self.lmp.extract_variable('pe', None, 0) * 0.043364115308771
+        else:
+            self.results['energy'] = self.lmp.extract_variable('pe', None, 0)
 #            self.results['energy'] = self.lmp.extract_global('pe', 0)
             
 #        if 'stress' in properties:
@@ -327,12 +336,15 @@ End LAMMPSlib Interface Documentation
         # xph: make the stress listed in the same order as in vasp.py and lammpsrun.py
         #stress_vars = ['pxx', 'pyy', 'pzz', 'pxy', 'pxz', 'pyz']
         stress_vars = ['pxx', 'pyy', 'pzz', 'pyz', 'pxz', 'pxy']
-
+  
         for i, var in enumerate(stress_vars):
             stress[i] = self.lmp.extract_variable(var, None, 0)
             
         # 1 bar (used by lammps for metal units) = 1e-4 GPa
-        self.results['stress'] = stress * -1e-4 * GPa
+        if flag_real_units:
+            self.results['stress'] = stress * -1e-4 * GPa / 0.986923267
+        else:
+            self.results['stress'] = stress * -1e-4 * GPa
 
 #        if 'forces' in properties:
         f = np.zeros((len(atoms), 3))
@@ -340,8 +352,11 @@ End LAMMPSlib Interface Documentation
         for i, var in enumerate(force_vars):
             f[:, i] = np.asarray(self.lmp.extract_variable(
                     var, 'all', 1)[:len(atoms)])
-            
-        self.results['forces'] = f
+        
+        if flag_real_units:
+            self.results['forces'] = f * 0.043364115308771
+        else:
+            self.results['forces'] = f
 
         if not self.parameters.keep_alive:
             self.lmp.close()
