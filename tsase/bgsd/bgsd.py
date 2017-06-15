@@ -5,6 +5,7 @@ import numpy
 import random
 
 ### Define a potential that converts another potential into the H landscape ############
+########################################################################################
 
 class BGSD_potential:
 
