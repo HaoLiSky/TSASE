@@ -337,6 +337,7 @@ class Hopping(Dynamics):
         
         return self.atoms.get_potential_energy()
 
+### push apart atoms when they are too close after MC step
     def push_apart(self,positions):
         movea = np.zeros(np.shape(positions))
         alpha = 0.025
