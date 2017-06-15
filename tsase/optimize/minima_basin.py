@@ -13,9 +13,6 @@ from ase.md import MDLogger
 import tsase
 import sys
 import atoms_operator as geometry
-#import atoms as geometry
-import eon.fileio as fileio
-#import write_con as write
 
 class Hopping(Dynamics):
     """Basin hopping algorithm.
@@ -483,8 +480,8 @@ class Hopping(Dynamics):
                 # rejected this MC step reset atoms positions
                 self.atoms.set_positions(positionsOld)
             if self.keep_minima_arrays:
-                self.local_minima = np.put(self.local_minima, step, self.atoms.get_potential_energy())
-                self.global_minima = np.put(self.global_minima, step, self.Emin)
+                np.put(self.local_minima, step, self.atoms.get_potential_energy())
+                np.put(self.global_minima, step, self.Emin)
                 #self.local_minima = np.append(self.local_minima, self.atoms.get_potential_energy())
                 #self.global_minima = np.append(self.global_minima, self.Emin)
             if self.minenergy is not None:
@@ -604,8 +601,11 @@ class Hopping(Dynamics):
             else:
                 rejectnum += 1
                 self.atoms.set_positions(positionsOld)
-            self.local_minima = np.append(self.local_minima, self.atoms.get_potential_energy())
-            self.global_minima = np.append(self.global_minima, self.Emin)
+            if self.keep_minima_arrays:
+                np.put(self.local_minima, step, self.atoms.get_potential_energy())
+                np.put(self.global_minima, step, self.Emin)
+            #self.local_minima = np.append(self.local_minima, self.atoms.get_potential_energy())
+            #self.global_minima = np.append(self.global_minima, self.Emin)
             if self.minenergy != None:
                 if Eo < self.minenergy:
                     #print "geo: ", self.cons.values()
