@@ -765,3 +765,4 @@ class CompareEnergies:
         dmax = np.absolute(difference)
         return dmax
 
+#this is just a test
