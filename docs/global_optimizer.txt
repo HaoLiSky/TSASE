@@ -13,11 +13,11 @@ TSASE contains a software package which combines features from multiple global o
 Below outlines the features of this combined GO software:
 
     class ``tsase.optimizer.`` **Hopping** (self, atoms, temperature=100, optimizer=SDLBFGS, fmax=0.05, dr=0.4, 
-    adjust_cm=True, mss=0.1, minenergy=None, distribution='uniform', adjust_step_size=None, adjust_every =10, target_ratio = 0.5, 
-    adjust_fraction = 0.05, significant_structure = True,  pushapart = 0.4, jumpmax=10, jmp = 7,
-    global_jump = 10, global_reset = False, jump_distribution = 'uniform', dimer_a = 0.001, dimer_d = 0.01, dimer_steps = 20, 
-    timestep = 0.1, mdmin = 2, history_weight = 0.0, history_num = 0, adjust_temp = True, accept_temp = None, acceptance_criteria = False,  
-    minimaHopping_history = True, beta1 = 1.04, beta2 = 1.04, beta3 = 1.0 / 1.04, Ediff0 = 0.5, alpha1 = 0.98, alpha2 = 1. / 0.98)
+    adjust_cm=True, mss=0.1, minenergy=None, distribution='uniform', adjust_step_size=10, target_ratio=0.5, 
+    adjust_fraction=0.05, significant_structure=True, pushapart=0.4, jumpmax=10, jmp=7,
+    global_jump=None, global_reset=False, jump_distribution='uniform', dimer_a=0.001, dimer_d =0.01, dimer_steps=20, 
+    timestep=0.1, mdmin=2, history_weight=0.0, history_num=0, adjust_temp=True, accept_temp=None, acceptance_criteria=False,  
+    minimaHopping_history=True, beta1=1.04, beta2=1.04, beta3=1.0/1.04, Ediff0=0.5, alpha1=0.98, alpha2=1./0.98)
 
 *General GO parameters*
 
@@ -33,7 +33,7 @@ Below outlines the features of this combined GO software:
 
     **mss** : maximum stepsize for the local optimization
 
-    **minenergy** : the BH algorithm stops when a configuration is found with a lower potential energy than this value
+    **minenergy** : the GO algorithm stops when a configuration is found with a lower potential energy than this value
 
     **pushapart** : push atoms apart until all atoms are no closer than this distance
 
@@ -152,6 +152,23 @@ Basin Hopping
     **temperature** : temperature in kT
 
 
+Below is an example script of how to use the combined GO algorithm to run standard BH:
+
+    .. code-block:: none
+
+        from tsase.optimize.minima_basin import Hopping
+
+        lj = tsase.calculators.lj(cutoff=35.0)
+        system = tsase.io.read_con('lj38-cluster.con')
+        system.set_calculator(lj)
+        opt = Hopping(atoms=system, temperature=8000, optimizer=SDLBFGS, fmax=0.05, dr=0.4,
+        adjust_cm=True, mss=0.1, minenergy=-173.918427, distribution='uniform', adjust_step_size=10, target_ratio=0.5,
+        adjust_fraction=0.05, significant_structure=True, pushapart=0.4, jumpmax=None,
+        global_jump=None, global_reset=False, history_weight=0.0, history_num=0, adjust_temp=False, accept_temp = None,
+        acceptance_criteria=False, use_geometry=False, keep_minima_arrays=False)
+        opt(10000)
+
+
 Minima Hopping
 --------------
     Below outlines the features of the minima hoppping implementation. All flags are equivalent to the description in the combined GO method.
@@ -170,6 +187,23 @@ Minima Hopping
         system.set_calculator(lj)
 	opt = MinimaHopping(atoms=system)
 	opt(totalsteps=10000, maxtemp=200000, minEnergy=-173.918427)
+
+
+Below is an example script of how to use the combined GO algorithm to run standard MH:
+
+    .. code-block:: none
+
+        from tsase.optimize.minima_basin import Hopping
+
+        lj = tsase.calculators.lj(cutoff=35.0)
+        system = tsase.io.read_con('lj38-cluster.con')
+        system.set_calculator(lj)
+        opt = Hopping(atoms=system, temperature=500, optimizer=SDLBFGS, fmax=0.05,
+        adjust_cm=True, mss=0.1, minenergy=-173.918427, distribution='molecular_dynamics', pushapart=0.4, jumpmax=None,
+        global_jump=None, global_reset=False, dimer_a=0.001, dimer_d=0.01, dimer_steps=20, timestep=0.1, mdmin=2,
+        acceptance_criteria=False, minimaHopping_history=True, beta1=1.04, beta2=1.04, beta3=1.0/1.04, Ediff0=0.5,
+        alpha1=0.98, alpha2=1./0.98, use_geometry=False, keep_minima_arrays=False)
+        opt(10000, maxtemp=50000)
 
 .. rubric:: References
 .. [#Wales97_5111] D. J. Wales, J. P. K. Doye, "Global Optimization by Basin-Hopping and the Lowest Energy Structures of Lennard-Jones Clusters Containing up to 110 Atoms", *J. Phys. Chem.* **101**,5111-5116 (1997).

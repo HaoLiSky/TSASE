@@ -18,4 +18,4 @@ Henkelman Group (UT Austin)
 * Shannon Stauffer 
 * Rileigh Bandy
 
-.. _ASE: https://wiki.fysik.dtu.dk/ase/overview.html
+.. _ASE: https://wiki.fysik.dtu.dk/ase/index.html
