@@ -5,7 +5,7 @@ Contents
 Our TSASE (pronounced "sassy") library is an extension to ASE for transistion state calculations. If you are looking for our Solid State NEB or Kinetic Database code, you are in the right place.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    index
    download
