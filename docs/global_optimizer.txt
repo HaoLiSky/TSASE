@@ -1,12 +1,12 @@
 
 .. _global_optimizer:
 
-
+==================
 Global Optimizers
 ==================
 
 Combined Basin and Minima Hopping
----------------------------------
+=================================
 
 TSASE contains a software package which combines features from multiple global optimization (GO) methods including Basin Hopping [#Wales97_5111]_ and Minimia Hopping [#Goedecker04_9911]_.  In this software package, you can select a move type (dynamics versus random), an acceptance criteria, and whether to utilize history.  
 
@@ -146,7 +146,7 @@ Usage:
 
 
 Basin Hopping
--------------
+=============
     Below outlines the features of the basin hoppping implementation. All flags are equivalent to the description above except for those defined below. 
 
     class ``tsase.optimizer.`` **BasinHopping** (self, atoms, temperature=100 * kB, optimizer=SDLBFGS, fmax=0.1,dr=0.1, active_ratio=1.0, adjust_cm=True, mss=0.2, minenergy=None, distribution='uniform', significant_structure = False, pushapart = 0.4,jumpmax=15,adjust_step_size=None, target_ratio = 0.5, adjust_fraction = 0.05)
@@ -154,9 +154,9 @@ Basin Hopping
 
     **temperature** : temperature in kT
 
-    Usage:
-    ======
-    Below is an example script of how to use the combined GO algorithm to run standard BH:
+Usage:
+------
+Below is an example script of how to use the combined GO algorithm to run standard BH:
 
     .. code-block:: none
 
@@ -174,15 +174,15 @@ Basin Hopping
 
 
 Minima Hopping
---------------
+==============
     Below outlines the features of the minima hoppping implementation. All flags are equivalent to the description in the combined GO method.
     
 
     class ``tsase.optimizer.`` **MinimaHopping** (self, atoms, T0, beta1, beta2, beta3, Ediff0, alpha1, alpha2, mdmin, logfile, minima_threshold, timestep, optimizer, minima_traj, fmax, dimer_a, dimer_d, dimer_steps)
     
-    Usage:
-    ======
-    Below is an example script of how to use this optimizer:
+Usage:
+------
+Below is an example script of how to use this optimizer:
 
     .. code-block:: none
 	
