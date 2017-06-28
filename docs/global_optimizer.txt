@@ -130,8 +130,8 @@ Below outlines the features of this combined GO software:
    :align:   center
    :width:   80 %
 
-    Usage:
-    ======
+Usage:
+-----
     Below is an example script of how to use this optimizer:
 
     .. code-block:: none
