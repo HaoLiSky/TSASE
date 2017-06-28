@@ -146,7 +146,7 @@ Usage:
 
     Below is an example script of how to use the combined GO algorithm to run standard MH:
 
-        .. code-block:: none
+    .. code-block:: none
 
         from tsase.optimize.minima_basin import Hopping
 
