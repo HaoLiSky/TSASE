@@ -130,6 +130,8 @@ Below outlines the features of this combined GO software:
    :align:   center
    :width:   80 %
 
+Usage:
+======
 Below is an example script of how to use this optimizer:
 
     .. code-block:: none
@@ -142,6 +144,7 @@ Below is an example script of how to use this optimizer:
         opt = Hopping(atoms=system, minEnergy=-173.918427)
         opt(10000)
 
+
 Basin Hopping
 -------------
     Below outlines the features of the basin hoppping implementation. All flags are equivalent to the description above except for those defined below. 
@@ -151,7 +154,8 @@ Basin Hopping
 
     **temperature** : temperature in kT
 
-
+Usage:
+======
 Below is an example script of how to use the combined GO algorithm to run standard BH:
 
     .. code-block:: none
@@ -176,7 +180,9 @@ Minima Hopping
 
     class ``tsase.optimizer.`` **MinimaHopping** (self, atoms, T0, beta1, beta2, beta3, Ediff0, alpha1, alpha2, mdmin, logfile, minima_threshold, timestep, optimizer, minima_traj, fmax, dimer_a, dimer_d, dimer_steps)
     
-    Below is an example script of how to use this optimizer:
+Usage:
+======
+Below is an example script of how to use this optimizer:
 
     .. code-block:: none
 	
