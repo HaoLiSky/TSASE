@@ -37,7 +37,7 @@ To use the independent scripts, it is recommended to add ``$HOME/tsase/tsase/bin
 .. code-block:: sh
     
     export PYTHONPATH=$HOME/tsase:$PYTHONPATH
-    export PATH=$HOME/tsase/tsase/bin:$PATH
+    export PATH=$HOME/tsase/bin:$PATH
 
 For more information on subversion read its `online documentation`_.
 
