@@ -155,7 +155,7 @@ Usage:
         system.set_calculator(lj)
         opt = Hopping(atoms=system, 
                       temperature=500,
-                      minenergy=-173.918427)
+                      minenergy=-173.918427,
                       distribution='molecular_dynamics', 
                       jumpmax=None,
                       global_jump=None, 
