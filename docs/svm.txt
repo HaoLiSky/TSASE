@@ -99,7 +99,7 @@ class ``tsase.svm.`` **ocsvm_dynamics** ( p, clf, csda_cc=0.001, cdsa_maxstep=1.
 
 	**kT** : temperature in kT; this is need to calculate appropriate boost factor and renormalization of the time
 
-
+.. rubric:: References
 .. [#Pozun12_174101] Z. D. Pozun, K. Hansen, D. Sheppard, M. Rupp, K.-R. Müller, and G. Henkelman, Optimizing transition states via kernel-based machine learning, J. Chem. Phys. 136, 174101 `DOI <http://dx.doi.org/10.1063/1.4707167>`_
 
 .. [#Xiao15_244104] P. Xiao, J. Duncan, L. Zhang, and G. Henkelman, Ridge-Based Bias Potentials to Accelerate Molecular Dynamics, J. Chem. Phys. 143, H3061 (2015) 
