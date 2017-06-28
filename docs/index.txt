@@ -1,7 +1,7 @@
 .. _home:
 
 ==========================================
-TSASE: Transition State Library for `ASE`_
+About TSASE: Transition State Library for `ASE`_
 ==========================================
 
 The TSASE library contains python code which depends on `ASE`_ to tackle transition state calculations.

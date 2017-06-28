@@ -231,23 +231,6 @@ Below is an example script of how to use this optimizer:
 	opt = MinimaHopping(atoms=system)
 	opt(totalsteps=10000, maxtemp=200000, minEnergy=-173.918427)
 
-
-    Below is an example script of how to use the combined GO algorithm to run standard MH:
-
-    .. code-block:: none
-
-        from tsase.optimize.minima_basin import Hopping
-
-        lj = tsase.calculators.lj(cutoff=35.0)
-        system = tsase.io.read_con('lj38-cluster.con')
-        system.set_calculator(lj)
-        opt = Hopping(atoms=system, temperature=500, optimizer=SDLBFGS, fmax=0.05,
-        adjust_cm=True, mss=0.1, minenergy=-173.918427, distribution='molecular_dynamics', pushapart=0.4, jumpmax=None,
-        global_jump=None, global_reset=False, dimer_a=0.001, dimer_d=0.01, dimer_steps=20, timestep=0.1, mdmin=2,
-        acceptance_criteria=False, minimaHopping_history=True, beta1=1.04, beta2=1.04, beta3=1.0/1.04, Ediff0=0.5,
-        alpha1=0.98, alpha2=1./0.98, use_geometry=False, keep_minima_arrays=False)
-        opt(10000, maxtemp=50000)
-
 .. rubric:: References
 .. [#Wales97_5111] D. J. Wales, J. P. K. Doye, "Global Optimization by Basin-Hopping and the Lowest Energy Structures of Lennard-Jones Clusters Containing up to 110 Atoms", *J. Phys. Chem.* **101**,5111-5116 (1997).
 .. [#Goedecker04_9911] S. Goedecker, "Minima hopping: An efficient search method for the global minimum of the potential energy surface of complex molecular systems", *J. Chem. Phys.* **120**, 9911 (2004).
