@@ -2,6 +2,9 @@
 .. _download:
 
 ================================
+Installation
+================================
+
 Download
 ================================
 
@@ -27,7 +30,6 @@ This will fetch a copy of the latest code to a local directory named tsase.
 
 The tsase code can also be download directly at `tarfile`_.
 
-=====================
 Environment Variables 
 =====================
 
