@@ -40,6 +40,8 @@ class ``tsase.md.`` **nvtandersen** (atoms,timestep,temperature,alpha,tcol,fixcm
 	**eig** : required when running dynamics in hyperplane; defines the vector corresponding to the
 		  degree of freedom being taken away from the system.
 
+Usage:
+======
 Below is an example of how to use the thermostat: 
 
 .. code-block:: none
@@ -49,6 +51,4 @@ Below is an example of how to use the thermostat:
 	f = atoms.get_forces()
 	f = dyn.step(f)	
 
-Usage:
-======
 
