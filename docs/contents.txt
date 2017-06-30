@@ -7,7 +7,7 @@ Our TSASE (pronounced "sassy") library is an extension to ASE for transistion st
 Installation and Download
 -------------------------
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    index
    download
