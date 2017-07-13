@@ -894,7 +894,7 @@ class ModifiedDimer:
         a = dimer_a
         d = dimer_d
         # random uniform vector
-        N = np.random.standard_normal((len(p), 3)
+        N = np.random.standard_normal((len(p), 3))
 	Nmag = np.linalg.norm(N)
         N = N / np.linalg.norm(N)
         y = x + d * N
