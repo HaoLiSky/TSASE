@@ -277,9 +277,6 @@ class Hopping(Dynamics):
         xi = np.random.standard_normal((len(masses), 3))
         if N is not None:
             xi = N
-            #momenta = 3 * len(masses) * xi * np.sqrt(2 * masses * temp)[:, np.newaxis]
-            #momenta = xi * np.sqrt((3/2) * len(masses) * masses * (self.temperature * kB))[:, np.newaxis]
-        #else:
         momenta = xi * np.sqrt(masses * temp)[:, np.newaxis]
         communicator.broadcast(xi, 0)
         return momenta
@@ -897,7 +894,8 @@ class ModifiedDimer:
         a = dimer_a
         d = dimer_d
         # random uniform vector
-        N = np.random.uniform(-1, 1, (len(p), 3))
+        N = np.random.standard_normal((len(p), 3)
+	Nmag = np.linalg.norm(N)
         N = N / np.linalg.norm(N)
         y = x + d * N
         p.set_positions(y)
@@ -913,7 +911,7 @@ class ModifiedDimer:
             y = x + d * N
             p.set_positions(y)
             iteration += 1
-        return N
+        return Nmag * N
 
 class PassedMinimum:
     """Simple routine to find if a minimum in the potential energy surface
