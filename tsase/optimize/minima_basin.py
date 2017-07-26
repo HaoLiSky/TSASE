@@ -532,6 +532,87 @@ class Hopping(Dynamics):
             if maxtemp and maxtemp < self.temperature:
                   break
 
+    def acceptance_MH2(self, steps, ro, Eo, maxtemp):
+        """Adjusts parameters and positions based  on minima hopping acceptance criteria."""
+        rejectnum = 0
+        lastcon = "none"
+        for step in range(steps):
+            positionsOld = self.atoms.get_positions()
+            rn = self.move(step,ro, self.distribution)
+            En = self.get_energy(rn)
+            self.steps += 1
+            self.log(step, En, self.Emin,self.dr)
+            match = None
+            countEo = 0
+            countEn = 0
+            # find energy match first even if using geometry comparision
+            # because it is computationlly cheaper to only compare geometries
+            # for structures that have the same potential energy
+            match, countEn, countEo = self.find_energy_match(En, Eo)
+            if self.use_geo and (match is not None):
+                match = self.find_match()
+            while match is not None:
+                if (self.use_geo and match == lastcon) or match == 1:
+                # re-found last minimum
+                    self.temperature *= self.beta1
+                elif self.mh_history:
+                # re-found previously found minimum
+                    self.temperature *= self.beta2
+       	       	self.atoms.set_positions(positionsOld)
+                rn = self.move(step,ro, self.distribution)
+                En = self.get_energy(rn)
+            else:
+            # must have found a new minimum
+                self.temperature *= self.beta3
+
+            accept = False
+            if (En < (Eo + self.Ediff)):
+                self.Ediff *= self.alpha1
+                accept = True
+            else:
+                self.Ediff *= self.alpha2
+                rejectnum += 1
+            if self.jumpmax and (rejectnum > self.jumpmax):
+                #JMP???
+                for i in range(0,self.jmp):
+                    rn = self.move(step,rn, self.jump_distribution)
+                En = self.get_energy(rn)
+                En = self.get_energy(rn)
+                accept = True
+            if accept:
+                rejectnum = 0
+                self.num_accepted_moves += 1
+                ro = rn
+                if self.use_geo:
+                    new_con = self.update_con(match)
+                    lastcon = new_con
+                self.update_minima(En, Eo)
+                # if global_jump is turned on (not 0) and we have visited the c$
+                if self.global_jump and (self.minima[round(En,self.minima_thres$
+                    for i in range(0,self.jmp):
+                        rn = self.move(step,rn, self.jump_distribution)
+                    if self.global_reset:
+                        # This may cause an error. Need to test!
+                        self.minima = {}
+                    En = self.get_energy(rn)
+                Eo = En
+                if self.lm_trajectory is not None:
+                    tsase.io.write_con(self.lm_trajectory,self.atoms,w='a')
+            else:
+                # rejected this MC step reset atoms positions
+                self.atoms.set_positions(positionsOld)
+            if self.keep_minima_arrays:
+                np.put(self.local_minima, step, self.atoms.get_potential_energy$
+                np.put(self.global_minima, step, self.Emin)
+                #self.local_minima = np.append(self.local_minima, self.atoms.ge$
+                #self.global_minima = np.append(self.global_minima, self.Emin)
+            if self.minenergy is not None:
+                if Eo < self.minenergy:
+                    #print "geo: ", self.cons.values()
+                    break
+            if maxtemp and maxtemp < self.temperature:
+                  break
+
     def acceptance_BH(self, steps, ro, Eo, maxtemp):
         """Boltzmann acceptance criteria for basin hopping."""
         acceptnum = 0
@@ -830,7 +911,7 @@ class Hopping(Dynamics):
             self.acceptance_criteria(steps,ro, Eo, maxtemp)
         
         elif self.mh_accept:
-            self.acceptance_MH(steps, ro, Eo, maxtemp)
+            self.acceptance_MH2(steps, ro, Eo, maxtemp)
         else:
             self.acceptance_BH(steps, ro, Eo, maxtemp)
         self.get_minimum()
