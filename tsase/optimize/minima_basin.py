@@ -561,6 +561,7 @@ class Hopping(Dynamics):
        	       	self.atoms.set_positions(positionsOld)
                 rn = self.move(step,ro, self.distribution)
                 En = self.get_energy(rn)
+                self.log(step, En, self.Emin,self.dr)
             else:
             # must have found a new minimum
                 self.temperature *= self.beta3
@@ -587,14 +588,6 @@ class Hopping(Dynamics):
                     new_con = self.update_con(match)
                     lastcon = new_con
                 self.update_minima(En, Eo)
-                # if global_jump is turned on (not 0) and we have visited the c$
-                if self.global_jump and (self.minima[round(En,self.minima_thres$
-                    for i in range(0,self.jmp):
-                        rn = self.move(step,rn, self.jump_distribution)
-                    if self.global_reset:
-                        # This may cause an error. Need to test!
-                        self.minima = {}
-                    En = self.get_energy(rn)
                 Eo = En
                 if self.lm_trajectory is not None:
                     tsase.io.write_con(self.lm_trajectory,self.atoms,w='a')
@@ -602,10 +595,8 @@ class Hopping(Dynamics):
                 # rejected this MC step reset atoms positions
                 self.atoms.set_positions(positionsOld)
             if self.keep_minima_arrays:
-                np.put(self.local_minima, step, self.atoms.get_potential_energy$
+                np.put(self.local_minima, step, self.atoms.get_potential_energy())
                 np.put(self.global_minima, step, self.Emin)
-                #self.local_minima = np.append(self.local_minima, self.atoms.ge$
-                #self.global_minima = np.append(self.global_minima, self.Emin)
             if self.minenergy is not None:
                 if Eo < self.minenergy:
                     #print "geo: ", self.cons.values()
