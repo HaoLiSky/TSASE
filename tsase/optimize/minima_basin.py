@@ -590,6 +590,10 @@ class Hopping(Dynamics):
                     lastcon = new_con
                 self.update_minima(En, Eo)
                 Eo = En
+                if En < self.Emin:
+                    self.Emin = En
+                    self.rmin = self.atoms.get_positions()
+                    self.call_observers()
                 if self.lm_trajectory is not None:
                     tsase.io.write_con(self.lm_trajectory,self.atoms,w='a')
             else:
