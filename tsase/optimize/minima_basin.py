@@ -561,6 +561,7 @@ class Hopping(Dynamics):
        	       	self.atoms.set_positions(positionsOld)
                 rn = self.move(step,ro, self.distribution)
                 En = self.get_energy(rn)
+                match, countEn, countEo = self.find_energy_match(En, Eo)
                 self.log(step, En, self.Emin,self.dr)
             else:
             # must have found a new minimum
