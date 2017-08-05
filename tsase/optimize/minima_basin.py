@@ -235,16 +235,11 @@ class Hopping(Dynamics):
     def update_geometries(self, En, position):
 	approxEn = round(En, self.minima_threshold)
         if approxEn in self.geometries:
-            same = False
-            for index in self.geometries[approxEn]:
-                positions = self.positionsMatrix[index]
-                if positions.all() == position.all():
-                    self.geo_history[index] += 1
-                    self.last_index = index
-                    print "\nSAME\n"
-                    same = True
-                    break
-            if not same:
+            if self.current_index is not None:
+                self.geo_history[self.current_index] += 1
+                self.last_index = self.current_index
+                print "\nSAME\n"
+            else:
                 new_index = len(self.positionsMatrix)
                 self.geo_history[new_index] = 1
                 self.last_index = new_index
@@ -611,6 +606,7 @@ class Hopping(Dynamics):
                     self.rmin = self.atoms.get_positions()
                     self.call_observers()
                 print "ACCEPTED"
+                #print self.atoms.get_positions()
                 if self.lm_trajectory is not None:
                     tsase.io.write_con(self.lm_trajectory,self.atoms,w='a')
             else:
