@@ -91,7 +91,7 @@ class Hopping(Dynamics):
                  # Geometry comparison parameters
                  use_geometry = False, # True = compare geometry of systems when they have the same PE when determining if they are the same atoms configuration
                  eps_r = 0.1, # positional difference to consider atoms in the same location
-                 confile_directory = "confiles", # Creates a new directory for all of the geometry .con files. Cannot be a directory that exists
+                 
                  ):
         Dynamics.__init__(self, atoms, logfile, trajectory)
 	self.temperature = temperature
@@ -140,7 +140,6 @@ class Hopping(Dynamics):
 	self.minima_threshold = minima_threshold
         self.use_geo = use_geometry
         self.eps_r = eps_r
-        self.con_dir = confile_directory
         self.keep_minima_arrays = keep_minima_arrays
         self.global_minima = [] # an array of the current global minimum for every MC step
         self.local_minima = [] # an array of the current local minimum for every MC step
@@ -156,9 +155,16 @@ class Hopping(Dynamics):
 	self.minima = {}
         # list with fixed size that will store history_num previous minima
         self.temp_minima = [0] * self.history_num
+        self.positionsMatrix = []
         # dictionary for geometry comparison
-        # keys = "#.con", values = # visits
-        self.cons = {}
+        # keys = approximate potential energy
+        # values = list of indexes in positionsMatrix with the same PE
+        self.geometries = {}
+        # dictionary with keys = index in positionsMatrix
+        # values = # accepted visits
+        self.geo_history = {}
+        self.current_index = None
+        self.last_index = None
         # number of Monte Carlo moves that have been accepted in the run
         self.num_accepted_moves = 0.0
         self.initialize()
@@ -171,8 +177,6 @@ class Hopping(Dynamics):
         self.positions = self.atoms.get_positions()
         self.call_observers()
         self.log(-1, self.Emin, self.Emin,self.dr)
-        if self.use_geo:
-            os.mkdir(self.con_dir)
 
                 
     def log(self, step, En, Emin,dr):
@@ -228,46 +232,54 @@ class Hopping(Dynamics):
             self.minima[approxEn] = 1
             return True, approxEn, approxEo
 
-
-    def find_match(self):
-        """ determines if atoms is the same geometry as any previously visited minima."""
-        #new_con = str(len(self.cons.keys())) + ".con"
-        #tsase.io.write_con(new_con, self.atoms, w='w')
-        #a = tsase.io.read_con(new_con)
-        for k in self.cons.keys():
-            b = tsase.io.read_con(k)
-            #same, r = geometry.identical(a, b, self.eps_r)
-            #same = geometry.match(a, b, self.eps_r, 1.5, True, True, False)
-            #same = self.rot_match(a, b, self.eps_r)
-            #same = geometry.rot_match(a, b, self.eps_r)
-            #same = geometry.get_mappings(a,b,self.eps_r,0.2)
-            same = geometry.rot_match(self.atoms, b, eps_r)
-            if same:
-                #os.remove(new_con)
-                #print "match", k
-                return k
-        # atoms is unvisited local minima 
-        #os.remove(new_con)
-        return None
-
-
-    def update_con(self, confile):
-        """ update dictionary of .con files
-        add a new .con if atoms is a new local min
-        or increment the # of visits for the correct .con """
-        if confile is not None:
-            # debugging
-            localMin = tsase.io.read_con(confile)
-            lj = tsase.calculators.lj(cutoff=35.0)
-            localMin.center(100.0)
-            localMin.set_calculator(lj)
-            #print "repeat min:", self.atoms.get_potential_energy()
-            #print "equivalent to", localMin.get_potential_energy()
-            self.cons[confile] += 1
+    def update_geometries(self, En, position):
+	approxEn = round(En, self.minima_threshold)
+        if approxEn in self.geometries:
+            same = False
+            for index in self.geometries[approxEn]:
+                positions = self.positionsMatrix[index]
+                if positions.all() == position.all():
+                    self.geo_history[index] += 1
+                    self.last_index = index
+                    print "\nSAME\n"
+                    same = True
+                    break
+            if not same:
+                new_index = len(self.positionsMatrix)
+                self.geo_history[new_index] = 1
+                self.last_index = new_index
+                self.geometries[approxEn].append(new_index)
+                self.positionsMatrix.append(self.atoms.get_positions())
         else:
-            new_con = self.con_dir + "/" + str(len(self.cons.keys())) + ".con"
-            tsase.io.write_con(new_con, self.atoms, w='w')
-            self.cons[new_con] = 1
+            new_index = len(self.positionsMatrix)
+            self.geometries[approxEn] = [new_index]
+            self.geo_history[new_index] = 1
+            self.last_index = new_index
+            self.positionsMatrix.append(self.atoms.get_positions())
+
+        print "Update GEO"
+        print "geometries{}"
+        print self.geometries
+        print self.positionsMatrix
+        print self.geo_history
+
+    def find_match(self, En, positionsOld):
+        """ determines if atoms is the same geometry as any previously visited minima."""
+        approxEn = round(En, self.minima_threshold)
+        if approxEn in self.geometries:
+            # check if we are back in the current local minimum
+            print "rot_match", geometry.rot_match(self.atoms, positionsOld, self.eps_r)
+            if geometry.rot_match(self.atoms, positionsOld, self.eps_r):
+                self.current_index = self.last_index
+                return 1, positionsOld
+            for index in self.geometries[approxEn]:
+                positions = self.positionsMatrix[index]
+                if geometry.rot_match(self.atoms, positions, self.eps_r):
+                    self.current_index = index
+                    return 2, positions
+            self.current_index = None
+            return None, self.atoms.get_positions()
+        return ValueError
 
 
     def _maxwellboltzmanndistribution(self,masses,N,temp,communicator=world):
@@ -449,7 +461,6 @@ class Hopping(Dynamics):
     def acceptance_MH(self, steps, ro, Eo, maxtemp):
         """Adjusts parameters and positions based  on minima hopping acceptance criteria."""
         rejectnum = 0
-        lastcon = "none"
         for step in range(steps):
             positionsOld = self.atoms.get_positions()
             rn = self.move(step,ro, self.distribution)
@@ -535,14 +546,15 @@ class Hopping(Dynamics):
     def acceptance_MH2(self, steps, ro, Eo, maxtemp):
         """Adjusts parameters and positions based  on minima hopping acceptance criteria."""
         rejectnum = 0
-        lastcon = "none"
         for step in range(steps):
             positionsOld = self.atoms.get_positions()
+            atomsOld = self.atoms.copy()
             rn = self.move(step,ro, self.distribution)
             En = self.get_energy(rn)
             self.steps += 1
             self.log(step, En, self.Emin,self.dr)
             match = None
+            position = positionsOld
             countEo = 0
             countEn = 0
             # find energy match first even if using geometry comparision
@@ -550,9 +562,10 @@ class Hopping(Dynamics):
             # for structures that have the same potential energy
             match, countEn, countEo = self.find_energy_match(En, Eo)
             if self.use_geo and (match is not None):
-                match = self.find_match()
+                match, position = self.find_match(En, positionsOld)
+                #print "position:", position
             while match is not None:
-                if (self.use_geo and match == lastcon) or match == 1:
+                if match == 1:
                 # re-found last minimum
                     self.temperature *= self.beta1
                 elif self.mh_history:
@@ -562,6 +575,9 @@ class Hopping(Dynamics):
                 rn = self.move(step,ro, self.distribution)
                 En = self.get_energy(rn)
                 match, countEn, countEo = self.find_energy_match(En, Eo)
+                if self.use_geo and (match is not None):
+                    match, position = self.find_match(En, positionsOld)
+                print "match:", match
                 self.log(step, En, self.Emin,self.dr)
             else:
             # must have found a new minimum
@@ -575,6 +591,7 @@ class Hopping(Dynamics):
                 self.Ediff *= self.alpha2
                 rejectnum += 1
             if self.jumpmax and (rejectnum > self.jumpmax):
+                print "problem?"
                 #JMP???
                 for i in range(0,self.jmp):
                     rn = self.move(step,rn, self.jump_distribution)
@@ -586,14 +603,14 @@ class Hopping(Dynamics):
                 self.num_accepted_moves += 1
                 ro = rn
                 if self.use_geo:
-                    new_con = self.update_con(match)
-                    lastcon = new_con
+                    self.update_geometries(En, position)
                 self.update_minima(En, Eo)
                 Eo = En
                 if En < self.Emin:
                     self.Emin = En
                     self.rmin = self.atoms.get_positions()
                     self.call_observers()
+                print "ACCEPTED"
                 if self.lm_trajectory is not None:
                     tsase.io.write_con(self.lm_trajectory,self.atoms,w='a')
             else:
@@ -604,7 +621,6 @@ class Hopping(Dynamics):
                 np.put(self.global_minima, step, self.Emin)
             if self.minenergy is not None:
                 if Eo < self.minenergy:
-                    #print "geo: ", self.cons.values()
                     break
             if maxtemp and maxtemp < self.temperature:
                   break
@@ -619,7 +635,6 @@ class Hopping(Dynamics):
             En = None
             rn = None
             self.steps += 1
-            lastcon = "none"
             while En is None:
                 rn = self.move(step,ro, self.distribution)
                 En = self.get_energy(rn)
@@ -629,15 +644,16 @@ class Hopping(Dynamics):
                 self.call_observers()
             self.log(step, En, self.Emin,self.dr)
             match = None
+            position = positionsOld
             countEo = 0
             countEn = 0
             approxEn = round(En,self.minima_threshold)
             approxEo = round(Eo,self.minima_threshold)
             match, countEn, countEo = self.find_energy_match(En, Eo)
-            if self.use_geo and match:
-                match = self.find_match()
+            if self.use_geo and (match is not None):
+                match, position = self.find_match(En, positionsOld)
             if self.adjust_temp and match:
-                if (self.use_geo and match == lastcon) or match == 1:
+                if match == 1:
                 # re-found last minimum
                     self.temperature *= self.beta1
                 else:
@@ -666,9 +682,10 @@ class Hopping(Dynamics):
                         # It is going to be a little complicated to remove .con files or correcly update the counts for files
                         # We can think of a good execution before I try to add it in.
                         elif self.use_geo:
-                            hn = self.cons[match] / self.num_accepted_moves
-                            if lastcon != "none":
-                                ho = self.cons[lastcon] / self.num_accepted_moves
+                            if self.current_index is not None:
+                                hn = self.geo_history[self.current_index] / self.num_accepted_moves
+                            if self.last_index is not None:
+                                ho = self.geo_history[self.last_index] / self.num_accepted_moves
                         else:
                             hn = countEn / self.num_accepted_moves
                             ho = countEo / self.num_accepted_moves
@@ -700,8 +717,7 @@ class Hopping(Dynamics):
                 else:
                     ro = rn.copy()
                 if self.use_geo:
-                    new_con = self.update_con(match)
-                    lastcon = new_con
+                    self.update_geometries(En, position)
                 self.update_minima(En, Eo)
                 # update temp_minima
                 if self.history_num:
@@ -722,11 +738,8 @@ class Hopping(Dynamics):
             if self.keep_minima_arrays:
                 np.put(self.local_minima, step, self.atoms.get_potential_energy())
                 np.put(self.global_minima, step, self.Emin)
-            #self.local_minima = np.append(self.local_minima, self.atoms.get_potential_energy())
-            #self.global_minima = np.append(self.global_minima, self.Emin)
             if self.minenergy != None:
                 if Eo < self.minenergy:
-                    #print "geo: ", self.cons.values()
                     break
             if self.adjust_step is not None:
                 if step % self.adjust_step == 0:
@@ -744,7 +757,7 @@ class Hopping(Dynamics):
 
     def adjust_temperature(self, match):
         if match:
-            if (self.use_geo and match == lastcon) or match == 1:
+            if match == 1:
             # re-found last minimum
                 self.temperature *= self.beta1
             else:

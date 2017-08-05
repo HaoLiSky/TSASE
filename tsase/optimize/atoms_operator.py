@@ -52,7 +52,7 @@ def match(a,b,eps_r,neighbor_cutoff,indistinguishable):
     else:
         return rot_match(a,b,eps_r)
 
-def rot_match(a, b, comp_eps_r):
+def rot_match(a, b_pos, comp_eps_r):
     """
        Following codes are modfied from atom.py in EON
        Determine if Configuration 'a' and 'b' is matching.
@@ -64,6 +64,10 @@ def rot_match(a, b, comp_eps_r):
     #TODO: method to map atoms in 'a' to those 'b' so that to deal with 'indistinguishable' situation
 #    if not (a.free.all() and b.free.all()):
 #        print "Comparing structures with frozen atoms with rotational matching; check_rotation may be set incorrectly"
+
+    b = a.copy()
+    b.set_positions(b_pos)
+
     acm = a.get_center_of_mass()
     bcm = b.get_center_of_mass()
 
