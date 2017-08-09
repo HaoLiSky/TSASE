@@ -256,7 +256,7 @@ def coordination_numbers(p, cutoff, brute=False):
 #Done Conversion: a.names[i] --> a[i].symbol
 import sys
 sys.setrecursionlimit(10000)
-def get_mappings(a, b, eps_r, neighbor_cutoff, mappings = None):
+def get_mappings(a, b_pos, eps_r, neighbor_cutoff, mappings = None):
     """ A recursive depth-first search for a complete set of mappings from atoms
         in configuration a to atoms in configuration b. Do not use the mappings
         argument, this is only used internally for recursion.
@@ -267,6 +267,10 @@ def get_mappings(a, b, eps_r, neighbor_cutoff, mappings = None):
         Note: If a and b are mirror images, this function will still return a
         mapping from a to b, even though it may not be possible to align them
         through translation and rotation. """
+
+    b = a.copy()
+    b.set_positions(b_pos)
+
     # If this is the top-level user call, create and loop through top-level
     # mappings.
     if mappings is None:
@@ -296,7 +300,7 @@ def get_mappings(a, b, eps_r, neighbor_cutoff, mappings = None):
                 # Make sure the element types are the same.
                 if a[aAtom].symbol != b[i].symbol:
                     continue
-                mappings = get_mappings(a, b, eps_r, neighbor_cutoff, {aAtom:i})
+                mappings = get_mappings(a, b_pos, eps_r, neighbor_cutoff, {aAtom:i})
                 # If the result is not none, then we found a successful mapping.
                 if mappings is not None:
                     return mappings
@@ -337,7 +341,7 @@ def get_mappings(a, b, eps_r, neighbor_cutoff, mappings = None):
                     if len(newMappings) == len(a):
                         return newMappings
                     # Otherwise, recurse.
-                    newMappings = get_mappings(a, b, eps_r, neighbor_cutoff, newMappings)
+                    newMappings = get_mappings(a, b_pos, eps_r, neighbor_cutoff, newMappings)
                     # Pass any successful mapping up the recursion chain.
                     if newMappings is not None:
                         return newMappings

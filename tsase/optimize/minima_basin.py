@@ -91,6 +91,8 @@ class Hopping(Dynamics):
                  # Geometry comparison parameters
                  use_geometry = False, # True = compare geometry of systems when they have the same PE when determining if they are the same atoms configuration
                  eps_r = 0.1, # positional difference to consider atoms in the same location
+                 use_get_mapping = True, # from atoms_operator.py use get_mapping if true or rot_match if false to compare geometry
+                 neighbor_cutoff = 0.25, # parameter for get_mapping only
                  
                  ):
         Dynamics.__init__(self, atoms, logfile, trajectory)
@@ -140,6 +142,8 @@ class Hopping(Dynamics):
 	self.minima_threshold = minima_threshold
         self.use_geo = use_geometry
         self.eps_r = eps_r
+        self.use_get_mapping = use_get_mapping
+        self.neighbor_cutoff = neighbor_cutoff
         self.keep_minima_arrays = keep_minima_arrays
         self.global_minima = [] # an array of the current global minimum for every MC step
         self.local_minima = [] # an array of the current local minimum for every MC step
@@ -263,13 +267,21 @@ class Hopping(Dynamics):
         approxEn = round(En, self.minima_threshold)
         if approxEn in self.geometries:
             # check if we are back in the current local minimum
-            print "rot_match", geometry.rot_match(self.atoms, positionsOld, self.eps_r)
-            if geometry.rot_match(self.atoms, positionsOld, self.eps_r):
+            same = False
+            if self.use_get_mapping:
+                same = geometry.get_mappings(self.atoms, positionsOld, self.eps_r, self.neighbor_cutoff)
+            else:
+                same = geometry.rot_match(self.atoms, positionsOld, self.eps_r)
+            if same:
                 self.current_index = self.last_index
                 return 1, positionsOld
             for index in self.geometries[approxEn]:
                 positions = self.positionsMatrix[index]
-                if geometry.rot_match(self.atoms, positions, self.eps_r):
+       	        if self.use_get_mapping:
+       	       	    same = geometry.get_mappings(self.atoms, positions, self.eps_r, self.neighbor_cutoff)
+       	        else:
+                    same = geometry.rot_match(self.atoms, positions, self.eps_r)
+                if same:
                     self.current_index = index
                     return 2, positions
             self.current_index = None
