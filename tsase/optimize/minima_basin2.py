@@ -88,7 +88,7 @@ class Hopping(Dynamics):
                  Ediff0 = 0.5,  # eV, initial energy acceptance threshold
                  alpha1 = 0.98,  # energy threshold adjustment parameter
                  alpha2 = 1./0.98,  # energy threshold adjustment parameter
-                 minimaHopping_history = True, # use history in MH acceptance criteria (True or False)
+                 minimaHopping_history = True, # use history in MH trial move (True or False)
 
                  # Geometry comparison parameters
                  use_geometry = False, # True = compare geometry of systems when they have the same PE when determining if they are the same atoms configuration
@@ -413,12 +413,12 @@ class Hopping(Dynamics):
             Eo = self.atoms.get_potential_energy()
             # todo: remove these logs later
             rn = self.move(step,ro, self.distribution)
-            self.log(step, En, self.Emin,self.dr)
             En = self.get_energy(rn)
+            self.log(step, En, self.Emin,self.dr)
             match, countEn, countEo = self.find_energy_match(En, Eo)
             if self.use_geo and (match is not None):
                 match, position = self.find_match(En, positionsOld)
-            while match is not None:
+            while (match is not None):
                 if match == 1:
                 # re-found last minimum
                     self.temperature *= self.beta1
@@ -434,6 +434,11 @@ class Hopping(Dynamics):
                 #print "match:", match
                 # todo: remove these logs later
                 self.log(step, En, self.Emin,self.dr)
+                # found a minimum that is different than ro, so stop the
+                # loop if not using history
+                if self.mh_history and match != 1:
+                    self.temperature *= self.beta3
+                    break
             else:
             # must have found a new minimum
                 self.temperature *= self.beta3
