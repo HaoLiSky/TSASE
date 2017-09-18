@@ -41,6 +41,8 @@ Below outlines the features of this combined GO software:
 
 *Selecting Move Type* 
 
+    **move_type** : type of trial move (True = BH; False = MH)
+
     **distribution** : the distribution used for the displacement of each atom
 
         default: uniform
@@ -74,6 +76,10 @@ Below outlines the features of this combined GO software:
 *Dynamic Move Parameters*
 
     **timestep** : timestep in fs
+
+    **mdmin** : number of times the dynamics need to pass a minima to stop the MD simulation
+
+    **dimer_method** : Use an iterative dimer method before MD (True or False) [#Shonborn09_144108]_
     
     **dimer_a** : dimer ajustment parameter; scalar for forces in optimization [#Shonborn09_144108]_
 
@@ -83,7 +89,7 @@ Below outlines the features of this combined GO software:
 
 *Occasional Jumping*
 
-    **jump_distribution** : options are same as the distribution flag ('uniform', 'molecular dynamics', etc.)
+    **jump_distribution** : options are the same as the distribution flag ('uniform', 'molecular dynamics', etc.)
 
     **jumpmax** : after this number of consecutive rejected Monte Carlo or Minima Hopping moves, accept the following *jmp* moves.  This allows for a more global search of the potential energy surface. [#Iwamatsu04_396]_
 
@@ -92,25 +98,22 @@ Below outlines the features of this combined GO software:
     **global_reset** : reset history if an occasional jump is taken (True)
 
     **global_jump** : After visiting a state for *global_jump* number of times, accept the following *jmp* moves of *jump_distribution*. Set to None to turn off.
-    
 
 *Selecting Acceptance Criteria*
 
-    **acceptance_criteria** : This flag specifies which acceptance criteria to use. True for  MH or False for BH
+    **acceptance_criteria** : This flag specifies which acceptance criteria to use. True for BH or False for MH
 
 *BH Acceptance Parameters*
 
     **accept_temp** : seperate temperature to use for BH acceptance
 
-    **adjust_temp** : dynamically adjust the temperature in BH acceptance
+    **adjust_temp** : dynamically adjust the temperature in BH acceptance (True or False)
 
     **history_weight** : weight factor for BH history, set to 0.0 to turn off history [#Rossi09_084208]_
 
     **history_num** : limit of previously accepted minima to keep track of for BH history, set to 0 to keep track of all accepted minima
 
 *Minima Hopping Acceptance Parameters*
-
-    **mdmin** : number of times the dynamics need to pass a minima to stop the MD simulation
 
     **beta1** : 1.04, temperature adjustment parameter
 
@@ -125,6 +128,16 @@ Below outlines the features of this combined GO software:
     **alpha2** : 1./0.98, energy threshold adjustment parameter
 
     **minimaHopping_history** : set to True if using MH history components otherwise set to False 
+
+*Geometry Comparision Parameters*
+
+    **use_geometry** : compare geometries of states (True or False) when false only potential energies are compared
+
+    **eps_r** : positional difference to consider atoms in the same location
+
+    **use_get_mapping** : which geometry comparision method from atoms_operator.py to use (True for get_mapping or False for rot_match)
+
+    **neighbor_cutoff: : parameter for get_mapping
 
 .. figure::  GOtable.png
    :align:   center
