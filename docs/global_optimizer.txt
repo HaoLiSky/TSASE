@@ -137,7 +137,7 @@ Below outlines the features of this combined GO software:
 
     **use_get_mapping** : which geometry comparision method from atoms_operator.py to use (True for get_mapping or False for rot_match)
 
-    **neighbor_cutoff: : parameter for get_mapping
+    **neighbor_cutoff** : parameter for get_mapping
 
 .. figure::  GOtable.png
    :align:   center
