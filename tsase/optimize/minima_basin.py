@@ -50,7 +50,7 @@ class Hopping(Dynamics):
 
                  # Random move parameters (BH trial moves)
                  dr = 0.45, # maximum displacement in each degree of freedom for Monte Carlo trial moves
-                 adjust_step_size = None, # adjust dr after this many Monte Carlo steps (Default: None; does not adjust dr)
+                 adjust_step_size = 10, # adjust dr after this many Monte Carlo steps (Default: None; does not adjust dr)
                  target_ratio = 0.5, # specified ratio of Monte Carlo steps
                  adjust_fraction = 0.05, # fraction by which to adjust dr by in order to meet target_ratio
                  significant_structure = True,  # displace from minimum at each move (True or False)

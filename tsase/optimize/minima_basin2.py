@@ -36,9 +36,8 @@ class Hopping(Dynamics):
                  mss = 0.1, # maximum step size for the local optimizer
                  minenergy = None, # the GO algorithm stops when a configuration is found with a lower potential energy than this value
                  pushapart = 0.4, # push atoms apart until all atoms are no closer than this distance
-                 keep_minima_arrays = False, # create global_minima and local_minima arrays of length maximum number of Monte Carlo steps (True or False)
+                 keep_minima_arrays = True, # create global_minima and local_minima arrays of length maximum number of Monte Carlo steps (True or False)
                  minima_threshold = 2,  # round potential energies to how many decimal places
-                 new_method = False, # reworking acceptance criteria functions
 
                  # Logging parameters
                  logfile = '-',
@@ -150,7 +149,6 @@ class Hopping(Dynamics):
         self.keep_minima_arrays = keep_minima_arrays
         self.global_minima = [] # an array of the current global minimum for every MC step
         self.local_minima = [] # an array of the current local minimum for every MC step
-        self.new_method = new_method
 
         # when a MD sim. has passed a local minimum:
         self.passedminimum = PassedMinimum()
@@ -241,7 +239,7 @@ class Hopping(Dynamics):
             if self.current_index is not None:
                 self.geo_history[self.current_index] += 1
                 self.last_index = self.current_index
-                print "\nSAME\n"
+                #print "\nSAME\n"
             else:
                 new_index = len(self.positionsMatrix)
                 self.geo_history[new_index] = 1
@@ -254,11 +252,11 @@ class Hopping(Dynamics):
             self.geo_history[new_index] = 1
             self.last_index = new_index
             self.positionsMatrix.append(self.atoms.get_positions())
-        print "Update GEO"
-        print "geometries{}"
-        print self.geometries
-        print self.positionsMatrix
-        print self.geo_history
+        #print "Update GEO"
+        #print "geometries{}"
+        #print self.geometries
+        #print self.positionsMatrix
+        #print self.geo_history
 
     def find_match(self, En, positionsOld):
         """ determines if atoms is the same geometry as any previously visited minima."""
@@ -436,7 +434,7 @@ class Hopping(Dynamics):
                 self.log(step, En, self.Emin,self.dr)
                 # found a minimum that is different than ro, so stop the
                 # loop if not using history
-                if self.mh_history and match != 1:
+                if not self.mh_history and match != 1:
                     self.temperature *= self.beta3
                     break
             else:
@@ -609,6 +607,10 @@ class Hopping(Dynamics):
                             self.minima = {}
                     En = self.get_energy(rn)
                     Eo = En
+                if En < self.Emin:
+                    self.Emin = En
+                    self.rmin = self.atoms.get_positions()
+                    self.call_observers()
                 if self.lm_trajectory is not None:
                     tsase.io.write_con(self.lm_trajectory,self.atoms,w='a')
             else:
