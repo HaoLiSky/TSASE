@@ -51,7 +51,7 @@ class Hopping(Dynamics):
 
                  # Random move parameters
                  dr = 0.45, # maximum displacement in each degree of freedom for Monte Carlo trial moves
-                 adjust_step_size = None, # adjust dr after this many Monte Carlo steps (Default: None; does not adjust dr)
+                 adjust_step_size = 10, # adjust dr after this many Monte Carlo steps (Default: None; does not adjust dr)
                  target_ratio = 0.5, # specified ratio of Monte Carlo steps
                  adjust_fraction = 0.05, # fraction by which to adjust dr by in order to meet target_ratio
                  significant_structure = True,  # displace from minimum at each move (True or False)
@@ -62,7 +62,7 @@ class Hopping(Dynamics):
                  dimer_method = True, # uses an iterative dimer method before molecular dynamics (True or False)
                  dimer_a = 0.001, # scalar for forces in optimization
                  dimer_d = 0.01, # distance between two images in the dimer
-                 dimer_steps = 20, # number of dimer iterations
+                 dimer_steps = 14, # number of dimer iterations
 
                  # Occasional jumping parameters
                  jump_distribution = 'uniform', # The distribution to use in OJ move. Same options as distribution flag
@@ -75,7 +75,7 @@ class Hopping(Dynamics):
                  accept_criteria = True, # BH = Tue; MH = False
 
                  # BH acceptance parameters
-                 accept_temp = None, # K; separate temperature to use for BH acceptance (None: use temperature parameter instead)
+                 accept_temp = 8000, # K; separate temperature to use for BH acceptance (None: use temperature parameter instead)
                  adjust_temp = False, # dynamically adjust the temperature in BH acceptance (True or False)
                  history_weight = 0.0, # the weight factor of BH history >= 0 (0.0: no history comparison in BH acceptance)
                  history_num = 0, # limit of previously accepted minima to keep track of for BH history (set to 0 to keep track of all minima)
@@ -599,6 +599,7 @@ class Hopping(Dynamics):
                 if self.history_num:
                     self.temp_minima[int(self.num_accepted_moves) % self.history_num] = approxEn
                 # take a global jump
+                approxEn = round(En,self.minima_threshold)
                 if self.global_jump and (self.minima[approxEn] > self.global_jump):
                     for i in range(0,self.jmp):
                         rn = self.move(step,rn, self.jump_distribution)
