@@ -75,7 +75,7 @@ class Hopping(Dynamics):
                  accept_criteria = True, # BH = Tue; MH = False
 
                  # BH acceptance parameters
-                 accept_temp = 8000, # K; separate temperature to use for BH acceptance (None: use temperature parameter instead)
+                 accept_temp = None, # K; separate temperature to use for BH acceptance (None: use temperature parameter instead)
                  adjust_temp = False, # dynamically adjust the temperature in BH acceptance (True or False)
                  history_weight = 0.0, # the weight factor of BH history >= 0 (0.0: no history comparison in BH acceptance)
                  history_num = 0, # limit of previously accepted minima to keep track of for BH history (set to 0 to keep track of all minima)
@@ -616,7 +616,6 @@ class Hopping(Dynamics):
                     tsase.io.write_con(self.lm_trajectory,self.atoms,w='a')
             else:
                 rejectnum += 1
-                recentaccept = 0
                 self.atoms.set_positions(positionsOld)
             if self.keep_minima_arrays:
                 np.put(self.local_minima, step, self.atoms.get_potential_energy())
