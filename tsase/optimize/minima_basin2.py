@@ -435,11 +435,11 @@ class Hopping(Dynamics):
                 # found a minimum that is different than ro, so stop the
                 # loop if not using history
                 if not self.mh_history and match != 1:
-                    self.temperature *= self.beta3
+                    #self.temperature *= self.beta3
                     break
-            else:
+            #else:
             # must have found a new minimum
-                self.temperature *= self.beta3
+            self.temperature *= self.beta3
         return rn
 
     def move(self, step, ro, distribution):
