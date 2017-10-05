@@ -9,6 +9,14 @@ from ase.utils.geometry import sort
 import numpy as np
 import sys
 
+def str2bool(v):
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 def cartesianPBC(r, cell):
     icell = np.linalg.inv(cell)
     vdir  = np.dot(r, icell)
@@ -63,7 +71,7 @@ def add_water(particle, bounding_box):
                 break
     particle += water
 
-def solvate(particle, thickness, padding, molecules):
+def solvate(particle, thickness, padding, molecules, lsort):
     vacuum = thickness/2.0;
     #padding = 1.0
     particle.center(vacuum, axis=2)
@@ -87,7 +95,8 @@ def solvate(particle, thickness, padding, molecules):
         sys.stdout.write('%i '%(i+1))
         sys.stdout.flush()
     print
-    particle=sort(particle)
+    if lsort:
+        particle=sort(particle)
 
     return particle
 
@@ -98,8 +107,10 @@ if __name__ == '__main__':
     parser.add_argument('thickness', type=float, help='thickness of solvent layer')
     parser.add_argument('padding', type=float, help='padding on structure bounding box')
     parser.add_argument('molecules', type=int, help='number of solvent molecules')
+    parser.add_argument('lsort', type=str2bool, help='sort or not')
     args = parser.parse_args()
     particle = read(args.structure)
-    solvated_particle = solvate(particle, args.thickness, args.padding, args.molecules)
-    solvated_particle.wrap()
+    print args.lsort
+    solvated_particle = solvate(particle, args.thickness, args.padding, args.molecules, args.lsort)
+    #solvated_particle.wrap()
     write('POSCAR_%iH2O'%args.molecules, solvated_particle, 'vasp')

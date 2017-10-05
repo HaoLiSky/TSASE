@@ -40,7 +40,7 @@ def overlap(particle, water):
         if atom_i.symbol not in ('H', 'O'): continue
         for atom_j in water:
             d = norm(atom_i.position-atom_j.position)
-            if d < 0.5: return True
+            if d < 1.5: return True
     return False
 
 def add_water(particle, bounding_box):
