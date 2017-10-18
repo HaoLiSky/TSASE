@@ -72,7 +72,7 @@ class Hopping(Dynamics):
                  global_reset = False, # True = reset all of the history counts after a jump (basically delete the history and start fresh)
 
                  # Select acceptance criteria
-                 accept_criteria = False, # BH = Tue; MH = False
+                 accept_criteria = True, # BH = Tue; MH = False
 
                  # BH acceptance parameters
                  accept_temp = 8000, # K; separate temperature to use for BH acceptance (None: use temperature parameter instead)
@@ -672,7 +672,7 @@ class Hopping(Dynamics):
             self.saveEdiff = np.zeros(steps + 1)
         if self.use_geo:
             #self.positionsMatrix = np.zeros(steps + 1)
-             self.positionsMatrix = np.zeros((steps + 1, 38, 3))
+             self.positionsMatrix = np.zeros((steps + 1, , 3))
         self.running_loop(steps, ro, Eo, maxtemp)
         self.get_minimum()
 
