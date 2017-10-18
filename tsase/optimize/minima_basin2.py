@@ -29,7 +29,7 @@ class Hopping(Dynamics):
 
                  # General GO parameters
                  atoms, # ASE atoms object defining the PES
-                 temperature = 100, # K, initial temperature
+                 temperature = 500, # K, initial temperature
                  optimizer = SDLBFGS, # local optimizer
                  fmax = 0.01, # magnitude of the L2 norm used as the convergence criteria for local optimization
                  adjust_cm = True, # fix the center of mass (True or False)
@@ -51,7 +51,7 @@ class Hopping(Dynamics):
 
                  # Random move parameters
                  dr = 0.45, # maximum displacement in each degree of freedom for Monte Carlo trial moves
-                 adjust_step_size = 10, # adjust dr after this many Monte Carlo steps (Default: None; does not adjust dr)
+                 adjust_step_size = None, # adjust dr after this many Monte Carlo steps (Default: None; does not adjust dr)
                  target_ratio = 0.5, # specified ratio of Monte Carlo steps
                  adjust_fraction = 0.05, # fraction by which to adjust dr by in order to meet target_ratio
                  significant_structure = True,  # displace from minimum at each move (True or False)
@@ -72,10 +72,10 @@ class Hopping(Dynamics):
                  global_reset = False, # True = reset all of the history counts after a jump (basically delete the history and start fresh)
 
                  # Select acceptance criteria
-                 accept_criteria = True, # BH = Tue; MH = False
+                 accept_criteria = False, # BH = Tue; MH = False
 
                  # BH acceptance parameters
-                 accept_temp = None, # K; separate temperature to use for BH acceptance (None: use temperature parameter instead)
+                 accept_temp = 8000, # K; separate temperature to use for BH acceptance (None: use temperature parameter instead)
                  adjust_temp = False, # dynamically adjust the temperature in BH acceptance (True or False)
                  history_weight = 0.0, # the weight factor of BH history >= 0 (0.0: no history comparison in BH acceptance)
                  history_num = 0, # limit of previously accepted minima to keep track of for BH history (set to 0 to keep track of all minima)
@@ -87,10 +87,10 @@ class Hopping(Dynamics):
                  Ediff0 = 0.5,  # eV, initial energy acceptance threshold
                  alpha1 = 0.98,  # energy threshold adjustment parameter
                  alpha2 = 1./0.98,  # energy threshold adjustment parameter
-                 minimaHopping_history = True, # use history in MH trial move (True or False)
+                 minimaHopping_history = False, # use history in MH trial move (True or False)
 
                  # Geometry comparison parameters
-                 use_geometry = False, # True = compare geometry of systems when they have the same PE when determining if they are the same atoms configuration
+                 use_geometry = True, # True = compare geometry of systems when they have the same PE when determining if they are the same atoms configuration
                  eps_r = 0.1, # positional difference to consider atoms in the same location
                  use_get_mapping = True, # from atoms_operator.py use get_mapping if true or rot_match if false to compare geometry
                  neighbor_cutoff = 0.25, # parameter for get_mapping only
@@ -149,18 +149,26 @@ class Hopping(Dynamics):
         self.keep_minima_arrays = keep_minima_arrays
         self.global_minima = [] # an array of the current global minimum for every MC step
         self.local_minima = [] # an array of the current local minimum for every MC step
+        self.allTemps = []
+        self.saveEdiff = []
 
         # when a MD sim. has passed a local minimum:
         self.passedminimum = PassedMinimum()
 
         self.mss = mss
+        # for PE comparision
         # dictionary for found local minima
         # keys will be the potential energy rounded to self.minima_threshold digits left of the decimal
         # values will be number of times the potential energy has been visited 
         self.minima = {}
+
         # list with fixed size that will store history_num previous minima
         self.temp_minima = [0] * self.history_num
+
+     	# for geometry comparison
         self.positionsMatrix = []
+        # count of unique geometries we have accepted so far
+        self.numPositions = 0
         # dictionary for geometry comparison
         # keys = approximate potential energy
         # values = list of indexes in positionsMatrix with the same PE
@@ -241,17 +249,29 @@ class Hopping(Dynamics):
                 self.last_index = self.current_index
                 #print "\nSAME\n"
             else:
-                new_index = len(self.positionsMatrix)
-                self.geo_history[new_index] = 1
-                self.last_index = new_index
-                self.geometries[approxEn].append(new_index)
-                self.positionsMatrix.append(self.atoms.get_positions())
+                #new_index = len(self.positionsMatrix)
+                #self.geo_history[new_index] = 1
+                #self.last_index = new_index
+                #self.geometries[approxEn].append(new_index)
+                #self.positionsMatrix.append(self.atoms.get_positions())
+                self.geo_history[self.numPositions] = 1
+                self.last_index = self.numPositions
+                self.geometries[approxEn].append(self.numPositions)
+        	self.positionsMatrix[self.numPositions] = self.atoms.get_positions()
+                #np.put(self.positionsMatrix, self.numPositions, [self.atoms.get_positions()])
+                self.numPositions += 1
         else:
-            new_index = len(self.positionsMatrix)
-            self.geometries[approxEn] = [new_index]
-            self.geo_history[new_index] = 1
-            self.last_index = new_index
-            self.positionsMatrix.append(self.atoms.get_positions())
+            #new_index = len(self.positionsMatrix)
+            #self.geometries[approxEn] = [new_index]
+            #self.geo_history[new_index] = 1
+            #self.last_index = new_index
+            #self.positionsMatrix.append(self.atoms.get_positions())
+            self.geometries[approxEn] = [self.numPositions]
+            self.geo_history[self.numPositions] = 1
+            self.last_index = self.numPositions
+            self.positionsMatrix[self.numPositions] = self.atoms.get_positions()
+  	    #np.put(self.positionsMatrix, self.numPositions, [self.atoms.get_positions()])
+            self.numPositions += 1
         #print "Update GEO"
         #print "geometries{}"
         #print self.geometries
@@ -273,7 +293,9 @@ class Hopping(Dynamics):
                 return 1, positionsOld
             for index in self.geometries[approxEn]:
                 positions = self.positionsMatrix[index]
+                #print "\npos:", positions
        	        if self.use_get_mapping:
+# problem here?
        	       	    same = geometry.get_mappings(self.atoms, positions, self.eps_r, self.neighbor_cutoff)
        	        else:
                     same = geometry.rot_match(self.atoms, positions, self.eps_r)
@@ -555,7 +577,7 @@ class Hopping(Dynamics):
             self.Ediff *= self.alpha2
             return False
 
-    def running_loop(self, steps, ro, Eo, maxtemp):
+    def running_loop(self, steps, ro, Eo, maxtemp = None):
         rejectnum = 0
         acceptnum = 0
         recentaccept = 0
@@ -595,11 +617,11 @@ class Hopping(Dynamics):
                 if self.use_geo:
                     self.update_geometries(En)
                 self.update_minima(En, Eo)
+                approxEn = round(En,self.minima_threshold)
                 # update temp_minima
                 if self.history_num:
                     self.temp_minima[int(self.num_accepted_moves) % self.history_num] = approxEn
                 # take a global jump
-                approxEn = round(En,self.minima_threshold)
                 if self.global_jump and (self.minima[approxEn] > self.global_jump):
                     for i in range(0,self.jmp):
                         rn = self.move(step,rn, self.jump_distribution)
@@ -620,6 +642,9 @@ class Hopping(Dynamics):
             if self.keep_minima_arrays:
                 np.put(self.local_minima, step, self.atoms.get_potential_energy())
                 np.put(self.global_minima, step, self.Emin)
+                # RB: only for keeping all temperature
+                np.put(self.allTemps, step, self.temperature)
+                np.put(self.saveEdiff, step, self.Ediff)
             if self.minenergy != None:
                 if Eo < self.minenergy:
                     break
@@ -643,6 +668,11 @@ class Hopping(Dynamics):
         if self.keep_minima_arrays:
             self.global_minima = np.zeros(steps + 1)
             self.local_minima = np.zeros(steps + 1)
+            self.allTemps = np.zeros(steps + 1)
+            self.saveEdiff = np.zeros(steps + 1)
+        if self.use_geo:
+            #self.positionsMatrix = np.zeros(steps + 1)
+             self.positionsMatrix = np.zeros((steps + 1, 38, 3))
         self.running_loop(steps, ro, Eo, maxtemp)
         self.get_minimum()
 
