@@ -295,7 +295,6 @@ class Hopping(Dynamics):
                 positions = self.positionsMatrix[index]
                 #print "\npos:", positions
        	        if self.use_get_mapping:
-# problem here?
        	       	    same = geometry.get_mappings(self.atoms, positions, self.eps_r, self.neighbor_cutoff)
        	        else:
                     same = geometry.rot_match(self.atoms, positions, self.eps_r)
@@ -672,7 +671,8 @@ class Hopping(Dynamics):
             self.saveEdiff = np.zeros(steps + 1)
         if self.use_geo:
             #self.positionsMatrix = np.zeros(steps + 1)
-             self.positionsMatrix = np.zeros((steps + 1, , 3))
+            # best way to get total number of atoms in the system??
+            self.positionsMatrix = np.zeros((steps + 1, len(self.atoms.get_positions()), 3))
         self.running_loop(steps, ro, Eo, maxtemp)
         self.get_minimum()
 
