@@ -35,7 +35,7 @@ class Hopping(Dynamics):
                  adjust_cm = True, # fix the center of mass (True or False)
                  mss = 0.1, # maximum step size for the local optimizer
                  minenergy = None, # the GO algorithm stops when a configuration is found with a lower potential energy than this value
-                 pushapart = 0.4, # push atoms apart until all atoms are no closer than this distance
+                 pushapart = 0.1, # push atoms apart until all atoms are no closer than this distance
                  keep_minima_arrays = True, # create global_minima and local_minima arrays of length maximum number of Monte Carlo steps (True or False)
                  minima_threshold = 2,  # round potential energies to how many decimal places
 
@@ -91,7 +91,7 @@ class Hopping(Dynamics):
 
                  # Geometry comparison parameters
                  use_geometry = True, # True = compare geometry of systems when they have the same PE when determining if they are the same atoms configuration
-                 eps_r = 0.1, # positional difference to consider atoms in the same location
+                 eps_r = 0.01, # positional difference to consider atoms in the same location
                  use_get_mapping = True, # from atoms_operator.py use get_mapping if true or rot_match if false to compare geometry
                  neighbor_cutoff = 0.25, # parameter for get_mapping only
                  ):
@@ -278,16 +278,18 @@ class Hopping(Dynamics):
         #print self.positionsMatrix
         #print self.geo_history
 
-    def find_match(self, En, positionsOld):
+    def find_match(self, En, Eo, positionsOld):
         """ determines if atoms is the same geometry as any previously visited minima."""
         approxEn = round(En, self.minima_threshold)
+        approxEo = round(Eo, self.minima_threshold)
         if approxEn in self.geometries:
             # check if we are back in the current local minimum
             same = False
-            if self.use_get_mapping:
-                same = geometry.get_mappings(self.atoms, positionsOld, self.eps_r, self.neighbor_cutoff)
-            else:
-                same = geometry.rot_match(self.atoms, positionsOld, self.eps_r)
+            if approxEn == approxEo:
+                if self.use_get_mapping:
+                    same = geometry.get_mappings(self.atoms, positionsOld, self.eps_r, self.neighbor_cutoff)
+                else:
+                    same = geometry.rot_match(self.atoms, positionsOld, self.eps_r)
             if same:
                 self.current_index = self.last_index
                 return 1, positionsOld
@@ -436,7 +438,7 @@ class Hopping(Dynamics):
             self.log(step, En, self.Emin,self.dr)
             match, countEn, countEo = self.find_energy_match(En, Eo)
             if self.use_geo and (match is not None):
-                match, position = self.find_match(En, positionsOld)
+                match, position = self.find_match(En, Eo, positionsOld)
             while (match is not None):
                 if match == 1:
                 # re-found last minimum
@@ -449,7 +451,7 @@ class Hopping(Dynamics):
                 En = self.get_energy(rn)
                 match, countEn, countEo = self.find_energy_match(En, Eo)
                 if self.use_geo and (match is not None):
-                    match, position = self.find_match(En, positionsOld)
+                    match, position = self.find_match(En, Eo, positionsOld)
                 #print "match:", match
                 # todo: remove these logs later
                 self.log(step, En, self.Emin,self.dr)
@@ -542,7 +544,7 @@ class Hopping(Dynamics):
             if self.num_accepted_moves:
                 match, countEn, countEo = self.find_energy_match(En, Eo)
                 if self.use_geo and (match is not None):
-                    match, position = self.find_match(En, positionsOld)
+                    match, position = self.find_match(En, Eo, positionsOld)
                 if self.adjust_temp:
                     self.adjust_temperature(match)
                 if match:

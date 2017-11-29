@@ -65,6 +65,7 @@ class Hopping(Dynamics):
 
                  # Occasional jumping parameters
                  jump_distribution = 'uniform', # The distribution to use in OJ move. Same options as distribution flag
+                 oj = False,
                  jumpmax = None, # number of previously rejected MC steps before taking an OJ move; None = no OJ move
                  jmp = 7, # number of consecutive accepted moves taken in OJ
                  global_jump = None, # number of times to visit the same PE before we take an OJ; None = no global jump
@@ -116,6 +117,7 @@ class Hopping(Dynamics):
         self.adjust_fraction = adjust_fraction
         self.significant_structure = significant_structure
         self.pushapart = pushapart
+        self.oj = oj
         self.jumpmax = jumpmax
         self.jmp = jmp
         self.jump_distribution = jump_distribution
@@ -145,6 +147,7 @@ class Hopping(Dynamics):
         self.use_get_mapping = use_get_mapping
         self.neighbor_cutoff = neighbor_cutoff
         self.keep_minima_arrays = keep_minima_arrays
+        # self.temp_track = temp_track
         self.global_minima = [] # an array of the current global minimum for every MC step
         self.local_minima = [] # an array of the current local minimum for every MC step
         self.new_method = new_method
@@ -543,6 +546,8 @@ class Hopping(Dynamics):
                 np.put(self.global_minima, step, self.Emin)
                 #self.local_minima = np.append(self.local_minima, self.atoms.get_potential_energy())
                 #self.global_minima = np.append(self.global_minima, self.Emin)
+            if self.temp_track:
+                np.put(self.temperatures, step, self.temperature)
             if self.minenergy is not None:
                 if Eo < self.minenergy:
                     #print "geo: ", self.cons.values()
@@ -710,10 +715,24 @@ class Hopping(Dynamics):
                     accept = True
             if self.jumpmax and rejectnum > self.jumpmax:
                 #JMP???
-                for i in range(0,self.jmp):
-                    rn = self.move(step,rn, self.jump_distribution)
-                En = self.get_energy(rn)
-                accept = True
+                if self.jump_distribution == 'dimer':
+                    self.dimer_d *= 80
+                    self.dimer_a *= 50
+                    self.dimer_steps = 30
+                    rn = self.move(step, rn, self.jump_distribution)
+                    En = self.get_energy(rn)
+                    accept = True
+                    self.dimer_d /= 80
+                    self.dimer_a /= 50
+                    self.dimer_steps = 14
+                    self.temperature = 8000
+                    print '\nJUMP\n'
+                else:
+                    for i in range(0,self.jmp):
+                        rn = self.move(step,rn, self.jump_distribution)
+                    En = self.get_energy(rn)
+                    accept = True
+
             if accept:
                 acceptnum += 1.
                 recentaccept += 1.
@@ -912,6 +931,7 @@ class Hopping(Dynamics):
                     elif ratio < self.target_ratio:
                         self.dr = self.dr * (1-self.adjust_fraction)
             if maxtemp and maxtemp < self.temperature:
+                  print "MAX TEMP REACHED"
                   break
 
 
@@ -964,8 +984,10 @@ class Hopping(Dynamics):
 class ModifiedDimer:
 # Class that moves the initial velocity vector of a MD escape trial
 # toward a direction with low curvature
+    
     def __call__(self,atoms,dimer_a,dimer_d,dimer_steps):
         p = atoms.copy()
+        self.oj = False
         #count = counter
         oldPos = atoms.get_positions()
         lj = tsase.calculators.lj(cutoff=35.0)
@@ -978,6 +1000,18 @@ class ModifiedDimer:
         # function that calculates the perpendicular force
         force = p.get_forces()
         f = force - np.vdot(force,N) * N
+        return f
+
+    def ojPerpForce(self, p, N, mag):
+        q = p.copy()
+        force = p.get_forces()
+        force = force - np.vdot(force, N) * N
+        force = force / np.linalg.norm(force)
+        mv = p.get_positions() + mag * force
+        q.set_positions(mv)
+        optimizer = tsase.optimize.SDLBFGS(q, logfile=None)
+        optimizer.run()
+        f = (p.get_potential_energy() - q.get_potential_energy()) / mag
         return f
 
     def escapeDirection(self,x, y):
@@ -994,8 +1028,8 @@ class ModifiedDimer:
         # random uniform vector
         N = np.random.standard_normal((len(p), 3))
 	Nmag = np.linalg.norm(N)
-        N = N / np.linalg.norm(N)
-        y = x + d * N
+        N = N / np.linalg.norm(N) #normalize
+        y = x + d * N #new position
         p.set_positions(y)
         maxIteration = dimer_steps
         iteration = 0
@@ -1003,10 +1037,13 @@ class ModifiedDimer:
         # After a few steps the iteration is stopped before a locally
         # optimal lowest curvature mode is found
         while iteration < maxIteration:
-            f = self.perpForce(p,N)
-            y = y + a * f
+            if self.oj:
+                f = self.ojPerpForce(p, N, dimer_a)
+            else:
+                f = self.perpForce(p,N)
+            y = y + a * f #force vector * dimer_a
             N = self.escapeDirection(x,y)
-            y = x + d * N
+            y = x + d * N #moves in escape direction 
             p.set_positions(y)
             iteration += 1
         return Nmag * N
