@@ -93,7 +93,7 @@ class Hopping(Dynamics):
                  use_geometry = True, # True = compare geometry of systems when they have the same PE when determining if they are the same atoms configuration
                  eps_r = 0.01, # positional difference to consider atoms in the same location
                  use_get_mapping = True, # from atoms_operator.py use get_mapping if true or rot_match if false to compare geometry
-                 neighbor_cutoff = 0.25, # parameter for get_mapping only
+                 neighbor_cutoff = 1.2, # parameter for get_mapping only
                  ):
         
         Dynamics.__init__(self, atoms, logfile, trajectory)
