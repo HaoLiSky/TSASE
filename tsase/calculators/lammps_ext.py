@@ -416,6 +416,10 @@ class LAMMPS:
         else:
             f.write('read_data %s\n' % lammps_data)
 
+        if ('set' in parameters):
+            for s in parameters['set']:
+                f.write('set %s \n' % s)
+        
 
         # Write interaction stuff
         f.write('\n### interactions \n')
