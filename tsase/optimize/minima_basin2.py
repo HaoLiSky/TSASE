@@ -711,8 +711,10 @@ class ModifiedDimer:
         p = atoms.copy()
         #count = counter
         oldPos = atoms.get_positions()
-        lj = tsase.calculators.lj(cutoff=35.0)
-        p.set_calculator(lj)
+        # RB: use the same calculator atoms parameter was using
+        #lj = tsase.calculators.lj(cutoff=35.0)
+        #p.set_calculator(lj)
+        p.set_calculator(atoms.get_calculator())
         N = self.gradientDimer(p,dimer_a,dimer_d,dimer_steps)
         atoms.set_positions(oldPos)
         return N
