@@ -141,6 +141,9 @@ Below outlines the features of this combined GO software:
 
 .. figure::  tsasetable.png
    :align:   center
+
+.. figure::  GOtable.png
+   :align:   center
    :width:   80 %
 
 Usage:
