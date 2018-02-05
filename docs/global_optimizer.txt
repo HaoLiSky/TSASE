@@ -139,7 +139,7 @@ Below outlines the features of this combined GO software:
 
     **neighbor_cutoff** : parameter for get_mapping
 
-.. figure::  tsasetable.png
+.. figure::  GOtable.png
    :align:   center
    :width:   80 %
 
