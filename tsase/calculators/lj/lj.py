@@ -27,7 +27,9 @@ class lj:
         return self.f.copy()
                         
     def get_stress(self, atoms):
-        raise NotImplementedError
+        #raise NotImplementedError
+        # RB: temporary fix when running ASE MD
+        return None
         
     def calculation_required(self, atoms, quantities):
         if atoms != self.atoms or self.atoms == None:
