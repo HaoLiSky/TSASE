@@ -40,10 +40,10 @@ class Hopping(Dynamics):
                  minima_threshold = 2,  # round potential energies to how many decimal places
 
                  # Logging parameters
-                 logfile = '-',
+                 logfile = None,
                  trajectory = None,
                  optimizer_logfile = '-',
-                 local_minima_trajectory = 'local_minima.con',
+                 local_minima_trajectory = None,
 
                  # Selecting move type
                  move_type = True, # True = basin hopping trial move; False = minima hopping
@@ -91,7 +91,7 @@ class Hopping(Dynamics):
 
                  # Geometry comparison parameters
                  use_geometry = True, # True = compare geometry of systems when they have the same PE when determining if they are the same atoms configuration
-                 eps_r = 0.01, # positional difference to consider atoms in the same location
+                 eps_r = 0.1, # positional difference to consider atoms in the same location
                  use_get_mapping = True, # from atoms_operator.py use get_mapping if true or rot_match if false to compare geometry
                  neighbor_cutoff = 1.2, # parameter for get_mapping only
                  ):
@@ -151,6 +151,7 @@ class Hopping(Dynamics):
         self.local_minima = [] # an array of the current local minimum for every MC step
         self.allTemps = []
         self.saveEdiff = []
+        self.trial_loop = []
 
         # when a MD sim. has passed a local minimum:
         self.passedminimum = PassedMinimum()
@@ -439,7 +440,9 @@ class Hopping(Dynamics):
             match, countEn, countEo = self.find_energy_match(En, Eo)
             if self.use_geo and (match is not None):
                 match, position = self.find_match(En, Eo, positionsOld)
+            loop_count = 0
             while (match is not None):
+                loop_count += 1
                 if match == 1:
                 # re-found last minimum
                     self.temperature *= self.beta1
@@ -463,6 +466,8 @@ class Hopping(Dynamics):
             #else:
             # must have found a new minimum
             self.temperature *= self.beta3
+            #print "loop_count: ",loop_count
+            self.trial_loop = np.append(self.trial_loop, loop_count)
         return rn
 
     def move(self, step, ro, distribution):
