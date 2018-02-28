@@ -43,7 +43,11 @@ pstress[2][0] = 3.0
 
 p1box = mushybox(p1,express=pstress)
 
-dyn = FIRE(p1box,maxmove = 0.1, dt = 0.1, dtmax = 0.1)
+# for ase.3.15 and later
+dyn = FIRE(p1box,maxmove = 0.1, dt = 0.1, dtmax = 0.1, force_consistent = False)
+#dyn = MDMin(p1box, dt=0.1, force_consistent = False)
+# for ase.3.12 and earlier
+#dyn = FIRE(p1box,maxmove = 0.1, dt = 0.1, dtmax = 0.1)
 #dyn = MDMin(p1box, dt=0.1)
 dyn.run(fmax=0.01, steps=100)
 
