@@ -141,9 +141,6 @@ Below outlines the features of this combined GO software:
 
 .. figure::  GOtable2.png
    :align:   center
-
-.. figure::  GOtable.png
-   :align:   center
    :width:   80 %
 
 Usage:
