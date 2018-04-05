@@ -161,7 +161,7 @@ Usage:
 
     .. code-block:: none
 
-        from tsase.optimize.minima_basin import Hopping
+        from tsase.optimize.minima_basin2 import Hopping
 
         lj = tsase.calculators.lj(cutoff=35.0)
         system = tsase.io.read_con('lj38-cluster.con')
@@ -169,6 +169,7 @@ Usage:
         opt = Hopping(atoms=system, 
                       temperature=500,
                       minenergy=-173.918427,
+                      move_type = True,
                       distribution='molecular_dynamics', 
                       jumpmax=None,
                       global_jump=None, 
@@ -178,7 +179,7 @@ Usage:
                       dimer_steps=20, 
                       timestep=0.1, 
                       mdmin=2,
-                      acceptance_criteria=True, 
+                      acceptance_criteria=False, 
                       minimaHopping_history=True, 
                       beta1=1.04, 
                       beta2=1.04, 
@@ -186,7 +187,7 @@ Usage:
                       Ediff0=0.5,
                       alpha1=0.98, 
                       alpha2=1./0.98, 
-                      use_geometry=False, 
+                      use_geometry=True, 
                       keep_minima_arrays=False)
         opt(10000, maxtemp=50000)
 
@@ -194,7 +195,7 @@ Usage:
 
     .. code-block:: none
 
-        from tsase.optimize.minima_basin import Hopping
+        from tsase.optimize.minima_basin2 import Hopping
 
         lj = tsase.calculators.lj(cutoff=35.0)
         system = tsase.io.read_con('lj38-cluster.con')
@@ -203,6 +204,7 @@ Usage:
                       temperature=8000,
                       dr=0.4,
                       minenergy=-173.918427,
+                      move_type = True
                       distribution='uniform',
                       adjust_step_size=10,
                       target_ratio=0.5,
@@ -213,8 +215,8 @@ Usage:
                       history_num=0,
                       adjust_temp=False,
                       accept_temp = None,
-                      acceptance_criteria=False,
-                      use_geometry=False,
+                      acceptance_criteria=True,
+                      use_geometry=True,
                       keep_minima_arrays=False)
         opt(10000)
 
