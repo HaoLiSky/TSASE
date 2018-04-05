@@ -149,7 +149,7 @@ Usage:
 
     .. code-block:: none
 
-        from tsase.optimize.minima_basin import Hopping
+        from tsase.optimize.minima_basin2 import Hopping
 
         lj = tsase.calculators.lj(cutoff=35.0)
         system = tsase.io.read_con('lj38-cluster.con')
