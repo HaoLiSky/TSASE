@@ -134,7 +134,7 @@ class Hopping(Dynamics):
         self.history_num = history_num
         self.adjust_temp = adjust_temp
         self.accept_temp = accept_temp
-        self.accept_criteria = accept_criteria
+        self.accept_criteria = acceptance_criteria
         self.mh_history = minimaHopping_history
         self.beta1 = beta1
         self.beta2 = beta2
