@@ -40,9 +40,10 @@ class Hopping(Dynamics):
                  minima_threshold = 2,  # round potential energies to how many decimal places
 
                  # Logging parameters
-                 logfile = None,
+                 logfile = '-',
                  trajectory = None,
                  optimizer_logfile = '-',
+                 #local_minima_trajectory = 'local_minima.con',
                  local_minima_trajectory = None,
 
                  # Selecting move type
@@ -72,7 +73,7 @@ class Hopping(Dynamics):
                  global_reset = False, # True = reset all of the history counts after a jump (basically delete the history and start fresh)
 
                  # Select acceptance criteria
-                 accept_criteria = True, # BH = Tue; MH = False
+                 acceptance_criteria = True, # BH = Tue; MH = False
 
                  # BH acceptance parameters
                  accept_temp = 8000, # K; separate temperature to use for BH acceptance (None: use temperature parameter instead)
@@ -152,6 +153,8 @@ class Hopping(Dynamics):
         self.allTemps = []
         self.saveEdiff = []
         self.trial_loop = []
+        self.num_localops = 0
+        self.num_geo_compare = []
 
         # when a MD sim. has passed a local minimum:
         self.passedminimum = PassedMinimum()
@@ -165,6 +168,7 @@ class Hopping(Dynamics):
 
         # list with fixed size that will store history_num previous minima
         self.temp_minima = [0] * self.history_num
+        self.temp_positions = [0] * self.history_num
 
      	# for geometry comparison
         self.positionsMatrix = []
@@ -243,7 +247,10 @@ class Hopping(Dynamics):
             return True, approxEn, approxEo
 
     def update_geometries(self, En):
+        '''Update the dictionaries to include this newly accepted geometry
+            and return the index in self.positionsMatrix[] that this geometry is stored at'''
         approxEn = round(En, self.minima_threshold)
+        index = -1
         if approxEn in self.geometries:
             if self.current_index is not None:
                 self.geo_history[self.current_index] += 1
@@ -289,6 +296,7 @@ class Hopping(Dynamics):
             if approxEn == approxEo:
                 if self.use_get_mapping:
                     same = geometry.get_mappings(self.atoms, positionsOld, self.eps_r, self.neighbor_cutoff)
+                    self.num_geo_compare[self.steps] += 1
                 else:
                     same = geometry.rot_match(self.atoms, positionsOld, self.eps_r)
             if same:
@@ -299,6 +307,7 @@ class Hopping(Dynamics):
                 #print "\npos:", positions
        	        if self.use_get_mapping:
        	       	    same = geometry.get_mappings(self.atoms, positions, self.eps_r, self.neighbor_cutoff)
+                    self.num_geo_compare[self.steps] += 1
        	        else:
                     same = geometry.rot_match(self.atoms, positions, self.eps_r)
                 if same:
@@ -390,6 +399,7 @@ class Hopping(Dynamics):
                 #                     logfile=self.optimizer_logfile,
                 #                     maxstep=self.mss)
                 opt.run(fmax=self.fmax)
+                self.num_localops += 1
 		# this caused an error when using QN local optimizer because
 		# energy is not an attriute of the class Hopping
                 #self.energy = self.atoms.get_potential_energy()
@@ -440,7 +450,7 @@ class Hopping(Dynamics):
             match, countEn, countEo = self.find_energy_match(En, Eo)
             if self.use_geo and (match is not None):
                 match, position = self.find_match(En, Eo, positionsOld)
-            loop_count = 0
+            loop_count = 1
             while (match is not None):
                 loop_count += 1
                 if match == 1:
@@ -553,15 +563,18 @@ class Hopping(Dynamics):
                 if self.adjust_temp:
                     self.adjust_temperature(match)
                 if match:
-                    if self.history_num:
+                    if self.history_num and not self.use_geo:
                         moves = min(self.num_accepted_moves, self.history_num)
                         hn = self.temp_minima.count(approxEn) / moves
                         ho = self.temp_minima.count(approxEo) / moves
                     elif self.use_geo:
+                        moves = self.num_accepted_moves
+                        if self.history_num:
+                            moves = min(self.num_accepted_moves, self.history_num)
                         if self.current_index is not None:
-                            hn = self.geo_history[self.current_index] / self.num_accepted_moves
+                            hn = self.geo_history[self.current_index] / moves
                         if self.last_index is not None:
-                            ho = self.geo_history[self.last_index] / self.num_accepted_moves
+                            ho = self.geo_history[self.last_index] / moves
                     else:
                         hn = countEn / self.num_accepted_moves
                         ho = countEo / self.num_accepted_moves
@@ -612,10 +625,10 @@ class Hopping(Dynamics):
                 En = self.get_energy(rn)
                 accept = True
             if accept:
-                acceptnum += 1.
-                recentaccept += 1.
-                rejectnum = 0
-                self.num_accepted_moves += 1
+                #acceptnum += 1.
+                #recentaccept += 1.
+                #rejectnum = 0
+                #self.num_accepted_moves += 1
                 if self.significant_structure == True:
                     ro = self.local_min_pos.copy()
                 else:
@@ -626,16 +639,63 @@ class Hopping(Dynamics):
                 approxEn = round(En,self.minima_threshold)
                 # update temp_minima
                 if self.history_num:
+                    oldEnergy = self.temp_minima[int(self.num_accepted_moves) % self.history_num]
+                    oldPos = self.temp_positions[int(self.num_accepted_moves) % self.history_num]
                     self.temp_minima[int(self.num_accepted_moves) % self.history_num] = approxEn
+                    if self.last_index is None:
+                        self.temp_positions[int(self.num_accepted_moves) % self.history_num] = self.atoms.get_positions()
+                    else:
+                        self.temp_positions[int(self.num_accepted_moves) % self.history_num] = self.positionsMatrix[self.last_index]
+                    print self.temp_minima
+                    print self.temp_positions
+                    # need to delete history from geometry dicts
+                    if self.use_geo and self.num_accepted_moves >= self.history_num:
+                        print "old self.geometries", self.geometries
+                        print "old self.geo_history", self.geo_history
+                        print "num unique pos", self.numPositions
+                        print "old energy to be deleted", oldEnergy
+                        posIndices = self.geometries[oldEnergy]
+                        print "posIndices", posIndices
+                        i = 0
+                        # find the index in positionsMatrix that oldPos is stored at
+                        while i < len(posIndices):
+                            if np.array_equal(self.positionsMatrix[posIndices[i]],oldPos):
+                                break
+                            else:
+                                # only for debugging 
+                                print geometry.get_mappings(self.atoms, self.positionsMatrix[posIndices[i]], self.eps_r, self.neighbor_cutoff)
+                            i += 1
+                        if i == len(posIndices):
+                            print "\nNO GEOMETRY MATCH???\n"
+                        print "posIndex", posIndices[i]
+                        self.geo_history[posIndices[i]] -= 1
+                        print "num visits to this geo", self.geo_history[posIndices[i]]
+                        if self.geo_history[posIndices[i]] == 0:
+                            print "deleting!!\n"
+                            del self.geo_history[posIndices[i]]
+                            if len(posIndices) == 1:
+                                del self.geometries[oldEnergy]
+                            else:
+                                np.delete(self.geometries[oldEnergy], i)
+       	       	       	print "self.geometries after", self.geometries
+       	       	       	print "self.geo_history after", self.geo_history
+                # RB: moved for array indexing. Need to test further
+                acceptnum += 1.
+                recentaccept += 1.
+                rejectnum = 0
+                self.num_accepted_moves += 1
+
                 # take a global jump
                 if self.global_jump and (self.minima[approxEn] > self.global_jump):
-                    for i in range(0,self.jmp):
-                        rn = self.move(step,rn, self.jump_distribution)
-                        if self.global_reset: 
-                            # This may cause an error. Need to test!
-                            self.minima = {}
-                    En = self.get_energy(rn)
-                    Eo = En
+                    if self.use_geo and (self.geo_history[self.last_index] > self.global_jump):
+                        print "global jump taken!!"
+                        for i in range(0,self.jmp):
+                            rn = self.move(step,rn, self.jump_distribution)
+                            if self.global_reset: 
+                                # This may cause an error. Need to test!
+                                self.minima = {}
+                        En = self.get_energy(rn)
+                        Eo = En
                 if En < self.Emin:
                     self.Emin = En
                     self.rmin = self.atoms.get_positions()
@@ -680,6 +740,7 @@ class Hopping(Dynamics):
             #self.positionsMatrix = np.zeros(steps + 1)
             # best way to get total number of atoms in the system??
             self.positionsMatrix = np.zeros((steps + 1, len(self.atoms.get_positions()), 3))
+            self.num_geo_compare = np.zeros(steps + 1)
         self.running_loop(steps, ro, Eo, maxtemp)
         self.get_minimum()
 
