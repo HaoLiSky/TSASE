@@ -42,7 +42,7 @@ class Hopping(Dynamics):
                  # Logging parameters
                  logfile = '-',
                  trajectory = None,
-                 optimizer_logfile = '-',
+                 optimizer_logfile = None,
                  #local_minima_trajectory = 'local_minima.con',
                  local_minima_trajectory = None,
 
