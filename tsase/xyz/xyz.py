@@ -14,7 +14,7 @@ import cairo
 import numpy as np
 import ase
 from ase.io import vasp
-from ase.calculators.neighborlist import NeighborList
+from ase.neighborlist import NeighborList
 import tsase
 from tsase.data import *
 
@@ -494,7 +494,7 @@ class xyz(gtk.Window):
         if not 'nlist' in fa.__dict__:
             cutoffs = [1.5 * elements[i.symbol]['radius'] for i in ra]
             fa.nlist = NeighborList(cutoffs, skin=0, self_interaction=False, bothways=True)
-        if len(fa.nlist.cutoffs) != len(ra):
+        if len(fa.nlist.nl.cutoffs) != len(ra):
             cutoffs = [1.5 * elements[i.symbol]['radius'] for i in ra]
             fa.nlist = NeighborList(cutoffs, skin=0, self_interaction=False, bothways=True)
         fa.nlist.update(ra)
