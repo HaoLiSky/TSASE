@@ -688,7 +688,7 @@ class Hopping(Dynamics):
                 # take a global jump
                 if self.global_jump and (self.minima[approxEn] > self.global_jump):
                     if self.use_geo and (self.geo_history[self.last_index] > self.global_jump):
-                        print "global jump taken!!"
+                        #print "global jump taken!!"
                         for i in range(0,self.jmp):
                             rn = self.move(step,rn, self.jump_distribution)
                             if self.global_reset: 
@@ -739,7 +739,7 @@ class Hopping(Dynamics):
         if self.use_geo:
             #self.positionsMatrix = np.zeros(steps + 1)
             # best way to get total number of atoms in the system??
-            self.positionsMatrix = np.zeros((steps + 1, len(self.atoms.get_positions()), 3))
+            self.positionsMatrix = np.zeros((steps + 1, self.atoms.get_number_atoms(), 3))
             self.num_geo_compare = np.zeros(steps + 1)
         self.running_loop(steps, ro, Eo, maxtemp)
         self.get_minimum()
